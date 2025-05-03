@@ -365,7 +365,7 @@ async function loadUsers() {
             userElement.dataset.uid = user.id;
             userElement.innerHTML = `
                 <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.username}" class="user-avatar">
-                <span class="username">${user.username}</span>
+                <span class="username">${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
                 <div class="user-actions">
                     <span class="material-symbols-outlined action-icon pin-icon">keep</span>
                     <span class="material-symbols-outlined action-icon close-icon">close</span>
@@ -448,7 +448,7 @@ async function startChat(userId, username) {
         userElement.dataset.uid = userId;
         userElement.innerHTML = `
             <img src="${profilePicture}" alt="${username}" class="user-avatar">
-            <span class="username">${username}</span>
+            <span class="username">${username}${userData?.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
             <div class="user-actions">
                 <span class="material-symbols-outlined action-icon pin-icon">keep</span>
                 <span class="material-symbols-outlined action-icon close-icon">close</span>
@@ -1008,7 +1008,7 @@ async function searchUsers(searchTerm) {
             userElement.dataset.uid = user.id;
             userElement.innerHTML = `
                 <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.username}" class="user-avatar">
-                <span class="username">${user.username}</span>
+                <span class="username">${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
                 <div class="user-actions">
                     <span class="material-symbols-outlined action-icon pin-icon">keep</span>
                     <span class="material-symbols-outlined action-icon close-icon">close</span>
