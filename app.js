@@ -129,23 +129,22 @@ document.addEventListener('DOMContentLoaded', () => {
     if (loginLink) {
         loginLink.addEventListener('click', (e) => {
             e.preventDefault();
-            const loginForm = document.getElementById('login-form');
-            const signupForm = document.getElementById('signup-form');
-            
-            if (loginForm && signupForm) {
-                signupForm.style.display = 'none';
-                loginForm.style.display = 'block';
-                clearErrorMessages();
-            }
+            showLogin();
         });
     }
 
     if (loginButton) {
-        loginButton.addEventListener('click', login);
+        loginButton.addEventListener('click', async (e) => {
+            e.preventDefault();
+            await login();
+        });
     }
 
     if (signupButton) {
-        signupButton.addEventListener('click', signup);
+        signupButton.addEventListener('click', async (e) => {
+            e.preventDefault();
+            await signup();
+        });
     }
 });
 
@@ -244,7 +243,8 @@ async function login() {
 
     try {
         loginButton.classList.add('loading');
-        await signInWithEmailAndPassword(auth, email, password);
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        console.log('Login successful:', userCredential.user);
         showChatSection();
     } catch (error) {
         console.error('Login error:', error);
