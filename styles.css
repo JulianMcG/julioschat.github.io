@@ -79,6 +79,33 @@ body {
     transition: background-color 5000s ease-in-out 0s;
 }
 
+.button-wrapper {
+    width: 100%;
+    position: relative;
+    margin-bottom: 10px;
+}
+
+.button-wrapper button {
+    width: 100%;
+    margin-bottom: 0;
+}
+
+.button-wrapper::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: -10px;
+    background-color: #13296D;
+    border-radius: 15px;
+    z-index: -1;
+}
+
+.auth-form button::before {
+    display: none;
+}
+
 .auth-form button {
     width: 100%;
     padding: 14px;
@@ -93,22 +120,6 @@ body {
     overflow: visible;
     margin-bottom: 10px;
     box-sizing: border-box;
-}
-
-.auth-form button::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: -10px;
-    background-color: #13296D;
-    border-radius: 15px;
-    z-index: -1;
-    box-sizing: border-box;
-    width: 100%;
-    margin: 0;
-    padding: 0;
 }
 
 .auth-form button:hover {
