@@ -333,13 +333,12 @@ body {
     align-items: center;
     padding: 10px;
     cursor: pointer;
-    transition: background-color 0.2s;
     position: relative;
     border-radius: 8px;
 }
 
 .user-item:hover {
-    background-color: #13161F;
+    background-color: rgba(19, 22, 31, 0.5);
 }
 
 .user-item.active {
