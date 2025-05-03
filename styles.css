@@ -430,13 +430,10 @@ body {
     background-color: #1C1F28;
     border-radius: 15px;
     margin: 20px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
 }
 
 .message-input input {
-    flex: 1;
+    width: 100%;
     background-color: transparent;
     border: none;
     color: #ECEBF7;
@@ -446,20 +443,6 @@ body {
 
 .message-input input:focus {
     outline: none;
-}
-
-.emoji-picker-button {
-    color: #B6B8C8;
-    cursor: pointer;
-    font-size: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: color 0.3s;
-}
-
-.emoji-picker-button:hover {
-    color: #ECEBF7;
 }
 
 .message-bubble {
@@ -1010,31 +993,4 @@ body {
 /* Remove button hover effects sitewide */
 button:hover {
     transform: none !important;
-}
-
-/* Emoji Picker Styles */
-#emoji-picker-modal .modal-content {
-    background-color: #10121B;
-    border-radius: 15px;
-    width: 400px;
-    max-width: 90%;
-    margin: 10% auto;
-    padding: 20px;
-}
-
-#emoji-picker-modal emoji-picker {
-    --background: #10121B;
-    --indicator-color: #1F49C7;
-    --num-columns: 8;
-    --button-active-background: #1C1F28;
-    --button-hover-background: #13161F;
-    --category-font-color: #B6B8C8;
-    --indicator-color: #1F49C7;
-    --input-border-color: #1C1F28;
-    --input-font-color: #ECEBF7;
-    --outline-color: #1C1F28;
-    --category-emoji-color: #B6B8C8;
-    --category-emoji-hover-color: #ECEBF7;
-    --category-emoji-selected-color: #1F49C7;
-    --emoji-size: 1.5rem;
 } 
