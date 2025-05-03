@@ -141,26 +141,30 @@ async function loadMessages() {
     chatMessages.innerHTML = '';
 
     try {
+        // Query messages where both users are participants
         const messagesRef = db.collection('messages')
-            .where('senderId', 'in', [currentUser.uid, currentChatUser.id])
-            .where('receiverId', 'in', [currentUser.uid, currentChatUser.id])
+            .where('participants', 'array-contains', currentUser.uid)
             .orderBy('timestamp', 'asc');
 
         messagesRef.onSnapshot(snapshot => {
             chatMessages.innerHTML = '';
             snapshot.forEach(doc => {
                 const message = doc.data();
-                const messageElement = document.createElement('div');
-                messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
                 
-                const time = message.timestamp ? new Date(message.timestamp.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
-                
-                messageElement.innerHTML = `
-                    <div class="content">${message.content}</div>
-                    <div class="time">${time}</div>
-                `;
-                
-                chatMessages.appendChild(messageElement);
+                // Only show messages between the current users
+                if (message.participants.includes(currentChatUser.id)) {
+                    const messageElement = document.createElement('div');
+                    messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
+                    
+                    const time = message.timestamp ? new Date(message.timestamp.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                    
+                    messageElement.innerHTML = `
+                        <div class="content">${message.content}</div>
+                        <div class="time">${time}</div>
+                    `;
+                    
+                    chatMessages.appendChild(messageElement);
+                }
             });
             
             // Scroll to bottom
@@ -191,11 +195,12 @@ async function sendMessage() {
 
     try {
         // Create message in Firestore
-        const messageRef = await db.collection('messages').add({
+        await db.collection('messages').add({
             content: content,
             senderId: currentUser.uid,
             receiverId: currentChatUser.id,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            participants: [currentUser.uid, currentChatUser.id] // Add participants array for easier querying
         });
 
         // Clear input
