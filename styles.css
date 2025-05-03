@@ -249,6 +249,12 @@ body {
 
 .user-item:hover {
     background-color: #13161F;
+    border-radius: 8px;
+}
+
+.user-item.active {
+    background-color: #13161F;
+    border-radius: 8px;
 }
 
 .user-avatar {
@@ -257,13 +263,6 @@ body {
     border-radius: 50%;
     margin-right: 10px;
     object-fit: cover;
-}
-
-.user-item.active {
-    background-color: #13161F;
-    border-radius: 15px;
-    padding: 10px;
-    margin: 5px 0;
 }
 
 .chat-area {
@@ -290,12 +289,22 @@ body {
     transform-origin: bottom;
     transition: all 0.3s ease;
     display: none;
-    position: relative;
 }
 
 .message-input.visible {
     display: block;
     animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .message-input input {
@@ -305,7 +314,6 @@ body {
     color: #ECEBF7;
     font-size: 14px;
     padding: 8px;
-    transition: all 0.3s ease;
 }
 
 .message-input input:focus {
@@ -321,7 +329,17 @@ body {
     word-wrap: break-word;
     display: inline-block;
     animation: messageAppear 0.3s ease;
-    transform-origin: left bottom;
+}
+
+@keyframes messageAppear {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
 .message.sent {
@@ -340,40 +358,6 @@ body {
     margin-left: 20px;
     text-align: left;
     border-radius: 15px 15px 15px 5px;
-}
-
-@keyframes messageAppear {
-    from {
-        opacity: 0;
-        transform: scale(0.9) translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-    }
-}
-
-@keyframes morphToMessage {
-    0% {
-        transform: scale(1) translateY(0);
-        background-color: #1C1F28;
-    }
-    50% {
-        transform: scale(0.95) translateY(-10px);
-        background-color: #1F49C7;
-    }
-    100% {
-        transform: scale(1) translateY(0);
-        background-color: #1F49C7;
-    }
-}
-
-.message-input.morphing {
-    animation: morphToMessage 0.3s ease forwards;
-}
-
-.message-input.morphing input {
-    color: #ECEBF7;
 }
 
 .message .sender {
