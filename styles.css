@@ -872,7 +872,7 @@ body {
     width: 500px;
     max-width: 90%;
     max-height: 90vh;
-    position: absolute;
+    position: fixed;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
@@ -882,17 +882,35 @@ body {
     -ms-overflow-style: none;
 }
 
-#settings-modal .modal-content::-webkit-scrollbar {
-    display: none;
+#settings-modal .username-change input {
+    width: 100%;
+    padding: 16px 15px;
+    border: 1.5px solid #1C1F28;
+    border-radius: 15px;
+    font-size: 16px;
+    background-color: #10121B;
+    color: #ECEBF7;
+    transition: border-color 0.3s;
 }
 
-#settings-modal .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #1C1F28;
+#settings-modal .username-change input::placeholder {
+    color: #1C1F28;
+}
+
+#settings-modal .username-change input:-webkit-autofill,
+#settings-modal .username-change input:-webkit-autofill:hover,
+#settings-modal .username-change input:-webkit-autofill:focus,
+#settings-modal .username-change input:-webkit-autofill:active {
+    -webkit-text-fill-color: #ECEBF7 !important;
+    -webkit-box-shadow: 0 0 0 30px #10121B inset !important;
+    transition: background-color 5000s ease-in-out 0s;
+}
+
+#settings-modal .username-change label {
+    display: block;
+    color: #B6B8C8;
+    margin-bottom: 8px;
+    font-size: 14px;
 }
 
 #settings-modal .profile-picture-upload {
