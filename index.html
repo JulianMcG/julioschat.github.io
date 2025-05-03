@@ -17,14 +17,13 @@
     <div class="container">
         <!-- Auth Section -->
         <div id="auth-section" class="section">
-            <h1>Julio's Chat</h1>
             <div class="auth-form">
                 <div id="login-form" style="display: none;">
                     <h2>Login</h2>
                     <input type="email" id="login-email" placeholder="Email">
                     <input type="password" id="login-password" placeholder="Password">
                     <button onclick="login()">Login</button>
-                    <p>Don't have an account? <a href="#" onclick="showSignup()">Sign up</a></p>
+                    <p>Don't have an account? <a href="#" onclick="showSignup()" class="auth-link">Sign up</a></p>
                 </div>
                 <div id="signup-form">
                     <h2>Sign Up</h2>
@@ -36,7 +35,7 @@
                     <input type="email" id="signup-email" placeholder="Email">
                     <input type="password" id="signup-password" placeholder="Password">
                     <button onclick="signup()">Sign Up</button>
-                    <p>Already have an account? <a href="#" onclick="showLogin()">Login</a></p>
+                    <p>Already have an account? <a href="#" onclick="showLogin()" class="auth-link">Login</a></p>
                 </div>
             </div>
         </div>
