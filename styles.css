@@ -185,8 +185,6 @@ body {
     padding: 8px 12px;
     max-width: 70%;
     position: relative;
-    border-radius: 15px;
-    border-bottom-right-radius: 5px;
     line-height: 1.4;
     word-wrap: break-word;
     display: inline-block;
@@ -198,6 +196,7 @@ body {
     margin-left: auto;
     margin-right: 20px;
     text-align: right;
+    border-radius: 15px 15px 0 15px;
 }
 
 .message.received {
@@ -206,6 +205,7 @@ body {
     margin-right: auto;
     margin-left: 20px;
     text-align: left;
+    border-radius: 15px 15px 15px 0;
 }
 
 .message .sender {
@@ -221,10 +221,16 @@ body {
 }
 
 .message .time {
-    font-size: 12px;
+    font-size: 10px;
     color: #6b6d7a;
-    margin-top: 5px;
+    margin-top: 4px;
     text-align: right;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.message:hover .time {
+    opacity: 1;
 }
 
 /* Profile Section */
