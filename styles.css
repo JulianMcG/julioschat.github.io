@@ -82,16 +82,19 @@ body {
 .button-wrapper {
     width: 100%;
     position: relative;
-    margin-bottom: 0;
-    padding-bottom: 5px;
 }
 
 .button-wrapper button {
     width: 100%;
-    margin-bottom: 0;
+    padding: 14px;
+    background-color: #1F49C7;
+    color: #ECEBF7;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
     transition: transform 0.1s ease;
-    position: relative;
-    z-index: 1;
 }
 
 .button-wrapper button:active {
@@ -99,15 +102,7 @@ body {
 }
 
 .button-wrapper::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #13296D;
-    border-radius: 15px;
-    z-index: 0;
+    display: none;
 }
 
 .auth-form button::before {
