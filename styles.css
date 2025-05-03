@@ -670,7 +670,7 @@ body {
 #auth-section {
     background-image: url('https://i.ibb.co/RkLHZdPq/Julio-s-Wall1.png');
     background-size: contain;
-    background-position: top;
+    background-position: top center;
     background-repeat: no-repeat;
     height: 100%;
 } 
