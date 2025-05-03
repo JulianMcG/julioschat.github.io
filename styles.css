@@ -326,6 +326,12 @@ body {
     flex: 1;
     overflow-y: auto;
     margin-bottom: 20px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.users-list::-webkit-scrollbar {
+    display: none;
 }
 
 .user-item {
@@ -423,6 +429,12 @@ body {
     padding: 20px;
     display: flex;
     flex-direction: column;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.chat-messages::-webkit-scrollbar {
+    display: none;
 }
 
 .message-input {
@@ -766,6 +778,12 @@ body {
     display: flex;
     flex-direction: column;
     gap: 5px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.compose-results::-webkit-scrollbar {
+    display: none;
 }
 
 .compose-user-item {
@@ -853,151 +871,76 @@ body {
     border-radius: 15px;
     width: 500px;
     max-width: 90%;
-    margin: 15vh auto;
-    padding: 30px;
-    position: relative;
+    max-height: 90vh;
+    position: absolute;
     top: 50%;
-    transform: translateY(-50%);
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 30px;
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+#settings-modal .modal-content::-webkit-scrollbar {
+    display: none;
 }
 
 #settings-modal .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 30px;
-    padding-bottom: 15px;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
     border-bottom: 1px solid #1C1F28;
-}
-
-#settings-modal .modal-header h2 {
-    font-size: 24px;
-    color: #ECEBF7;
-    margin: 0;
-}
-
-#settings-modal .close-modal {
-    color: #B6B8C8;
-    cursor: pointer;
-    font-size: 24px;
-    transition: color 0.3s;
-}
-
-#settings-modal .close-modal:hover {
-    color: #ECEBF7;
 }
 
 #settings-modal .profile-picture-upload {
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-bottom: 30px;
-    gap: 15px;
-}
-
-#settings-modal .profile-picture-upload img {
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    object-fit: cover;
-    cursor: pointer;
-    border: 3px solid #1F49C7;
-    transition: transform 0.3s;
-}
-
-#settings-modal .profile-picture-upload img:hover {
-    transform: scale(1.05);
+    margin-bottom: 20px;
 }
 
 #settings-modal .username-change {
-    margin-bottom: 30px;
-}
-
-#settings-modal .username-change label {
-    display: block;
-    margin-bottom: 10px;
-    color: #B6B8C8;
-    font-size: 14px;
-}
-
-#settings-modal .username-change input {
-    width: 100%;
-    padding: 16px 15px;
-    border: 1.5px solid #1C1F28;
-    border-radius: 15px;
-    font-size: 16px;
-    background-color: #10121B;
-    color: #ECEBF7;
-    transition: border-color 0.3s;
-}
-
-#settings-modal .username-change input::placeholder {
-    color: #1C1F28;
-}
-
-#settings-modal .username-change input:-webkit-autofill,
-#settings-modal .username-change input:-webkit-autofill:hover,
-#settings-modal .username-change input:-webkit-autofill:focus,
-#settings-modal .username-change input:-webkit-autofill:active {
-    -webkit-text-fill-color: #ECEBF7 !important;
-    -webkit-box-shadow: 0 0 0 30px #10121B inset !important;
-    transition: background-color 5000s ease-in-out 0s;
+    margin-bottom: 20px;
 }
 
 #settings-modal .save-button {
     width: 100%;
     padding: 14px;
-    background-color: #1F49C7;
+    background-color: #494C56;
     color: #ECEBF7;
-    border: 3px solid rgba(255, 255, 255, 0.1);
+    border: 3px solid rgba(255, 255, 255, 0.05);
     border-radius: 15px;
     cursor: pointer;
     font-size: 16px;
     font-weight: 600;
-    transition: all 0.3s ease;
-    box-shadow: 0 5px 0 #13296D;
+    transition: transform 0.1s ease;
+    box-shadow: 0 5px 0 #31333A;
     margin-bottom: 20px;
 }
 
-#settings-modal .save-button:hover {
-    background-color: #1a3db0;
-    transform: translateY(-2px);
-}
-
-#settings-modal .save-button:active {
-    transform: translateY(5px);
-    box-shadow: 0 0 0 #13296D;
-}
-
 #settings-modal .signout-section {
-    margin-top: 30px;
+    margin-top: 20px;
     padding-top: 20px;
     border-top: 1px solid #1C1F28;
     display: flex;
     justify-content: center;
 }
 
-#settings-modal .signout-button {
-    width: 100%;
-    padding: 14px;
-    background-color: #E85658;
-    color: #ECEBF7;
-    border: 3px solid rgba(255, 255, 255, 0.1);
-    border-radius: 15px;
-    cursor: pointer;
-    font-size: 16px;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    box-shadow: 0 5px 0 #8A1315;
+/* Add scrollbar hiding for all scrollable elements */
+.users-list,
+.chat-messages,
+.compose-results {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
 }
 
-#settings-modal .signout-button:hover {
-    background-color: #d14547;
-    transform: translateY(-2px);
-}
-
-#settings-modal .signout-button:active {
-    transform: translateY(5px);
-    box-shadow: 0 0 0 #8A1315;
+.users-list::-webkit-scrollbar,
+.chat-messages::-webkit-scrollbar,
+.compose-results::-webkit-scrollbar {
+    display: none;
 }
 
 /* Remove button hover effects sitewide */
