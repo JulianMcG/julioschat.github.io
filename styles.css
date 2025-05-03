@@ -52,7 +52,7 @@ body {
     position: relative;
 }
 
-.form-group:last-child {
+.form-group:last-of-type {
     margin-bottom: 40px;
 }
 
@@ -90,7 +90,7 @@ body {
 .button-wrapper {
     width: 100%;
     position: relative;
-    margin-bottom: 40px;
+    margin-bottom: 20px;
 }
 
 .button-wrapper button {
