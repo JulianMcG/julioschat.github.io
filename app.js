@@ -89,8 +89,6 @@ function showLogin() {
 
 // Add event listeners for auth links
 document.addEventListener('DOMContentLoaded', () => {
-    // ... existing event listeners ...
-
     // Auth link event listeners
     const signupLink = document.querySelector('#login-form .auth-link');
     const loginLink = document.querySelector('#signup-form .auth-link');
