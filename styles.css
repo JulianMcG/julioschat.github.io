@@ -863,8 +863,6 @@ body {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 30px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid #1C1F28;
 }
 
 #settings-modal .modal-header h2 {
@@ -935,53 +933,54 @@ body {
 #settings-modal .save-button {
     width: 100%;
     padding: 14px;
-    background-color: #1F49C7;
+    background-color: #494C56;
     color: #ECEBF7;
-    border: none;
-    border-radius: 8px;
+    border: 3px solid rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
     cursor: pointer;
     font-size: 16px;
     font-weight: 600;
-    transition: all 0.3s;
+    transition: transform 0.1s ease;
+    box-shadow: 0 5px 0 #31333A;
     margin-bottom: 20px;
 }
 
 #settings-modal .save-button:hover {
-    background-color: #1a3db0;
     transform: translateY(-2px);
 }
 
 #settings-modal .save-button:active {
-    transform: translateY(0);
+    transform: translateY(5px);
+    box-shadow: 0 0 0 #31333A;
 }
 
 #settings-modal .signout-section {
-    margin-top: 30px;
-    padding-top: 20px;
-    border-top: 1px solid #1C1F28;
+    margin-top: 20px;
     display: flex;
     justify-content: center;
 }
 
 #settings-modal .signout-button {
+    width: 100%;
+    padding: 14px;
     background-color: #E85658;
     color: #ECEBF7;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 8px;
+    border: 3px solid rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
     cursor: pointer;
     font-size: 16px;
     font-weight: 600;
-    transition: all 0.3s;
+    transition: transform 0.1s ease;
+    box-shadow: 0 5px 0 #8A1315;
 }
 
 #settings-modal .signout-button:hover {
-    background-color: #d14547;
     transform: translateY(-2px);
 }
 
 #settings-modal .signout-button:active {
-    transform: translateY(0);
+    transform: translateY(5px);
+    box-shadow: 0 0 0 #8A1315;
 }
 
 /* Remove button hover effects sitewide */
