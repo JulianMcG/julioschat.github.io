@@ -68,13 +68,23 @@ document.getElementById('profile-picture-input').addEventListener('change', asyn
 
 // Auth Functions
 function showSignup() {
-    document.getElementById('login-form').style.display = 'none';
-    document.getElementById('signup-form').style.display = 'block';
+    const loginForm = document.getElementById('login-form');
+    const signupForm = document.getElementById('signup-form');
+    
+    if (loginForm && signupForm) {
+        loginForm.style.display = 'none';
+        signupForm.style.display = 'block';
+    }
 }
 
 function showLogin() {
-    document.getElementById('signup-form').style.display = 'none';
-    document.getElementById('login-form').style.display = 'block';
+    const loginForm = document.getElementById('login-form');
+    const signupForm = document.getElementById('signup-form');
+    
+    if (loginForm && signupForm) {
+        signupForm.style.display = 'none';
+        loginForm.style.display = 'block';
+    }
 }
 
 async function signup() {
@@ -90,17 +100,12 @@ async function signup() {
 
     try {
         console.log('Attempting to create user...');
+        
+        // Create user with email and password
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         console.log('User created:', userCredential.user.uid);
         
-        // Update user profile
-        await updateProfile(userCredential.user, {
-            displayName: username,
-            photoURL: profilePicture
-        });
-        console.log('Profile updated');
-
-        // Create user document in Firestore
+        // Create user document in Firestore first
         await setDoc(doc(db, 'users', userCredential.user.uid), {
             username: username,
             email: email,
@@ -108,6 +113,13 @@ async function signup() {
             createdAt: serverTimestamp()
         });
         console.log('User document created');
+
+        // Then update the profile
+        await updateProfile(userCredential.user, {
+            displayName: username,
+            photoURL: profilePicture
+        });
+        console.log('Profile updated');
 
         // Show chat section
         showChatSection();
@@ -120,6 +132,11 @@ async function signup() {
 async function login() {
     const email = document.getElementById('login-email').value;
     const password = document.getElementById('login-password').value;
+
+    if (!email || !password) {
+        alert('Please fill in all fields');
+        return;
+    }
 
     try {
         await signInWithEmailAndPassword(auth, email, password);
