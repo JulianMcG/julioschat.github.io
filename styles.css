@@ -428,7 +428,7 @@ body {
     display: flex;
     flex-direction: column;
     position: relative;
-    z-index: 1;
+    z-index: 0;
 }
 
 .message-input {
@@ -437,7 +437,7 @@ body {
     border-radius: 15px;
     margin: 20px;
     position: relative;
-    z-index: 2;
+    z-index: 1;
 }
 
 .message-input input {
@@ -459,6 +459,7 @@ body {
     margin: 0 20px 5px 20px;
     border-radius: 5px;
     position: relative;
+    z-index: 0;
 }
 
 .message-bubble.sent {
