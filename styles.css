@@ -452,7 +452,7 @@ body {
 .message-bubble {
     max-width: 70%;
     padding: 10px 15px;
-    margin: 5px 0;
+    margin: 0 20px 5px 20px;
     border-radius: 5px;
     position: relative;
 }
