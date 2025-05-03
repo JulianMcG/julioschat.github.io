@@ -702,4 +702,20 @@ body {
 
 .signout-button:active {
     transform: translateY(0);
+}
+
+.username {
+    font-size: 16px;
+    font-weight: 500;
+    color: #ECEBF7;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.verified-badge {
+    color: #1F49C7;
+    font-size: 16px;
+    display: inline-flex;
+    align-items: center;
 } 
