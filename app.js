@@ -399,7 +399,6 @@ function createUserElement(user) {
     const userElement = document.createElement('div');
     userElement.className = 'user-item';
     userElement.innerHTML = `
-        <div class="unread-indicator"></div>
         <img src="${user.profilePicture || 'default-avatar.png'}" alt="${user.username}" class="profile-picture">
         <span class="username">${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
         <div class="user-actions">
@@ -441,27 +440,6 @@ function createUserElement(user) {
 async function startChat(userId, username) {
     currentChatUser = { id: userId, username: username };
     
-    // Mark all messages as read when opening a chat
-    try {
-        const messagesQuery = query(
-            collection(db, 'messages'),
-            where('participants', 'array-contains', currentUser.uid),
-            where('senderId', '==', userId),
-            where('read', '==', false)
-        );
-        
-        const messagesSnapshot = await getDocs(messagesQuery);
-        const updatePromises = [];
-        
-        messagesSnapshot.forEach(doc => {
-            updatePromises.push(setDoc(doc.ref, { read: true }, { merge: true }));
-        });
-        
-        await Promise.all(updatePromises);
-    } catch (error) {
-        console.error('Error marking messages as read:', error);
-    }
-    
     // Check if user is already in sidebar
     const existingUser = document.querySelector(`.user-item[data-uid="${userId}"]`);
     if (!existingUser) {
@@ -476,7 +454,6 @@ async function startChat(userId, username) {
         userElement.className = 'user-item';
         userElement.dataset.uid = userId;
         userElement.innerHTML = `
-            <div class="unread-indicator"></div>
             <img src="${profilePicture}" alt="${username}" class="profile-picture">
             <span class="username">${username}${isVerified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
             <div class="user-actions">
@@ -543,7 +520,6 @@ async function startChat(userId, username) {
     userItems.forEach(item => {
         if (item.dataset.uid === userId) {
             item.classList.add('active');
-            item.classList.remove('has-unread'); // Remove unread indicator when opening chat
         } else {
             item.classList.remove('active');
         }
@@ -595,7 +571,6 @@ async function loadMessages() {
 
         const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
             chatMessages.innerHTML = '';
-            let hasUnread = false;
             
             snapshot.forEach(doc => {
                 const message = doc.data();
@@ -609,23 +584,8 @@ async function loadMessages() {
                         <div class="content">${message.content}</div>
                     `;
                     chatMessages.appendChild(messageElement);
-
-                    // Check if message is unread
-                    if (message.senderId !== currentUser.uid && !message.read) {
-                        hasUnread = true;
-                    }
                 }
             });
-            
-            // Update unread indicator for the current chat
-            const currentUserItem = document.querySelector(`.user-item[data-uid="${currentChatUser.id}"]`);
-            if (currentUserItem) {
-                if (hasUnread) {
-                    currentUserItem.classList.add('has-unread');
-                } else {
-                    currentUserItem.classList.remove('has-unread');
-                }
-            }
             
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }, (error) => {
@@ -797,8 +757,7 @@ async function sendMessage() {
             senderId: currentUser.uid,
             receiverId: currentChatUser.id,
             participants: [currentUser.uid, currentChatUser.id],
-            timestamp: serverTimestamp(),
-            read: false
+            timestamp: serverTimestamp()
         };
 
         // Add message to Firestore
