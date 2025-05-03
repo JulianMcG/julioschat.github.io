@@ -21,30 +21,31 @@
                 <div id="login-form" style="display: none;">
                     <h2>Login</h2>
                     <div class="form-group">
-                        <input type="email" id="login-email" placeholder="Email" required>
+                        <label for="login-email">Email</label>
+                        <input type="email" id="login-email" placeholder="Enter your email" required>
                     </div>
                     <div class="form-group">
-                        <input type="password" id="login-password" placeholder="Password" required>
+                        <label for="login-password">Password</label>
+                        <input type="password" id="login-password" placeholder="Enter your password" required>
                     </div>
                     <button id="login-button">Login</button>
                     <p>Don't have an account? <a href="#" class="auth-link">Sign up</a></p>
                 </div>
                 <div id="signup-form">
-                    <h2>Sign Up</h2>
-                    <div class="profile-picture-upload">
-                        <img src="https://i.ibb.co/Gf9VD2MN/pfp.png" alt="Profile Picture" id="profile-picture-preview">
-                        <input type="file" id="profile-picture-input" accept="image/*">
+                    <h2>Create New Account</h2>
+                    <div class="form-group">
+                        <label for="signup-username">Name</label>
+                        <input type="text" id="signup-username" placeholder="Enter your name" required>
                     </div>
                     <div class="form-group">
-                        <input type="text" id="signup-username" placeholder="Username" required>
+                        <label for="signup-email">Email</label>
+                        <input type="email" id="signup-email" placeholder="Enter your email" required>
                     </div>
                     <div class="form-group">
-                        <input type="email" id="signup-email" placeholder="Email" required>
+                        <label for="signup-password">Password</label>
+                        <input type="password" id="signup-password" placeholder="Enter your password" required>
                     </div>
-                    <div class="form-group">
-                        <input type="password" id="signup-password" placeholder="Password" required>
-                    </div>
-                    <button id="signup-button">Sign Up</button>
+                    <button id="signup-button">Create New Account</button>
                     <p>Already have an account? <a href="#" class="auth-link">Login</a></p>
                 </div>
             </div>
