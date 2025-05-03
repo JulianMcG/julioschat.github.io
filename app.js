@@ -317,31 +317,26 @@ async function loadUsers() {
         const hiddenConversations = currentUserData?.hiddenConversations || [];
         const pinnedConversations = currentUserData?.pinnedConversations || [];
 
-        // Get all messages where current user is a participant, ordered by timestamp
+        // Get all messages where current user is a participant
         const messagesQuery = query(
             collection(db, 'messages'),
-            where('participants', 'array-contains', currentUser.uid),
-            orderBy('timestamp', 'desc')
+            where('participants', 'array-contains', currentUser.uid)
         );
         const messagesSnapshot = await getDocs(messagesQuery);
 
-        // Get unique user IDs from messages and their last message time
-        const dmUsers = new Map();
+        // Get unique user IDs from messages
+        const dmUserIds = new Set();
         messagesSnapshot.forEach(doc => {
             const message = doc.data();
             message.participants.forEach(id => {
                 if (id !== currentUser.uid) {
-                    if (!dmUsers.has(id) || message.timestamp > dmUsers.get(id).lastMessageTime) {
-                        dmUsers.set(id, {
-                            lastMessageTime: message.timestamp
-                        });
-                    }
+                    dmUserIds.add(id);
                 }
             });
         });
 
         // Get user details for each DM'd user
-        const usersPromises = Array.from(dmUsers.keys()).map(async (userId) => {
+        const usersPromises = Array.from(dmUserIds).map(async (userId) => {
             const userDoc = await getDoc(doc(db, 'users', userId));
             const userData = userDoc.data();
             return {
@@ -349,18 +344,17 @@ async function loadUsers() {
                 username: userData.username,
                 profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
                 verified: userData.verified,
-                isPinned: pinnedConversations.includes(userId),
-                lastMessageTime: dmUsers.get(userId).lastMessageTime
+                isPinned: pinnedConversations.includes(userId)
             };
         });
 
         const users = await Promise.all(usersPromises);
 
-        // Sort users: pinned first, then by last message time
+        // Sort users: pinned first, then alphabetically
         users.sort((a, b) => {
             if (a.isPinned && !b.isPinned) return -1;
             if (!a.isPinned && b.isPinned) return 1;
-            return b.lastMessageTime - a.lastMessageTime;
+            return a.username.localeCompare(b.username);
         });
 
         // Display users
