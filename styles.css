@@ -188,6 +188,7 @@ body {
     line-height: 1.4;
     word-wrap: break-word;
     display: inline-block;
+    transition: margin-bottom 0.2s ease;
 }
 
 .message.sent {
@@ -223,14 +224,37 @@ body {
 .message .time {
     font-size: 10px;
     color: #6b6d7a;
-    margin-top: 4px;
     text-align: right;
     opacity: 0;
-    transition: opacity 0.2s ease;
+    transform: translateY(-10px);
+    transition: all 0.2s ease;
+    position: absolute;
+    width: 100%;
+    left: 0;
+    pointer-events: none;
+}
+
+.message:hover {
+    margin-bottom: 20px;
 }
 
 .message:hover .time {
     opacity: 1;
+    transform: translateY(0);
+}
+
+.message:hover + .message {
+    margin-top: 12px;
+}
+
+/* Ensure the last message doesn't have extra margin */
+.message:last-child:hover {
+    margin-bottom: 8px;
+}
+
+/* Ensure the last message's time doesn't cause extra space */
+.message:last-child .time {
+    position: relative;
 }
 
 /* Profile Section */
