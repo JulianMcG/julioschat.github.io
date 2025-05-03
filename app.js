@@ -20,7 +20,8 @@ import {
     addDoc,
     serverTimestamp,
     arrayUnion,
-    arrayRemove
+    arrayRemove,
+    writeBatch
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
@@ -326,11 +327,16 @@ async function loadUsers() {
 
         // Get unique user IDs from messages
         const dmUserIds = new Set();
+        const unreadMessages = new Map();
+        
         messagesSnapshot.forEach(doc => {
             const message = doc.data();
             message.participants.forEach(id => {
                 if (id !== currentUser.uid) {
                     dmUserIds.add(id);
+                    if (message.senderId === id && !message.read) {
+                        unreadMessages.set(id, (unreadMessages.get(id) || 0) + 1);
+                    }
                 }
             });
         });
@@ -344,7 +350,8 @@ async function loadUsers() {
                 username: userData.username,
                 profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
                 verified: userData.verified,
-                isPinned: pinnedConversations.includes(userId)
+                isPinned: pinnedConversations.includes(userId),
+                hasUnread: unreadMessages.has(userId)
             };
         });
 
@@ -361,6 +368,10 @@ async function loadUsers() {
         users.forEach(user => {
             const userElement = createUserElement(user);
             userElement.dataset.uid = user.id;
+            
+            if (user.hasUnread) {
+                userElement.classList.add('has-unread');
+            }
             
             if (user.isPinned) {
                 userElement.classList.add('pinned');
@@ -399,6 +410,7 @@ function createUserElement(user) {
     const userElement = document.createElement('div');
     userElement.className = 'user-item';
     userElement.innerHTML = `
+        <div class="unread-indicator"></div>
         <img src="${user.profilePicture || 'default-avatar.png'}" alt="${user.username}" class="profile-picture">
         <span class="username">${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
         <div class="user-actions">
@@ -571,6 +583,7 @@ async function loadMessages() {
 
         const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
             chatMessages.innerHTML = '';
+            let lastMessage = null;
             
             snapshot.forEach(doc => {
                 const message = doc.data();
@@ -580,12 +593,25 @@ async function loadMessages() {
                     
                     const messageElement = document.createElement('div');
                     messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
+                    
+                    // Add status label for sent messages
+                    const status = message.senderId === currentUser.uid ? 
+                        (message.read ? 'Read' : 'Sent') : '';
+                    
                     messageElement.innerHTML = `
                         <div class="content">${message.content}</div>
+                        ${status ? `<div class="status">${status}</div>` : ''}
                     `;
+                    
                     chatMessages.appendChild(messageElement);
+                    lastMessage = message;
                 }
             });
+            
+            // Mark messages as read when chat is opened
+            if (lastMessage && lastMessage.senderId !== currentUser.uid) {
+                markMessagesAsRead(currentChatUser.id);
+            }
             
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }, (error) => {
@@ -595,6 +621,75 @@ async function loadMessages() {
         window.currentMessageUnsubscribe = unsubscribe;
     } catch (error) {
         console.error('Error loading messages:', error);
+    }
+}
+
+// Function to mark messages as read
+async function markMessagesAsRead(userId) {
+    try {
+        const messagesQuery = query(
+            collection(db, 'messages'),
+            where('participants', 'array-contains', currentUser.uid),
+            where('senderId', '==', userId),
+            where('read', '==', false)
+        );
+        
+        const messagesSnapshot = await getDocs(messagesQuery);
+        const batch = writeBatch(db);
+        
+        messagesSnapshot.forEach(doc => {
+            batch.update(doc.ref, { read: true });
+        });
+        
+        await batch.commit();
+        
+        // Update UI
+        const userElement = document.querySelector(`.user-item[data-uid="${userId}"]`);
+        if (userElement) {
+            userElement.classList.remove('has-unread');
+        }
+    } catch (error) {
+        console.error('Error marking messages as read:', error);
+    }
+}
+
+// Update sendMessage function to include read status
+async function sendMessage() {
+    if (!currentUser || !currentChatUser) {
+        console.log('No current user or chat user');
+        return;
+    }
+
+    const messageInput = document.getElementById('message-input');
+    const content = messageInput.value.trim();
+    
+    if (!content) {
+        return;
+    }
+
+    try {
+        // Create message data
+        const messageData = {
+            content: content,
+            senderId: currentUser.uid,
+            receiverId: currentChatUser.id,
+            participants: [currentUser.uid, currentChatUser.id],
+            timestamp: serverTimestamp(),
+            read: false
+        };
+
+        // Add message to Firestore
+        const docRef = await addDoc(collection(db, 'messages'), messageData);
+        
+        // Clear input
+        messageInput.value = '';
+        
+        // Scroll to bottom
+        const chatMessages = document.getElementById('chat-messages');
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    } catch (error) {
+        console.error('Error sending message:', error);
+        alert('Error sending message: ' + error.message);
     }
 }
 
@@ -726,226 +821,6 @@ window.addEventListener('click', (event) => {
     const modal = document.getElementById('compose-modal');
     if (event.target === modal) {
         closeComposeModal();
-    }
-});
-
-// Send message
-async function sendMessage() {
-    if (!currentUser || !currentChatUser) {
-        console.log('No current user or chat user');
-        return;
-    }
-
-    const messageInput = document.getElementById('message-input');
-    const content = messageInput.value.trim();
-    
-    if (!content) {
-        return;
-    }
-
-    try {
-        console.log('Attempting to send message with data:', {
-            content,
-            senderId: currentUser.uid,
-            receiverId: currentChatUser.id,
-            participants: [currentUser.uid, currentChatUser.id]
-        });
-
-        // Create message data
-        const messageData = {
-            content: content,
-            senderId: currentUser.uid,
-            receiverId: currentChatUser.id,
-            participants: [currentUser.uid, currentChatUser.id],
-            timestamp: serverTimestamp()
-        };
-
-        // Add message to Firestore
-        const docRef = await addDoc(collection(db, 'messages'), messageData);
-        console.log('Message sent successfully with ID:', docRef.id);
-        
-        // Clear input
-        messageInput.value = '';
-        
-        // Scroll to bottom
-        const chatMessages = document.getElementById('chat-messages');
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    } catch (error) {
-        console.error('Error sending message:', error);
-        alert('Error sending message: ' + error.message);
-    }
-}
-
-// Update current user profile in sidebar
-function updateCurrentUserProfile(user) {
-    if (user) {
-        // Get user's verification status from Firestore
-        getDoc(doc(db, 'users', user.uid)).then(userDoc => {
-            const userData = userDoc.data();
-            const isVerified = userData?.verified || false;
-            
-            // Update username with verified badge if user is verified
-            const verifiedBadge = isVerified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : '';
-            document.getElementById('current-username').innerHTML = `${user.displayName || 'Username'}${verifiedBadge}`;
-            document.getElementById('current-user-avatar').src = user.photoURL || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
-
-            // Update user items in the list
-            const userItems = document.querySelectorAll('.user-item');
-            userItems.forEach(item => {
-                if (item.dataset.uid === user.uid) {
-                    item.querySelector('.username').innerHTML = `${user.displayName || 'Username'}${verifiedBadge}`;
-                    item.querySelector('img').src = user.photoURL || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
-                }
-            });
-        });
-    }
-}
-
-// Auth State Listener
-onAuthStateChanged(auth, (user) => {
-    if (user) {
-        currentUser = user;
-        updateCurrentUserProfile(user);
-        showChatSection();
-    } else {
-        currentUser = null;
-        showAuthSection();
-    }
-});
-
-// Settings Modal Functions
-function openSettingsModal() {
-    const modal = document.getElementById('settings-modal');
-    const currentUsername = document.getElementById('current-username').textContent;
-    const currentProfilePicture = document.getElementById('current-user-avatar').src;
-    
-    document.getElementById('settings-username').value = currentUsername;
-    document.getElementById('settings-profile-picture').src = currentProfilePicture;
-    
-    modal.style.display = 'block';
-}
-
-function closeSettingsModal() {
-    document.getElementById('settings-modal').style.display = 'none';
-}
-
-// Settings Modal Event Listeners
-document.querySelector('.settings-icon').addEventListener('click', openSettingsModal);
-document.querySelector('#settings-modal .close-modal').addEventListener('click', closeSettingsModal);
-
-// Close modal when clicking outside
-window.addEventListener('click', (event) => {
-    const modal = document.getElementById('settings-modal');
-    if (event.target === modal) {
-        closeSettingsModal();
-    }
-});
-
-// Settings Profile Picture Upload
-document.getElementById('settings-profile-picture').addEventListener('click', () => {
-    document.getElementById('settings-profile-picture-input').click();
-});
-
-document.getElementById('settings-profile-picture-input').addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-        try {
-            // Check file size (limit to 5MB - ImgBB's limit)
-            if (file.size > 5 * 1024 * 1024) {
-                alert('Image size should be less than 5MB');
-                return;
-            }
-
-            // Create form data
-            const formData = new FormData();
-            formData.append('image', file);
-            formData.append('key', 'b20dafa4db75ca192070ec47334a4a77');
-
-            console.log('Uploading image to ImgBB...');
-            
-            // Upload to ImgBB
-            const response = await fetch('https://api.imgbb.com/1/upload', {
-                method: 'POST',
-                body: formData
-            });
-
-            console.log('ImgBB response:', response);
-
-            const data = await response.json();
-            console.log('ImgBB data:', data);
-            
-            if (!data.success) {
-                throw new Error(`ImgBB upload failed: ${data.error?.message || 'Unknown error'}`);
-            }
-
-            const imageUrl = data.data.url;
-            console.log('Upload successful, image URL:', imageUrl);
-            
-            // Update the preview
-            document.getElementById('settings-profile-picture').src = imageUrl;
-            
-            // Update Firebase Auth profile
-            await updateProfile(currentUser, {
-                photoURL: imageUrl
-            });
-            
-            // Update Firestore
-            await setDoc(doc(db, 'users', currentUser.uid), {
-                profilePicture: imageUrl
-            }, { merge: true });
-            
-            // Update UI
-            document.getElementById('current-user-avatar').src = imageUrl;
-            
-            alert('Profile picture updated successfully!');
-        } catch (error) {
-            console.error('Detailed error uploading profile picture:', error);
-            alert(`Error uploading profile picture: ${error.message}`);
-        }
-    }
-});
-
-// Save Settings
-document.querySelector('.save-button').addEventListener('click', async () => {
-    const newUsername = document.getElementById('settings-username').value.trim();
-    const newProfilePicture = document.getElementById('settings-profile-picture').src;
-
-    if (!newUsername) {
-        alert('Please enter a username');
-        return;
-    }
-
-    try {
-        // Update Firebase Auth profile
-        await updateProfile(currentUser, {
-            displayName: newUsername,
-            photoURL: newProfilePicture
-        });
-
-        // Update Firestore
-        await setDoc(doc(db, 'users', currentUser.uid), {
-            username: newUsername,
-            profilePicture: newProfilePicture
-        }, { merge: true });
-
-        // Update UI
-        document.getElementById('current-username').textContent = newUsername;
-        document.getElementById('current-user-avatar').src = newProfilePicture;
-
-        // Update all user items in the list
-        const userItems = document.querySelectorAll('.user-item');
-        userItems.forEach(item => {
-            if (item.dataset.uid === currentUser.uid) {
-                item.querySelector('span').textContent = newUsername;
-                item.querySelector('img').src = newProfilePicture;
-            }
-        });
-
-        closeSettingsModal();
-        alert('Profile updated successfully!');
-    } catch (error) {
-        console.error('Error updating profile:', error);
-        alert('Error updating profile. Please try again.');
     }
 });
 
