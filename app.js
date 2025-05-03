@@ -127,8 +127,8 @@ async function loadMessages() {
 
     try {
         const messagesRef = db.collection('messages')
-            .where('participants', 'array-contains', currentUser.uid)
-            .where('participants', 'array-contains', currentChatUser.id)
+            .where('senderId', 'in', [currentUser.uid, currentChatUser.id])
+            .where('receiverId', 'in', [currentUser.uid, currentChatUser.id])
             .orderBy('timestamp', 'asc');
 
         messagesRef.onSnapshot(snapshot => {
@@ -136,14 +136,19 @@ async function loadMessages() {
             snapshot.forEach(doc => {
                 const message = doc.data();
                 const messageElement = document.createElement('div');
-                messageElement.className = 'message';
+                messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
+                
+                const time = message.timestamp ? new Date(message.timestamp.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                
                 messageElement.innerHTML = `
-                    <div class="sender">${message.senderId === currentUser.uid ? 'You' : currentChatUser.username}</div>
                     <div class="content">${message.content}</div>
-                    <div class="time">${new Date(message.timestamp.toDate()).toLocaleString()}</div>
+                    <div class="time">${time}</div>
                 `;
+                
                 chatMessages.appendChild(messageElement);
             });
+            
+            // Scroll to bottom
             chatMessages.scrollTop = chatMessages.scrollHeight;
         });
     } catch (error) {
@@ -167,16 +172,19 @@ async function sendMessage() {
     if (!content) return;
 
     try {
+        // Create message in Firestore
         await db.collection('messages').add({
             content: content,
             senderId: currentUser.uid,
-            participants: [currentUser.uid, currentChatUser.id],
+            receiverId: currentChatUser.id,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
 
+        // Clear input
         messageInput.value = '';
     } catch (error) {
         console.error('Error sending message:', error);
+        alert('Error sending message. Please try again.');
     }
 }
 
