@@ -94,19 +94,44 @@ async function loadUsers() {
     usersContainer.innerHTML = '';
 
     try {
-        const usersSnapshot = await db.collection('users').get();
-        usersSnapshot.forEach(doc => {
-            if (doc.id !== currentUser.uid) {
-                const user = doc.data();
-                const userElement = document.createElement('div');
-                userElement.className = 'user-item';
-                userElement.innerHTML = `
-                    <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.username}" class="user-avatar">
-                    <span>${user.username}</span>
-                `;
-                userElement.onclick = () => startChat(doc.id, user.username);
-                usersContainer.appendChild(userElement);
-            }
+        // Get all messages where current user is a participant
+        const messagesSnapshot = await db.collection('messages')
+            .where('participants', 'array-contains', currentUser.uid)
+            .get();
+
+        // Get unique user IDs from messages
+        const dmUserIds = new Set();
+        messagesSnapshot.forEach(doc => {
+            const message = doc.data();
+            message.participants.forEach(id => {
+                if (id !== currentUser.uid) {
+                    dmUserIds.add(id);
+                }
+            });
+        });
+
+        // Get user details for each DM'd user
+        const usersPromises = Array.from(dmUserIds).map(async (userId) => {
+            const userDoc = await db.collection('users').doc(userId).get();
+            return {
+                id: userId,
+                ...userDoc.data()
+            };
+        });
+
+        const users = await Promise.all(usersPromises);
+
+        // Display users
+        users.forEach(user => {
+            const userElement = document.createElement('div');
+            userElement.className = 'user-item';
+            userElement.dataset.uid = user.id;
+            userElement.innerHTML = `
+                <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.username}" class="user-avatar">
+                <span>${user.username}</span>
+            `;
+            userElement.onclick = () => startChat(user.id, user.username);
+            usersContainer.appendChild(userElement);
         });
     } catch (error) {
         console.error('Error loading users:', error);
@@ -192,11 +217,6 @@ function checkFirebaseConnection() {
 }
 
 async function sendMessage() {
-    if (!checkFirebaseConnection()) {
-        alert('Firebase connection error. Please refresh the page.');
-        return;
-    }
-
     if (!currentUser) {
         alert('You must be logged in to send messages');
         return;
@@ -213,12 +233,7 @@ async function sendMessage() {
     if (!content) return;
 
     try {
-        // First, verify we can write to Firestore
-        const testRef = db.collection('test').doc('test');
-        await testRef.set({ test: 'test' });
-        await testRef.delete();
-        
-        // Now send the actual message
+        // Create message in Firestore
         const messageData = {
             content: content,
             senderId: currentUser.uid,
@@ -227,7 +242,7 @@ async function sendMessage() {
             participants: [currentUser.uid, currentChatUser.id]
         };
 
-        const messageRef = await db.collection('messages').add(messageData);
+        await db.collection('messages').add(messageData);
         
         // Clear input
         messageInput.value = '';
@@ -244,14 +259,8 @@ async function sendMessage() {
         chatMessages.scrollTop = chatMessages.scrollHeight;
 
     } catch (error) {
-        console.error('Detailed error:', error);
-        if (error.code === 'permission-denied') {
-            alert('Permission denied. Please check your Firebase security rules.');
-        } else if (error.code === 'unavailable') {
-            alert('Firebase service is unavailable. Please check your internet connection.');
-        } else {
-            alert('Error sending message: ' + error.message);
-        }
+        console.error('Error sending message:', error);
+        alert('Error sending message: ' + error.message);
     }
 }
 
@@ -263,13 +272,10 @@ document.getElementById('message-input').addEventListener('keypress', (e) => {
     }
 });
 
-// Search Users
+// Search Users with suggestions
 document.getElementById('search-user').addEventListener('input', async (e) => {
     const searchTerm = e.target.value.toLowerCase();
     const usersContainer = document.getElementById('users-container');
-    const userItems = usersContainer.getElementsByClassName('user-item');
-
-    // Clear previous suggestions
     usersContainer.innerHTML = '';
 
     if (searchTerm.length > 0) {
@@ -282,7 +288,6 @@ document.getElementById('search-user').addEventListener('input', async (e) => {
                     const user = doc.data();
                     const username = user.username.toLowerCase();
                     
-                    // Check if username contains the search term
                     if (username.includes(searchTerm)) {
                         suggestions.push({
                             id: doc.id,
@@ -309,11 +314,13 @@ document.getElementById('search-user').addEventListener('input', async (e) => {
                     <img src="${user.profilePicture}" alt="${user.username}" class="user-avatar">
                     <span>${user.username}</span>
                 `;
-                userElement.onclick = () => startChat(user.id, user.username);
+                userElement.onclick = () => {
+                    startChat(user.id, user.username);
+                    e.target.value = ''; // Clear search input
+                };
                 usersContainer.appendChild(userElement);
             });
 
-            // If no suggestions found, show a message
             if (suggestions.length === 0) {
                 const noResults = document.createElement('div');
                 noResults.className = 'no-results';
@@ -324,33 +331,13 @@ document.getElementById('search-user').addEventListener('input', async (e) => {
             console.error('Error searching users:', error);
         }
     } else {
-        // If search box is empty, show all users
+        // If search box is empty, show DM'd users
         loadUsers();
     }
 });
 
-// Compose new message
-document.querySelector('.compose-icon').addEventListener('click', () => {
-    const username = prompt('Enter username to message:');
-    if (username) {
-        // Find user by username and start chat
-        db.collection('users')
-            .where('username', '==', username)
-            .get()
-            .then(snapshot => {
-                if (!snapshot.empty) {
-                    const user = snapshot.docs[0];
-                    startChat(user.id, user.data().username);
-                } else {
-                    alert('User not found');
-                }
-            })
-            .catch(error => {
-                console.error('Error finding user:', error);
-                alert('Error finding user');
-            });
-    }
-});
+// Remove the compose icon click handler since we're integrating it into the search
+document.querySelector('.compose-icon').style.display = 'none';
 
 // Update current user profile in sidebar
 function updateCurrentUserProfile(user) {
@@ -414,14 +401,41 @@ document.getElementById('settings-profile-picture').addEventListener('click', ()
     document.getElementById('settings-profile-picture-input').click();
 });
 
-document.getElementById('settings-profile-picture-input').addEventListener('change', (e) => {
+document.getElementById('settings-profile-picture-input').addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            document.getElementById('settings-profile-picture').src = e.target.result;
-        };
-        reader.readAsDataURL(file);
+        try {
+            // Create a storage reference
+            const storageRef = firebase.storage().ref();
+            const fileRef = storageRef.child(`profile_pictures/${currentUser.uid}/${file.name}`);
+            
+            // Upload the file
+            await fileRef.put(file);
+            
+            // Get the download URL
+            const downloadURL = await fileRef.getDownloadURL();
+            
+            // Update the preview
+            document.getElementById('settings-profile-picture').src = downloadURL;
+            
+            // Update Firebase Auth profile
+            await currentUser.updateProfile({
+                photoURL: downloadURL
+            });
+            
+            // Update Firestore
+            await db.collection('users').doc(currentUser.uid).update({
+                profilePicture: downloadURL
+            });
+            
+            // Update UI
+            document.getElementById('current-user-avatar').src = downloadURL;
+            
+            alert('Profile picture updated successfully!');
+        } catch (error) {
+            console.error('Error uploading profile picture:', error);
+            alert('Error uploading profile picture. Please try again.');
+        }
     }
 });
 
