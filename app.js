@@ -48,19 +48,25 @@ document.getElementById('profile-picture-input').addEventListener('change', asyn
             formData.append('image', file);
             formData.append('key', 'b20dafa4db75ca192070ec47334a4a77');
 
+            console.log('Uploading image to ImgBB...');
+            
             // Upload to ImgBB
             const response = await fetch('https://api.imgbb.com/1/upload', {
                 method: 'POST',
                 body: formData
             });
 
+            console.log('ImgBB response:', response);
+
             const data = await response.json();
+            console.log('ImgBB data:', data);
             
             if (!data.success) {
-                throw new Error('Failed to upload image');
+                throw new Error(`ImgBB upload failed: ${data.error?.message || 'Unknown error'}`);
             }
 
             const imageUrl = data.data.url;
+            console.log('Upload successful, image URL:', imageUrl);
             
             // Update the preview
             document.getElementById('profile-picture-preview').src = imageUrl;
@@ -80,8 +86,8 @@ document.getElementById('profile-picture-input').addEventListener('change', asyn
             
             alert('Profile picture updated successfully!');
         } catch (error) {
-            console.error('Error uploading profile picture:', error);
-            alert('Error uploading profile picture. Please try again.');
+            console.error('Detailed error uploading profile picture:', error);
+            alert(`Error uploading profile picture: ${error.message}`);
         }
     }
 });
