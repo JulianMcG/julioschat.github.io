@@ -97,7 +97,7 @@ body {
 }
 
 .form-group input::placeholder {
-    color: #B6B8C8;
+    color: #1C1F28;
 }
 
 .form-group input:-webkit-autofill,
