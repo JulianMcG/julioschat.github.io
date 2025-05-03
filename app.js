@@ -37,30 +37,46 @@ document.getElementById('profile-picture-input').addEventListener('change', asyn
     const file = e.target.files[0];
     if (file) {
         try {
-            // Create a storage reference
-            const storageRef = ref(storage, `profile_pictures/${currentUser.uid}/${file.name}`);
+            // Check file size (limit to 5MB - ImgBB's limit)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Image size should be less than 5MB');
+                return;
+            }
+
+            // Create form data
+            const formData = new FormData();
+            formData.append('image', file);
+            formData.append('key', 'b20dafa4db75ca192070ec47334a4a77');
+
+            // Upload to ImgBB
+            const response = await fetch('https://api.imgbb.com/1/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
             
-            // Upload the file
-            await uploadBytes(storageRef, file);
-            
-            // Get the download URL
-            const downloadURL = await getDownloadURL(storageRef);
+            if (!data.success) {
+                throw new Error('Failed to upload image');
+            }
+
+            const imageUrl = data.data.url;
             
             // Update the preview
-            document.getElementById('profile-picture-preview').src = downloadURL;
+            document.getElementById('profile-picture-preview').src = imageUrl;
             
             // Update Firebase Auth profile
             await updateProfile(currentUser, {
-                photoURL: downloadURL
+                photoURL: imageUrl
             });
             
             // Update Firestore
             await setDoc(doc(db, 'users', currentUser.uid), {
-                profilePicture: downloadURL
+                profilePicture: imageUrl
             }, { merge: true });
             
             // Update UI
-            document.getElementById('current-user-avatar').src = downloadURL;
+            document.getElementById('current-user-avatar').src = imageUrl;
             
             alert('Profile picture updated successfully!');
         } catch (error) {
