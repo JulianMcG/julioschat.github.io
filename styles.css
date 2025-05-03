@@ -929,6 +929,29 @@ body {
     justify-content: center;
 }
 
+#settings-modal .signout-button {
+    width: 100%;
+    padding: 14px;
+    background-color: #E85658;
+    color: #ECEBF7;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: transform 0.1s ease;
+    box-shadow: 0 5px 0 #8A1315;
+}
+
+#settings-modal .signout-button:hover {
+    transform: translateY(-2px);
+}
+
+#settings-modal .signout-button:active {
+    transform: translateY(5px);
+    box-shadow: 0 0 0 #8A1315;
+}
+
 /* Add scrollbar hiding for all scrollable elements */
 .users-list,
 .chat-messages,
