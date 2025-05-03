@@ -220,6 +220,15 @@ function updateCurrentUserProfile(user) {
     if (user) {
         document.getElementById('current-username').textContent = user.displayName || 'Username';
         document.getElementById('current-user-avatar').src = user.photoURL || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
+        
+        // Update user items in the list
+        const userItems = document.querySelectorAll('.user-item');
+        userItems.forEach(item => {
+            if (item.dataset.uid === user.uid) {
+                item.querySelector('span').textContent = user.displayName || 'Username';
+                item.querySelector('img').src = user.photoURL || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
+            }
+        });
     }
 }
 
@@ -290,16 +299,16 @@ document.querySelector('.save-button').addEventListener('click', async () => {
     }
 
     try {
-        // Update Firestore
-        await db.collection('users').doc(currentUser.uid).update({
-            username: newUsername,
-            profilePicture: newProfilePicture
-        });
-
-        // Update Firebase Auth profile
+        // First update Firebase Auth profile
         await currentUser.updateProfile({
             displayName: newUsername,
             photoURL: newProfilePicture
+        });
+
+        // Then update Firestore
+        await db.collection('users').doc(currentUser.uid).update({
+            username: newUsername,
+            profilePicture: newProfilePicture
         });
 
         // Update UI
