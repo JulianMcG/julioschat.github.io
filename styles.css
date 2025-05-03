@@ -10,6 +10,10 @@
 body {
     background-color: #0c0e16;
     height: 100vh;
+    background-image: url('https://i.ibb.co/RkLHZdPq/Julio-s-Wall1.png');
+    background-size: 100% auto;
+    background-position: top;
+    background-repeat: no-repeat;
 }
 
 .container {
@@ -31,7 +35,6 @@ body {
     padding: 40px;
     background-color: #13161F;
     border-radius: 15px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     position: relative;
     top: 50%;
     transform: translateY(-50%);
@@ -49,24 +52,26 @@ body {
     position: relative;
 }
 
+.form-group label {
+    display: block;
+    color: #B6B8C8;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
 .form-group input {
     width: 100%;
     padding: 12px 15px;
-    border: 2px solid #2a2d3e;
-    border-radius: 8px;
+    border: 2px solid #1C1F28;
+    border-radius: 12.5px;
     font-size: 16px;
     background-color: #1a1c2a;
     color: #ECEBF7;
     transition: border-color 0.3s;
 }
 
-.form-group input:focus {
-    outline: none;
-    border-color: #1F49C7;
-}
-
 .form-group input::placeholder {
-    color: #6b6d7a;
+    color: #1C1F28;
 }
 
 .auth-form button {
@@ -497,14 +502,13 @@ body {
 }
 
 .modal-content {
-    position: relative;
-    background-color: #0c0e16;
-    margin: 10% auto;
+    background-color: #13161F;
+    margin: 50px auto;
     padding: 20px;
-    width: 90%;
-    max-width: 500px;
+    width: 80%;
+    max-width: 600px;
     border-radius: 15px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    position: relative;
 }
 
 .modal-header {
@@ -912,4 +916,9 @@ body {
 
 #settings-modal .signout-button:active {
     transform: translateY(0);
+}
+
+/* Remove button hover effects sitewide */
+button:hover {
+    transform: none !important;
 } 
