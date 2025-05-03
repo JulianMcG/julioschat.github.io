@@ -345,21 +345,32 @@ body {
     background-color: #1a3db0;
 }
 
-.auth-form p {
-    text-align: center;
-    margin-top: 15px;
-    color: #B6B8C8;
-}
-
 .auth-link {
-    color: #1F49C7;
+    color: #1F49C7 !important;
     text-decoration: none;
     font-weight: 500;
     transition: color 0.3s;
 }
 
 .auth-link:hover {
-    color: #1a3db0;
+    color: #1a3db0 !important;
+}
+
+.auth-form p {
+    text-align: center;
+    margin-top: 15px;
+    color: #B6B8C8;
+}
+
+.auth-form p a {
+    color: #1F49C7 !important;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.3s;
+}
+
+.auth-form p a:hover {
+    color: #1a3db0 !important;
 }
 
 /* Modal Styles */
