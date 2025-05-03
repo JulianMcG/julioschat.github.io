@@ -244,12 +244,11 @@ body {
     padding: 10px;
     cursor: pointer;
     border-radius: 8px;
-    transition: background-color 0.3s;
     margin: 5px 0;
 }
 
 .user-item:hover {
-    background-color: #13161F;
+    background-color: rgba(19, 22, 31, 0.5);
 }
 
 .user-item.active {
