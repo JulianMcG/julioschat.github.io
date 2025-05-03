@@ -52,8 +52,8 @@ body {
     position: relative;
 }
 
-.form-group:last-of-type {
-    margin-bottom: 80px !important;
+.form-group.before-button {
+    margin-bottom: 80px;
 }
 
 .form-group label {
