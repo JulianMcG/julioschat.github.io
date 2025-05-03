@@ -381,7 +381,7 @@ body {
 .user-actions {
     display: none;
     position: absolute;
-    right: 10px;
+    right: 20px;
     gap: 12px;
 }
 
@@ -407,6 +407,10 @@ body {
 .pinned .pin-icon {
     color: #B6B8C8;
     font-variation-settings: 'FILL' 1;
+}
+
+.pin-icon:hover {
+    color: #ECEBF7;
 }
 
 .chat-area {
