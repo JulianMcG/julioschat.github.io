@@ -1,3 +1,25 @@
+import { auth, db } from './firebase-config.js';
+import { 
+    createUserWithEmailAndPassword, 
+    signInWithEmailAndPassword, 
+    signOut, 
+    onAuthStateChanged,
+    updateProfile
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { 
+    collection, 
+    doc, 
+    setDoc, 
+    getDoc, 
+    getDocs, 
+    query, 
+    where, 
+    orderBy, 
+    onSnapshot, 
+    addDoc,
+    serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
 let currentUser = null;
 let currentChatUser = null;
 
@@ -35,22 +57,23 @@ async function signup() {
     const profilePicture = document.getElementById('profile-picture-preview').src;
 
     try {
-        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         
-        await db.collection('users').doc(userCredential.user.uid).set({
+        await setDoc(doc(db, 'users', userCredential.user.uid), {
             username: username,
             email: email,
             profilePicture: profilePicture,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            createdAt: serverTimestamp()
         });
 
-        await userCredential.user.updateProfile({
+        await updateProfile(userCredential.user, {
             displayName: username,
             photoURL: profilePicture
         });
 
         showChatSection();
     } catch (error) {
+        console.error('Signup error:', error);
         alert(error.message);
     }
 }
@@ -60,18 +83,20 @@ async function login() {
     const password = document.getElementById('login-password').value;
 
     try {
-        await auth.signInWithEmailAndPassword(email, password);
+        await signInWithEmailAndPassword(auth, email, password);
         showChatSection();
     } catch (error) {
+        console.error('Login error:', error);
         alert(error.message);
     }
 }
 
 async function logout() {
     try {
-        await auth.signOut();
+        await signOut(auth);
         showAuthSection();
     } catch (error) {
+        console.error('Logout error:', error);
         alert(error.message);
     }
 }
@@ -95,9 +120,11 @@ async function loadUsers() {
 
     try {
         // Get all messages where current user is a participant
-        const messagesSnapshot = await db.collection('messages')
-            .where('participants', 'array-contains', currentUser.uid)
-            .get();
+        const messagesQuery = query(
+            collection(db, 'messages'),
+            where('participants', 'array-contains', currentUser.uid)
+        );
+        const messagesSnapshot = await getDocs(messagesQuery);
 
         // Get unique user IDs from messages
         const dmUserIds = new Set();
@@ -112,7 +139,7 @@ async function loadUsers() {
 
         // Get user details for each DM'd user
         const usersPromises = Array.from(dmUserIds).map(async (userId) => {
-            const userDoc = await db.collection('users').doc(userId).get();
+            const userDoc = await getDoc(doc(db, 'users', userId));
             return {
                 id: userId,
                 ...userDoc.data()
@@ -168,20 +195,18 @@ async function loadMessages() {
     const chatMessages = document.getElementById('chat-messages');
     chatMessages.innerHTML = '';
 
-    console.log('Loading messages between:', currentUser.uid, 'and', currentChatUser.id);
-
     try {
-        const messagesRef = db.collection('messages')
-            .where('participants', 'array-contains', currentUser.uid)
-            .orderBy('timestamp', 'asc');
+        const messagesQuery = query(
+            collection(db, 'messages'),
+            where('participants', 'array-contains', currentUser.uid),
+            orderBy('timestamp', 'asc')
+        );
 
-        messagesRef.onSnapshot(snapshot => {
-            console.log('Received snapshot with', snapshot.size, 'messages');
+        const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
             chatMessages.innerHTML = '';
             
             snapshot.forEach(doc => {
                 const message = doc.data();
-                console.log('Processing message:', message);
                 
                 if (message.participants.includes(currentChatUser.id)) {
                     const messageElement = document.createElement('div');
@@ -194,9 +219,12 @@ async function loadMessages() {
             });
             
             chatMessages.scrollTop = chatMessages.scrollHeight;
-        }, error => {
+        }, (error) => {
             console.error('Error in message snapshot:', error);
         });
+
+        // Store unsubscribe function for cleanup
+        window.currentMessageUnsubscribe = unsubscribe;
     } catch (error) {
         console.error('Error loading messages:', error);
     }
@@ -339,21 +367,14 @@ async function sendMessage() {
     });
 
     try {
-        // Create message in Firestore
-        const messageData = {
+        await addDoc(collection(db, 'messages'), {
             content: content,
             senderId: currentUser.uid,
             receiverId: currentChatUser.id,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-            participants: [currentUser.uid, currentChatUser.id]
-        };
+            participants: [currentUser.uid, currentChatUser.id],
+            timestamp: serverTimestamp()
+        });
 
-        console.log('Message data:', messageData);
-
-        const messageRef = await db.collection('messages').add(messageData);
-        console.log('Message sent with ID:', messageRef.id);
-
-        // Clear input
         messageInput.value = '';
 
         // Add message to UI immediately
@@ -390,7 +411,7 @@ function updateCurrentUserProfile(user) {
 }
 
 // Auth State Listener
-auth.onAuthStateChanged(user => {
+onAuthStateChanged(auth, (user) => {
     if (user) {
         currentUser = user;
         updateCurrentUserProfile(user);
