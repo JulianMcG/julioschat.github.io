@@ -342,21 +342,8 @@ async function startChat(userId, username) {
     userItems.forEach(item => {
         if (item.dataset.uid === userId) {
             item.classList.add('active');
-            // Animate other items
-            userItems.forEach(otherItem => {
-                if (otherItem !== item) {
-                    const itemRect = item.getBoundingClientRect();
-                    const otherRect = otherItem.getBoundingClientRect();
-                    if (otherRect.top < itemRect.top) {
-                        otherItem.classList.add('shift-up');
-                    } else {
-                        otherItem.classList.add('shift-down');
-                    }
-                }
-            });
         } else {
             item.classList.remove('active');
-            item.classList.remove('shift-up', 'shift-down');
         }
     });
 
@@ -570,12 +557,9 @@ async function sendMessage() {
     }
 
     try {
-        console.log('Attempting to send message with data:', {
-            content,
-            senderId: currentUser.uid,
-            receiverId: currentChatUser.id,
-            participants: [currentUser.uid, currentChatUser.id]
-        });
+        // Start morphing animation
+        const messageInputContainer = document.querySelector('.message-input');
+        messageInputContainer.classList.add('morphing');
 
         // Create message data
         const messageData = {
@@ -588,10 +572,12 @@ async function sendMessage() {
 
         // Add message to Firestore
         const docRef = await addDoc(collection(db, 'messages'), messageData);
-        console.log('Message sent successfully with ID:', docRef.id);
         
-        // Clear input
+        // Clear input and reset animation
         messageInput.value = '';
+        setTimeout(() => {
+            messageInputContainer.classList.remove('morphing');
+        }, 300);
         
         // Scroll to bottom
         const chatMessages = document.getElementById('chat-messages');
