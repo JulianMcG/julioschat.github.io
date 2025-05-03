@@ -82,7 +82,8 @@ body {
 .button-wrapper {
     width: 100%;
     position: relative;
-    margin-bottom: 5px;
+    margin-bottom: 0;
+    padding-bottom: 5px;
 }
 
 .button-wrapper button {
@@ -103,7 +104,7 @@ body {
     top: 0;
     left: 0;
     right: 0;
-    bottom: -5px;
+    bottom: 0;
     background-color: #13296D;
     border-radius: 15px;
     z-index: 0;
