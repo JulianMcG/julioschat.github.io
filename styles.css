@@ -673,4 +673,33 @@ body {
     padding: 20px;
     font-size: 14px;
     font-style: italic;
+}
+
+.signout-section {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #1C1F28;
+    display: flex;
+    justify-content: center;
+}
+
+.signout-button {
+    background-color: #E85658;
+    color: #ECEBF7;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.signout-button:hover {
+    background-color: #d14547;
+    transform: translateY(-2px);
+}
+
+.signout-button:active {
+    transform: translateY(0);
 } 
