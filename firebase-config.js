@@ -36,8 +36,10 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /messages/{message} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
+      allow read: if request.auth != null && 
+        (request.auth.uid in resource.data.participants);
+      allow create: if request.auth != null && 
+        request.auth.uid in request.resource.data.participants;
     }
     match /users/{user} {
       allow read: if request.auth != null;
