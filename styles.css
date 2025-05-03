@@ -75,6 +75,14 @@ body {
     color: #1C1F28;
 }
 
+.form-group input:-webkit-autofill,
+.form-group input:-webkit-autofill:hover,
+.form-group input:-webkit-autofill:focus,
+.form-group input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px #10121B inset !important;
+    -webkit-text-fill-color: #ECEBF7 !important;
+}
+
 .auth-form button {
     width: 100%;
     padding: 16px;
