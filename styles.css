@@ -94,9 +94,9 @@ body {
 }
 
 .search-icon {
-    color: #ECEBF7;
+    color: #6b6d7a;
     margin-right: 10px;
-    font-size: 18px;
+    font-size: 20px;
 }
 
 #search-user {
@@ -143,7 +143,6 @@ body {
     flex-direction: column;
     background-color: #13161F;
     border-top-left-radius: 15px;
-    margin-top: 15px;
 }
 
 .chat-messages {
@@ -203,13 +202,20 @@ body {
     left: 0;
     right: 0;
     padding: 20px;
-    border-top: 1px solid #1C1F28;
     display: flex;
     align-items: center;
     justify-content: space-between;
     background-color: #0c0e16;
-    margin: 0 20px;
-    width: calc(100% - 40px);
+}
+
+.profile-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 20px;
+    right: 20px;
+    height: 1px;
+    background-color: #1C1F28;
 }
 
 .profile-info {
