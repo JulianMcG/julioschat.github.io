@@ -14,7 +14,6 @@ body {
     background-size: 100% auto;
     background-position: top;
     background-repeat: no-repeat;
-    background-attachment: fixed;
 }
 
 .container {
@@ -31,7 +30,7 @@ body {
 
 /* Auth Section */
 .auth-form {
-    max-width: 400px;
+    max-width: 500px;
     margin: 0 auto;
     padding: 40px;
     background-color: #10121B;
@@ -81,13 +80,24 @@ body {
     background-color: #1F49C7;
     color: #ECEBF7;
     border: none;
-    border-radius: 15.5px;
+    border-radius: 12.5px;
     cursor: pointer;
     font-size: 16px;
     font-weight: 600;
-    transition: all 0.3s;
     position: relative;
     overflow: hidden;
+}
+
+.auth-form button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12.5px;
+    pointer-events: none;
 }
 
 .auth-form button:hover {
