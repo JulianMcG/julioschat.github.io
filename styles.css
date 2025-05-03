@@ -288,7 +288,7 @@ body {
 }
 
 .search-icon {
-    color: #B6B8C8;
+    color: #6b6d7a;
     margin-right: 10px;
     font-size: 20px;
 }
@@ -297,7 +297,7 @@ body {
     background-color: transparent;
     border: none;
     flex: 1;
-    color: #B6B8C8;
+    color: #ECEBF7;
     padding-right: 30px;
 }
 
@@ -430,10 +430,13 @@ body {
     background-color: #1C1F28;
     border-radius: 15px;
     margin: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .message-input input {
-    width: 100%;
+    flex: 1;
     background-color: transparent;
     border: none;
     color: #ECEBF7;
@@ -445,8 +448,18 @@ body {
     outline: none;
 }
 
-.message-input input::placeholder {
+.emoji-picker-button {
     color: #B6B8C8;
+    cursor: pointer;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.3s;
+}
+
+.emoji-picker-button:hover {
+    color: #ECEBF7;
 }
 
 .message-bubble {
