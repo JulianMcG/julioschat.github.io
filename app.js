@@ -186,10 +186,64 @@ document.getElementById('search-user').addEventListener('input', async (e) => {
     const usersContainer = document.getElementById('users-container');
     const userItems = usersContainer.getElementsByClassName('user-item');
 
-    Array.from(userItems).forEach(item => {
-        const username = item.querySelector('span').textContent.toLowerCase();
-        item.style.display = username.includes(searchTerm) ? 'flex' : 'none';
-    });
+    // Clear previous suggestions
+    usersContainer.innerHTML = '';
+
+    if (searchTerm.length > 0) {
+        try {
+            const usersSnapshot = await db.collection('users').get();
+            const suggestions = [];
+            
+            usersSnapshot.forEach(doc => {
+                if (doc.id !== currentUser.uid) {
+                    const user = doc.data();
+                    const username = user.username.toLowerCase();
+                    
+                    // Check if username contains the search term
+                    if (username.includes(searchTerm)) {
+                        suggestions.push({
+                            id: doc.id,
+                            username: user.username,
+                            profilePicture: user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'
+                        });
+                    }
+                }
+            });
+
+            // Sort suggestions by how close they match the search term
+            suggestions.sort((a, b) => {
+                const aIndex = a.username.toLowerCase().indexOf(searchTerm);
+                const bIndex = b.username.toLowerCase().indexOf(searchTerm);
+                return aIndex - bIndex;
+            });
+
+            // Display suggestions
+            suggestions.forEach(user => {
+                const userElement = document.createElement('div');
+                userElement.className = 'user-item';
+                userElement.dataset.uid = user.id;
+                userElement.innerHTML = `
+                    <img src="${user.profilePicture}" alt="${user.username}" class="user-avatar">
+                    <span>${user.username}</span>
+                `;
+                userElement.onclick = () => startChat(user.id, user.username);
+                usersContainer.appendChild(userElement);
+            });
+
+            // If no suggestions found, show a message
+            if (suggestions.length === 0) {
+                const noResults = document.createElement('div');
+                noResults.className = 'no-results';
+                noResults.textContent = 'No users found';
+                usersContainer.appendChild(noResults);
+            }
+        } catch (error) {
+            console.error('Error searching users:', error);
+        }
+    } else {
+        // If search box is empty, show all users
+        loadUsers();
+    }
 });
 
 // Compose new message
