@@ -165,81 +165,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-async function signup() {
-    const username = document.getElementById('signup-username').value.trim();
-    const email = document.getElementById('signup-email').value.trim();
-    const password = document.getElementById('signup-password').value;
-    const profilePicture = document.getElementById('profile-picture-preview').src;
-    const signupButton = document.getElementById('signup-button');
-
-    // Clear previous errors
-    clearErrorMessages();
-
-    // Validate inputs
-    if (!username) {
-        showError(document.getElementById('signup-username'), 'Username is required');
-        return;
-    }
-    if (!email) {
-        showError(document.getElementById('signup-email'), 'Email is required');
-        return;
-    }
-    if (!password) {
-        showError(document.getElementById('signup-password'), 'Password is required');
-        return;
-    }
-    if (password.length < 6) {
-        showError(document.getElementById('signup-password'), 'Password must be at least 6 characters');
-        return;
-    }
-
-    try {
-        signupButton.classList.add('loading');
-        
-        // Create user with email and password
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        
-        // Create user document in Firestore
-        await setDoc(doc(db, 'users', userCredential.user.uid), {
-            username: username,
-            email: email,
-            profilePicture: profilePicture,
-            createdAt: serverTimestamp()
-        });
-
-        // Update the profile
-        await updateProfile(userCredential.user, {
-            displayName: username,
-            photoURL: profilePicture
-        });
-
-        // Show chat section
-        showChatSection();
-    } catch (error) {
-        console.error('Signup error:', error);
-        let errorMessage = 'An error occurred during signup';
-        
-        switch (error.code) {
-            case 'auth/email-already-in-use':
-                errorMessage = 'Email is already in use';
-                showError(document.getElementById('signup-email'), errorMessage);
-                break;
-            case 'auth/invalid-email':
-                errorMessage = 'Invalid email address';
-                showError(document.getElementById('signup-email'), errorMessage);
-                break;
-            case 'auth/weak-password':
-                errorMessage = 'Password is too weak';
-                showError(document.getElementById('signup-password'), errorMessage);
-                break;
-            default:
-                alert(errorMessage);
-        }
-    } finally {
-        signupButton.classList.remove('loading');
-    }
-}
-
 async function login() {
     const email = document.getElementById('login-email').value.trim();
     const password = document.getElementById('login-password').value;
@@ -283,6 +208,80 @@ async function login() {
         }
     } finally {
         loginButton.classList.remove('loading');
+    }
+}
+
+async function signup() {
+    const username = document.getElementById('signup-username').value.trim();
+    const email = document.getElementById('signup-email').value.trim();
+    const password = document.getElementById('signup-password').value;
+    const signupButton = document.getElementById('signup-button');
+
+    // Clear previous errors
+    clearErrorMessages();
+
+    // Validate inputs
+    if (!username) {
+        showError(document.getElementById('signup-username'), 'Username is required');
+        return;
+    }
+    if (!email) {
+        showError(document.getElementById('signup-email'), 'Email is required');
+        return;
+    }
+    if (!password) {
+        showError(document.getElementById('signup-password'), 'Password is required');
+        return;
+    }
+    if (password.length < 6) {
+        showError(document.getElementById('signup-password'), 'Password must be at least 6 characters');
+        return;
+    }
+
+    try {
+        signupButton.classList.add('loading');
+        
+        // Create user with email and password
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        
+        // Create user document in Firestore
+        await setDoc(doc(db, 'users', userCredential.user.uid), {
+            username: username,
+            email: email,
+            profilePicture: 'https://i.ibb.co/Gf9VD2MN/pfp.png',
+            createdAt: serverTimestamp()
+        });
+
+        // Update the profile
+        await updateProfile(userCredential.user, {
+            displayName: username,
+            photoURL: 'https://i.ibb.co/Gf9VD2MN/pfp.png'
+        });
+
+        // Show chat section
+        showChatSection();
+    } catch (error) {
+        console.error('Signup error:', error);
+        let errorMessage = 'An error occurred during signup';
+        
+        switch (error.code) {
+            case 'auth/email-already-in-use':
+                errorMessage = 'Email is already in use';
+                showError(document.getElementById('signup-email'), errorMessage);
+                break;
+            case 'auth/invalid-email':
+                errorMessage = 'Invalid email address';
+                showError(document.getElementById('signup-email'), errorMessage);
+                break;
+            case 'auth/weak-password':
+                errorMessage = 'Password is too weak';
+                showError(document.getElementById('signup-password'), errorMessage);
+                break;
+            default:
+                alert(errorMessage);
+        }
+    } finally {
+        signupButton.classList.remove('loading');
     }
 }
 
