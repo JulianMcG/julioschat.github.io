@@ -396,4 +396,12 @@ body {
 
 .save-button:hover {
     background-color: #1a3db0;
+}
+
+.no-results {
+    color: #6b6d7a;
+    text-align: center;
+    padding: 20px;
+    font-size: 14px;
+    font-style: italic;
 } 
