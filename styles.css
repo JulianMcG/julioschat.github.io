@@ -182,7 +182,7 @@ body {
 
 .message {
     margin-bottom: 8px;
-    padding: 8px 12px;
+    padding: 12px 16px;
     max-width: 70%;
     position: relative;
     line-height: 1.4;
@@ -197,7 +197,7 @@ body {
     margin-left: auto;
     margin-right: 20px;
     text-align: right;
-    border-radius: 15px 15px 0 15px;
+    border-radius: 15px 15px 5px 15px;
 }
 
 .message.received {
@@ -206,7 +206,7 @@ body {
     margin-right: auto;
     margin-left: 20px;
     text-align: left;
-    border-radius: 15px 15px 15px 0;
+    border-radius: 15px 15px 15px 5px;
 }
 
 .message .sender {
@@ -219,6 +219,7 @@ body {
     font-size: 14px;
     word-wrap: break-word;
     max-width: 100%;
+    padding: 4px 0;
 }
 
 .message .time {
@@ -232,9 +233,11 @@ body {
     width: 100%;
     left: 0;
     pointer-events: none;
+    padding-top: 4px;
 }
 
-.message:hover {
+/* Only apply the lift effect if there's a next message */
+.message:not(:last-child):hover {
     margin-bottom: 20px;
 }
 
@@ -243,18 +246,25 @@ body {
     transform: translateY(0);
 }
 
-.message:hover + .message {
+/* Only apply the margin-top to the next message if the current message is being hovered */
+.message:not(:last-child):hover + .message {
     margin-top: 12px;
 }
 
-/* Ensure the last message doesn't have extra margin */
+/* Last message should just show the time without lifting */
 .message:last-child:hover {
     margin-bottom: 8px;
 }
 
-/* Ensure the last message's time doesn't cause extra space */
 .message:last-child .time {
     position: relative;
+    transform: translateY(0);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.message:last-child:hover .time {
+    opacity: 1;
 }
 
 /* Profile Section */
