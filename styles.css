@@ -91,7 +91,7 @@ body {
     font-weight: 600;
     position: relative;
     overflow: visible;
-    margin-bottom: 5px;
+    margin-bottom: 10px;
 }
 
 .auth-form button::before {
@@ -100,7 +100,7 @@ body {
     top: 5px;
     left: 0;
     right: 0;
-    bottom: -5px;
+    bottom: -10px;
     background-color: #13296D;
     border-radius: 15px;
     z-index: -1;
