@@ -80,6 +80,12 @@
             color: #1DA1F2;
             font-size: 14px;
             margin-top: 2px;
+            display: flex;
+            align-items: center;
+        }
+
+        .verified-badge .material-icons {
+            font-size: 14px;
         }
     </style>
 </head>
@@ -148,7 +154,7 @@
                     contactName.className = 'contact-name';
                     contactName.innerHTML = `
                         ${contactData.username}
-                        ${contactData.verified ? '<span class="verified-badge">✓</span>' : ''}
+                        ${contactData.verified ? '<span class="verified-badge"><span class="material-icons">verified</span></span>' : ''}
                     `;
                     contactNames.insertBefore(contactName, emptyName);
                 }
