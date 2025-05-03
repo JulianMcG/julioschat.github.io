@@ -270,7 +270,7 @@ body {
     display: none;
     position: absolute;
     right: 10px;
-    gap: 8px;
+    gap: 12px;
 }
 
 .user-item:hover .user-actions {
@@ -282,18 +282,22 @@ body {
 }
 
 .action-icon {
-    color: #e3e3e3;
+    color: #B6B8C8;
     cursor: pointer;
-    font-size: 24px;
-    transition: transform 0.2s;
-}
-
-.action-icon:hover {
-    transform: scale(1.1);
+    font-size: 20px;
 }
 
 .pinned {
     order: -1;
+}
+
+.pinned .username::after {
+    content: "keep";
+    font-family: "Material Symbols Outlined";
+    color: #B6B8C8;
+    font-size: 16px;
+    margin-left: 8px;
+    vertical-align: middle;
 }
 
 .chat-area {
