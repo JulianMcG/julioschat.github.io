@@ -223,53 +223,43 @@ async function loadMessages() {
     chatMessages.innerHTML = '';
 
     try {
-        console.log('Loading messages between:', {
-            currentUser: currentUser.uid,
-            chatUser: currentChatUser.id
-        });
-
-        // Create a query that gets messages between the two users
         const messagesQuery = query(
             collection(db, 'messages'),
             where('participants', 'array-contains', currentUser.uid),
             orderBy('timestamp', 'asc')
         );
 
-        // Clean up any existing listener
         if (window.currentMessageUnsubscribe) {
             window.currentMessageUnsubscribe();
         }
 
         const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
-            console.log('Received snapshot with', snapshot.size, 'messages');
             chatMessages.innerHTML = '';
             
             snapshot.forEach(doc => {
                 const message = doc.data();
-                console.log('Processing message:', message);
                 
-                // Check if the message is between the current users
                 if (message.participants.includes(currentChatUser.id) && 
                     message.participants.includes(currentUser.uid)) {
                     
-                    console.log('Displaying message:', message);
                     const messageElement = document.createElement('div');
                     messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
+                    
+                    const time = message.timestamp ? new Date(message.timestamp.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                    
                     messageElement.innerHTML = `
                         <div class="content">${message.content}</div>
-                        <div class="time">${message.timestamp ? new Date(message.timestamp.toDate()).toLocaleTimeString() : ''}</div>
+                        <div class="time">${time}</div>
                     `;
                     chatMessages.appendChild(messageElement);
                 }
             });
             
-            // Scroll to bottom
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }, (error) => {
             console.error('Error in message snapshot:', error);
         });
 
-        // Store unsubscribe function for cleanup
         window.currentMessageUnsubscribe = unsubscribe;
     } catch (error) {
         console.error('Error loading messages:', error);
