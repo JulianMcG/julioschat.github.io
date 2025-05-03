@@ -27,6 +27,100 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstati
 let currentUser = null;
 let currentChatUser = null;
 const storage = getStorage();
+let notificationPermission = false;
+let notificationEnabled = false;
+
+// Check if browser supports notifications
+if ('Notification' in window) {
+    // Check if notifications are already granted
+    if (Notification.permission === 'granted') {
+        notificationPermission = true;
+    }
+}
+
+// Function to request notification permission
+async function requestNotificationPermission() {
+    if (!('Notification' in window)) {
+        console.log('This browser does not support notifications');
+        return false;
+    }
+
+    try {
+        const permission = await Notification.requestPermission();
+        notificationPermission = permission === 'granted';
+        return notificationPermission;
+    } catch (error) {
+        console.error('Error requesting notification permission:', error);
+        return false;
+    }
+}
+
+// Function to show notification
+function showNotification(title, body) {
+    if (!notificationPermission || !notificationEnabled) return;
+
+    const options = {
+        body: body,
+        icon: 'https://i.ibb.co/Gf9VD2MN/pfp.png',
+        badge: 'https://i.ibb.co/Gf9VD2MN/pfp.png',
+        vibrate: [200, 100, 200],
+        tag: 'new-message'
+    };
+
+    new Notification(title, options);
+}
+
+// Update notification settings in Firestore
+async function updateNotificationSettings(enabled) {
+    if (!currentUser) return;
+
+    try {
+        await setDoc(doc(db, 'users', currentUser.uid), {
+            notificationsEnabled: enabled
+        }, { merge: true });
+        notificationEnabled = enabled;
+    } catch (error) {
+        console.error('Error updating notification settings:', error);
+    }
+}
+
+// Load notification settings from Firestore
+async function loadNotificationSettings() {
+    if (!currentUser) return;
+
+    try {
+        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        const userData = userDoc.data();
+        notificationEnabled = userData?.notificationsEnabled || false;
+        
+        // Update toggle switch state
+        const notificationToggle = document.getElementById('notification-toggle');
+        if (notificationToggle) {
+            notificationToggle.checked = notificationEnabled;
+        }
+    } catch (error) {
+        console.error('Error loading notification settings:', error);
+    }
+}
+
+// Add event listener for notification toggle
+document.addEventListener('DOMContentLoaded', () => {
+    const notificationToggle = document.getElementById('notification-toggle');
+    if (notificationToggle) {
+        notificationToggle.addEventListener('change', async (e) => {
+            if (e.target.checked) {
+                const permission = await requestNotificationPermission();
+                if (permission) {
+                    await updateNotificationSettings(true);
+                } else {
+                    e.target.checked = false;
+                }
+            } else {
+                await updateNotificationSettings(false);
+            }
+        });
+    }
+});
 
 // Profile Picture Upload
 document.getElementById('profile-picture-preview').addEventListener('click', () => {
@@ -584,6 +678,16 @@ async function loadMessages() {
                         <div class="content">${message.content}</div>
                     `;
                     chatMessages.appendChild(messageElement);
+
+                    // Show notification for new messages
+                    if (message.senderId !== currentUser.uid && 
+                        !document.hasFocus() && 
+                        notificationEnabled) {
+                        showNotification(
+                            message.senderUsername || 'New Message',
+                            message.content
+                        );
+                    }
                 }
             });
             
@@ -807,6 +911,7 @@ onAuthStateChanged(auth, (user) => {
         currentUser = user;
         updateCurrentUserProfile(user);
         showChatSection();
+        loadNotificationSettings();
     } else {
         currentUser = null;
         showAuthSection();
