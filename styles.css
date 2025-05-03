@@ -855,7 +855,6 @@ body {
     max-width: 90%;
     margin: 10% auto;
     padding: 30px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 #settings-modal .modal-header {
@@ -916,18 +915,26 @@ body {
 
 #settings-modal .username-change input {
     width: 100%;
-    padding: 12px 15px;
-    border: 2px solid #2a2d3e;
-    border-radius: 8px;
+    padding: 16px 15px;
+    border: 1.5px solid #1C1F28;
+    border-radius: 15px;
     font-size: 16px;
-    background-color: #1a1c2a;
+    background-color: #10121B;
     color: #ECEBF7;
     transition: border-color 0.3s;
 }
 
-#settings-modal .username-change input:focus {
-    outline: none;
-    border-color: #1F49C7;
+#settings-modal .username-change input::placeholder {
+    color: #1C1F28;
+}
+
+#settings-modal .username-change input:-webkit-autofill,
+#settings-modal .username-change input:-webkit-autofill:hover,
+#settings-modal .username-change input:-webkit-autofill:focus,
+#settings-modal .username-change input:-webkit-autofill:active {
+    -webkit-text-fill-color: #ECEBF7 !important;
+    -webkit-box-shadow: 0 0 0 30px #10121B inset !important;
+    transition: background-color 5000s ease-in-out 0s;
 }
 
 #settings-modal .save-button {
