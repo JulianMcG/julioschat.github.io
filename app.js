@@ -235,8 +235,90 @@ auth.onAuthStateChanged(user => {
     }
 });
 
-// Settings icon click handler
-document.querySelector('.settings-icon').addEventListener('click', () => {
-    // Add settings functionality here
-    alert('Settings coming soon!');
+// Settings Modal Functions
+function openSettingsModal() {
+    const modal = document.getElementById('settings-modal');
+    const currentUsername = document.getElementById('current-username').textContent;
+    const currentProfilePicture = document.getElementById('current-user-avatar').src;
+    
+    document.getElementById('settings-username').value = currentUsername;
+    document.getElementById('settings-profile-picture').src = currentProfilePicture;
+    
+    modal.style.display = 'block';
+}
+
+function closeSettingsModal() {
+    document.getElementById('settings-modal').style.display = 'none';
+}
+
+// Settings Modal Event Listeners
+document.querySelector('.settings-icon').addEventListener('click', openSettingsModal);
+document.querySelector('.close-modal').addEventListener('click', closeSettingsModal);
+
+// Close modal when clicking outside
+window.addEventListener('click', (event) => {
+    const modal = document.getElementById('settings-modal');
+    if (event.target === modal) {
+        closeSettingsModal();
+    }
+});
+
+// Profile Picture Upload in Settings
+document.getElementById('settings-profile-picture').addEventListener('click', () => {
+    document.getElementById('settings-profile-picture-input').click();
+});
+
+document.getElementById('settings-profile-picture-input').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            document.getElementById('settings-profile-picture').src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// Save Settings
+document.querySelector('.save-button').addEventListener('click', async () => {
+    const newUsername = document.getElementById('settings-username').value.trim();
+    const newProfilePicture = document.getElementById('settings-profile-picture').src;
+
+    if (!newUsername) {
+        alert('Please enter a username');
+        return;
+    }
+
+    try {
+        // Update Firestore
+        await db.collection('users').doc(currentUser.uid).update({
+            username: newUsername,
+            profilePicture: newProfilePicture
+        });
+
+        // Update Firebase Auth profile
+        await currentUser.updateProfile({
+            displayName: newUsername,
+            photoURL: newProfilePicture
+        });
+
+        // Update UI
+        document.getElementById('current-username').textContent = newUsername;
+        document.getElementById('current-user-avatar').src = newProfilePicture;
+
+        // Update all user items in the list
+        const userItems = document.querySelectorAll('.user-item');
+        userItems.forEach(item => {
+            if (item.dataset.uid === currentUser.uid) {
+                item.querySelector('span').textContent = newUsername;
+                item.querySelector('img').src = newProfilePicture;
+            }
+        });
+
+        closeSettingsModal();
+        alert('Profile updated successfully!');
+    } catch (error) {
+        console.error('Error updating profile:', error);
+        alert('Error updating profile. Please try again.');
+    }
 }); 
