@@ -22,7 +22,7 @@ import {
     arrayUnion,
     arrayRemove
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
 let currentUser = null;
 let currentChatUser = null;
@@ -160,51 +160,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (signupButton) {
         signupButton.addEventListener('click', signup);
-    }
-
-    // Message input event listener
-    const messageInput = document.getElementById('message-input');
-    if (messageInput) {
-        messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
-    }
-
-    // Image upload button event listener
-    const imageUploadButton = document.getElementById('image-upload-button');
-    const imageUploadInput = document.getElementById('image-upload');
-    
-    if (imageUploadButton && imageUploadInput) {
-        imageUploadButton.addEventListener('click', () => {
-            imageUploadInput.click();
-        });
-
-        imageUploadInput.addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                try {
-                    // Check file size (limit to 5MB)
-                    if (file.size > 5 * 1024 * 1024) {
-                        alert('Image size should be less than 5MB');
-                        return;
-                    }
-
-                    // Convert file to base64
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        const base64String = e.target.result;
-                        messageInput.value = base64String;
-                    };
-                    reader.readAsDataURL(file);
-                } catch (error) {
-                    console.error('Error processing image:', error);
-                    alert('Error processing image: ' + error.message);
-                }
-            }
-        });
     }
 });
 
@@ -625,14 +580,8 @@ async function loadMessages() {
                     
                     const messageElement = document.createElement('div');
                     messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
-                    
-                    let content = message.content;
-                    if (message.imageUrl) {
-                        content = `<img src="${message.imageUrl}" alt="Shared image" style="max-width: 100%; border-radius: 8px; margin-top: 8px;">`;
-                    }
-                    
                     messageElement.innerHTML = `
-                        <div class="content">${content}</div>
+                        <div class="content">${message.content}</div>
                     `;
                     chatMessages.appendChild(messageElement);
                 }
@@ -671,6 +620,17 @@ function closeComposeModal() {
 
 // Compose new message
 document.addEventListener('DOMContentLoaded', () => {
+    // Message input event listener
+    const messageInput = document.getElementById('message-input');
+    if (messageInput) {
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    }
+
     // Compose icon event listener
     const composeIcon = document.querySelector('.compose-icon');
     if (composeIcon) {
@@ -784,66 +744,12 @@ async function sendMessage() {
     }
 
     try {
-        // Check if the message contains an image
-        const imageMatch = content.match(/data:image\/([a-zA-Z]+);base64,([^"]+)/);
-        let moderatedImageUrl = null;
-
-        if (imageMatch) {
-            // Convert base64 to blob
-            const imageType = imageMatch[1];
-            const base64Data = imageMatch[2];
-            const byteCharacters = atob(base64Data);
-            const byteArrays = [];
-
-            for (let offset = 0; offset < byteCharacters.length; offset += 512) {
-                const slice = byteCharacters.slice(offset, offset + 512);
-                const byteNumbers = new Array(slice.length);
-                for (let i = 0; i < slice.length; i++) {
-                    byteNumbers[i] = slice.charCodeAt(i);
-                }
-                const byteArray = new Uint8Array(byteNumbers);
-                byteArrays.push(byteArray);
-            }
-
-            const blob = new Blob(byteArrays, { type: `image/${imageType}` });
-
-            // Upload to Firebase Storage
-            const storageRef = ref(storage, `messages/${currentUser.uid}/${Date.now()}.${imageType}`);
-            await uploadBytes(storageRef, blob);
-            const imageUrl = await getDownloadURL(storageRef);
-
-            // Moderate the image using Cloud Vision API
-            const response = await fetch('https://vision.googleapis.com/v1/images:annotate?key=YOUR_CLOUD_VISION_API_KEY', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    requests: [{
-                        image: {
-                            content: base64Data
-                        },
-                        features: [{
-                            type: 'SAFE_SEARCH_DETECTION'
-                        }]
-                    }]
-                })
-            });
-
-            const moderationResult = await response.json();
-            const safeSearch = moderationResult.responses[0].safeSearchAnnotation;
-
-            // Check if the image is appropriate
-            if (safeSearch.adult === 'VERY_LIKELY' || 
-                safeSearch.violence === 'VERY_LIKELY' || 
-                safeSearch.racy === 'VERY_LIKELY') {
-                // Delete the inappropriate image
-                await deleteObject(storageRef);
-                throw new Error('Image contains inappropriate content and cannot be sent');
-            }
-
-            moderatedImageUrl = imageUrl;
-        }
+        console.log('Attempting to send message with data:', {
+            content,
+            senderId: currentUser.uid,
+            receiverId: currentChatUser.id,
+            participants: [currentUser.uid, currentChatUser.id]
+        });
 
         // Create message data
         const messageData = {
@@ -851,8 +757,7 @@ async function sendMessage() {
             senderId: currentUser.uid,
             receiverId: currentChatUser.id,
             participants: [currentUser.uid, currentChatUser.id],
-            timestamp: serverTimestamp(),
-            imageUrl: moderatedImageUrl
+            timestamp: serverTimestamp()
         };
 
         // Add message to Firestore
