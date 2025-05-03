@@ -31,7 +31,6 @@ body {
     height: 100vh;
     padding: 0;
     position: relative;
-    overflow: hidden;
 }
 
 .container::before {
@@ -49,7 +48,6 @@ body {
     background-color: #0c0e16;
     height: 100%;
     padding: 0;
-    position: relative;
 }
 
 /* Auth Section */
@@ -850,30 +848,13 @@ body {
     margin-left: 4px;
 }
 
-#settings-modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 1000;
-}
-
 #settings-modal .modal-content {
     background-color: #10121B;
     border-radius: 15px;
     width: 500px;
     max-width: 90%;
+    margin: 10% auto;
     padding: 30px;
-    max-height: 80vh;
-    overflow-y: auto;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    margin: 0;
 }
 
 #settings-modal .modal-header {
@@ -1012,126 +993,4 @@ body {
 /* Remove button hover effects sitewide */
 button:hover {
     transform: none !important;
-}
-
-.notification-settings {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 30px;
-    padding: 15px;
-    background-color: #13161F;
-    border-radius: 8px;
-    cursor: pointer;
-}
-
-.notification-settings label {
-    color: #ECEBF7;
-    font-size: 14px;
-}
-
-.toggle-switch {
-    position: relative;
-    display: inline-block;
-    width: 50px;
-    height: 24px;
-    pointer-events: none;
-}
-
-.toggle-switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-    pointer-events: none;
-}
-
-.toggle-slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #1C1F28;
-    transition: .4s;
-    border-radius: 24px;
-    pointer-events: none;
-}
-
-.toggle-slider:before {
-    position: absolute;
-    content: "";
-    height: 16px;
-    width: 16px;
-    left: 4px;
-    bottom: 4px;
-    background-color: #ECEBF7;
-    transition: .4s;
-    border-radius: 50%;
-    pointer-events: none;
-}
-
-input:checked + .toggle-slider {
-    background-color: #1F49C7;
-}
-
-input:checked + .toggle-slider:before {
-    transform: translateX(26px);
-}
-
-/* Add scrollbar styles */
-#settings-modal .modal-content::-webkit-scrollbar {
-    width: 8px;
-}
-
-#settings-modal .modal-content::-webkit-scrollbar-track {
-    background: #13161F;
-    border-radius: 4px;
-}
-
-#settings-modal .modal-content::-webkit-scrollbar-thumb {
-    background: #1C1F28;
-    border-radius: 4px;
-}
-
-#settings-modal .modal-content::-webkit-scrollbar-thumb:hover {
-    background: #1F49C7;
-}
-
-.chat-notification {
-    background-color: #1F49C7;
-    color: #ECEBF7;
-    padding: 10px 15px;
-    border-radius: 8px;
-    margin: 10px 0;
-    animation: slideIn 0.3s ease-out;
-    max-width: 80%;
-    align-self: center;
-}
-
-.chat-notification .notification-content {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.chat-notification .notification-title {
-    font-weight: 600;
-    font-size: 14px;
-}
-
-.chat-notification .notification-body {
-    font-size: 13px;
-    opacity: 0.9;
-}
-
-@keyframes slideIn {
-    from {
-        transform: translateY(-20px);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
 } 
