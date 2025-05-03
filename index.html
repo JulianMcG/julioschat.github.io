@@ -12,8 +12,6 @@
     <!-- Firebase SDK -->
     <script type="module" src="firebase-config.js"></script>
     <script type="module" src="app.js"></script>
-    <!-- Emoji Picker -->
-    <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1.16.0/index.js"></script>
 </head>
 <body>
     <div class="container">
@@ -91,22 +89,8 @@
                     <div class="chat-messages" id="chat-messages"></div>
                     <div class="message-input">
                         <input type="text" id="message-input" placeholder="Type a message...">
-                        <span class="material-symbols-outlined emoji-picker-button">sentiment_satisfied</span>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Emoji Picker Modal -->
-    <div id="emoji-picker-modal" class="modal">
-        <div class="modal-content" style="width: 400px; max-width: 90%;">
-            <div class="modal-header">
-                <h2>Choose an Emoji</h2>
-                <span class="material-symbols-outlined close-modal">close</span>
-            </div>
-            <div class="modal-body">
-                <emoji-picker></emoji-picker>
             </div>
         </div>
     </div>
