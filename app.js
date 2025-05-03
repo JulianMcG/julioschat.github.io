@@ -1057,14 +1057,9 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Sign Out Button
-document.querySelector('.signout-button').addEventListener('click', async () => {
-    try {
-        await signOut(auth);
-        showAuthSection();
-    } catch (error) {
-        console.error('Error signing out:', error);
-        alert('Error signing out. Please try again.');
-    }
+document.querySelector('.signout-button').addEventListener('click', () => {
+    closeSettingsModal();
+    signOut();
 });
 
 function updateChatHeader(user) {
