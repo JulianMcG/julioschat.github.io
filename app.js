@@ -557,9 +557,12 @@ async function sendMessage() {
     }
 
     try {
-        // Start morphing animation
-        const messageInputContainer = document.querySelector('.message-input');
-        messageInputContainer.classList.add('morphing');
+        console.log('Attempting to send message with data:', {
+            content,
+            senderId: currentUser.uid,
+            receiverId: currentChatUser.id,
+            participants: [currentUser.uid, currentChatUser.id]
+        });
 
         // Create message data
         const messageData = {
@@ -572,12 +575,10 @@ async function sendMessage() {
 
         // Add message to Firestore
         const docRef = await addDoc(collection(db, 'messages'), messageData);
+        console.log('Message sent successfully with ID:', docRef.id);
         
-        // Clear input and reset animation
+        // Clear input
         messageInput.value = '';
-        setTimeout(() => {
-            messageInputContainer.classList.remove('morphing');
-        }, 300);
         
         // Scroll to bottom
         const chatMessages = document.getElementById('chat-messages');
