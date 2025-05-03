@@ -111,8 +111,25 @@ function showError(element, message) {
     errorElement.classList.add('show');
 }
 
+// Check if user has visited before
+function hasVisitedBefore() {
+    return localStorage.getItem('hasVisited') === 'true';
+}
+
+function setVisited() {
+    localStorage.setItem('hasVisited', 'true');
+}
+
 // Add event listeners for auth links and buttons
 document.addEventListener('DOMContentLoaded', () => {
+    // Show appropriate form based on previous visit
+    if (hasVisitedBefore()) {
+        showLogin();
+    } else {
+        showSignup();
+        setVisited();
+    }
+
     // Auth link event listeners
     const signupLink = document.getElementById('signup-link');
     const loginLink = document.getElementById('login-link');
