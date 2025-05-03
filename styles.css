@@ -288,7 +288,7 @@ body {
 }
 
 .search-icon {
-    color: #6b6d7a;
+    color: #B6B8C8;
     margin-right: 10px;
     font-size: 20px;
 }
@@ -297,7 +297,7 @@ body {
     background-color: transparent;
     border: none;
     flex: 1;
-    color: #ECEBF7;
+    color: #B6B8C8;
     padding-right: 30px;
 }
 
@@ -443,6 +443,10 @@ body {
 
 .message-input input:focus {
     outline: none;
+}
+
+.message-input input::placeholder {
+    color: #B6B8C8;
 }
 
 .message-bubble {
