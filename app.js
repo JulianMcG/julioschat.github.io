@@ -513,26 +513,14 @@ async function startChat(userId, username) {
     userItems.forEach(item => {
         if (item.dataset.uid === userId) {
             item.classList.add('active');
-            // Animate other items
-            userItems.forEach(otherItem => {
-                if (otherItem !== item) {
-                    const itemRect = item.getBoundingClientRect();
-                    const otherRect = otherItem.getBoundingClientRect();
-                    if (otherRect.top < itemRect.top) {
-                        otherItem.classList.add('shift-up');
-                    } else {
-                        otherItem.classList.add('shift-down');
-                    }
-                }
-            });
         } else {
             item.classList.remove('active');
-            item.classList.remove('shift-up', 'shift-down');
         }
     });
 
     // Update chat header
-    document.getElementById('active-chat-username').textContent = username;
+    const verifiedBadge = '<span class="material-symbols-outlined verified-badge">verified</span>';
+    document.getElementById('active-chat-username').innerHTML = `${username}${currentChatUser?.verified ? ` ${verifiedBadge}` : ''}`;
 
     // Show message input
     const messageInput = document.querySelector('.message-input');
@@ -782,6 +770,13 @@ function updateCurrentUserProfile(user) {
         document.getElementById('current-username').textContent = user.displayName || 'Username';
         document.getElementById('current-user-avatar').src = user.photoURL || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
         
+        // Show verified badge if user is verified
+        const verifiedBadge = '<span class="material-symbols-outlined verified-badge">verified</span>';
+        const usernameElement = document.getElementById('current-username');
+        if (user.verified) {
+            usernameElement.innerHTML = `${user.displayName || 'Username'} ${verifiedBadge}`;
+        }
+
         // Update user items in the list
         const userItems = document.querySelectorAll('.user-item');
         userItems.forEach(item => {
@@ -944,51 +939,38 @@ document.querySelector('.save-button').addEventListener('click', async () => {
 // Search Functions
 async function searchUsers(searchTerm) {
     const usersContainer = document.getElementById('users-container');
-    usersContainer.innerHTML = '';
+    usersContainer.innerHTML = ''; // Clear previous results
 
     try {
         // Get current user's hidden conversations
         const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
-        const hiddenConversations = currentUserDoc.data()?.hiddenConversations || [];
-        const pinnedConversations = currentUserDoc.data()?.pinnedConversations || [];
+        const currentUserData = currentUserDoc.data();
+        const hiddenConversations = currentUserData?.hiddenConversations || [];
+        const pinnedConversations = currentUserData?.pinnedConversations || [];
 
-        // Get all messages where current user is a participant
-        const messagesQuery = query(
-            collection(db, 'messages'),
-            where('participants', 'array-contains', currentUser.uid)
+        // Search for users
+        const usersQuery = query(
+            collection(db, 'users'),
+            where('username', '>=', searchTerm),
+            where('username', '<=', searchTerm + '\uf8ff')
         );
-        const messagesSnapshot = await getDocs(messagesQuery);
+        const usersSnapshot = await getDocs(usersQuery);
+        const users = [];
 
-        // Get unique user IDs from messages
-        const dmUserIds = new Set();
-        messagesSnapshot.forEach(doc => {
-            const message = doc.data();
-            message.participants.forEach(id => {
-                if (id !== currentUser.uid) {
-                    dmUserIds.add(id);
-                }
-            });
+        usersSnapshot.forEach(doc => {
+            const userData = doc.data();
+            if (doc.id !== currentUser.uid && !hiddenConversations.includes(doc.id)) {
+                users.push({
+                    id: doc.id,
+                    username: userData.username,
+                    profilePicture: userData.profilePicture,
+                    verified: userData.verified
+                });
+            }
         });
-
-        // Get user details for each DM'd user
-        const usersPromises = Array.from(dmUserIds).map(async (userId) => {
-            const userDoc = await getDoc(doc(db, 'users', userId));
-            return {
-                id: userId,
-                ...userDoc.data()
-            };
-        });
-
-        const users = await Promise.all(usersPromises);
-
-        // Filter users based on search term and exclude hidden conversations
-        const filteredUsers = users.filter(user => 
-            !hiddenConversations.includes(user.id) &&
-            user.username.toLowerCase().includes(searchTerm.toLowerCase())
-        );
 
         // Sort users: pinned first, then alphabetically
-        filteredUsers.sort((a, b) => {
+        users.sort((a, b) => {
             const aPinned = pinnedConversations.includes(a.id);
             const bPinned = pinnedConversations.includes(b.id);
             
@@ -999,7 +981,7 @@ async function searchUsers(searchTerm) {
         });
 
         // Display filtered users
-        filteredUsers.forEach(user => {
+        users.forEach(user => {
             const userElement = document.createElement('div');
             userElement.className = 'user-item';
             if (pinnedConversations.includes(user.id)) {
@@ -1017,7 +999,6 @@ async function searchUsers(searchTerm) {
             
             // Add click handler for the user item
             userElement.onclick = (e) => {
-                // Only start chat if not clicking on action icons
                 if (!e.target.classList.contains('action-icon')) {
                     startChat(user.id, user.username);
                 }
@@ -1027,9 +1008,7 @@ async function searchUsers(searchTerm) {
             const closeIcon = userElement.querySelector('.close-icon');
             closeIcon.onclick = async (e) => {
                 e.stopPropagation();
-                // Remove the user element
                 userElement.remove();
-                // Update Firestore to mark conversation as hidden
                 try {
                     await setDoc(doc(db, 'users', currentUser.uid), {
                         hiddenConversations: arrayUnion(user.id)
@@ -1046,12 +1025,10 @@ async function searchUsers(searchTerm) {
                 const isPinned = userElement.classList.contains('pinned');
                 userElement.classList.toggle('pinned');
                 
-                // Move the element to the top immediately
                 if (!isPinned) {
                     usersContainer.insertBefore(userElement, usersContainer.firstChild);
                 }
                 
-                // Update Firestore
                 try {
                     if (!isPinned) {
                         await setDoc(doc(db, 'users', currentUser.uid), {
@@ -1175,4 +1152,4 @@ document.querySelector('.signout-button').addEventListener('click', async () => 
         console.error('Error signing out:', error);
         alert('Error signing out. Please try again.');
     }
-}); 
+});
