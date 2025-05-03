@@ -349,17 +349,9 @@ async function startChat(userId, username) {
 
     // Update chat header
     document.getElementById('active-chat-username').textContent = username;
-
+    
     // Show message input
-    const messageInput = document.querySelector('.message-input');
-    messageInput.classList.add('visible');
-
-    // Update message input placeholder
-    const messageInputField = document.getElementById('message-input');
-    if (messageInputField) {
-        messageInputField.placeholder = `Message ${username}`;
-        messageInputField.focus();
-    }
+    document.querySelector('.message-input').classList.add('visible');
 
     // Load messages
     loadMessages();
@@ -423,123 +415,95 @@ function checkFirebaseConnection() {
     return true;
 }
 
-// Compose Modal
+// Compose Modal Functions
 function openComposeModal() {
     const modal = document.getElementById('compose-modal');
+    const composeSearch = document.getElementById('compose-search');
+    const composeResults = document.getElementById('compose-results');
+    
     modal.style.display = 'block';
+    composeSearch.value = '';
+    composeResults.innerHTML = '';
+    
+    // Focus the search input
+    composeSearch.focus();
 }
 
 function closeComposeModal() {
-    const modal = document.getElementById('compose-modal');
-    modal.style.display = 'none';
+    document.getElementById('compose-modal').style.display = 'none';
 }
 
-// Compose new message
-document.addEventListener('DOMContentLoaded', () => {
-    // Message input event listener
-    const messageInput = document.getElementById('message-input');
-    if (messageInput) {
-        messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
-    }
+// Compose search functionality
+document.getElementById('compose-search').addEventListener('input', async (e) => {
+    const searchTerm = e.target.value.toLowerCase();
+    const composeResults = document.getElementById('compose-results');
+    composeResults.innerHTML = '';
 
-    // Compose icon event listener
-    const composeIcon = document.querySelector('.compose-icon');
-    if (composeIcon) {
-        composeIcon.addEventListener('click', openComposeModal);
-    }
-
-    // Close modal event listener
-    const closeModal = document.querySelector('.close-modal');
-    if (closeModal) {
-        closeModal.addEventListener('click', closeComposeModal);
-    }
-
-    // Compose search event listener
-    const composeSearch = document.getElementById('compose-search');
-    if (composeSearch) {
-        composeSearch.addEventListener('input', async (e) => {
-            const searchTerm = e.target.value.toLowerCase();
-            const composeResults = document.getElementById('compose-results');
-            composeResults.innerHTML = '';
-
-            if (searchTerm.length > 0) {
-                try {
-                    const usersSnapshot = await db.collection('users').get();
-                    const suggestions = [];
+    if (searchTerm.length > 0) {
+        try {
+            const usersSnapshot = await getDocs(collection(db, 'users'));
+            const suggestions = [];
+            
+            usersSnapshot.forEach(doc => {
+                if (doc.id !== currentUser.uid) {
+                    const user = doc.data();
+                    const username = user.username.toLowerCase();
                     
-                    usersSnapshot.forEach(doc => {
-                        if (doc.id !== currentUser.uid) {
-                            const user = doc.data();
-                            const username = user.username.toLowerCase();
-                            
-                            if (username.includes(searchTerm)) {
-                                suggestions.push({
-                                    id: doc.id,
-                                    username: user.username,
-                                    profilePicture: user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'
-                                });
-                            }
-                        }
-                    });
-
-                    suggestions.sort((a, b) => {
-                        const aIndex = a.username.toLowerCase().indexOf(searchTerm);
-                        const bIndex = b.username.toLowerCase().indexOf(searchTerm);
-                        return aIndex - bIndex;
-                    });
-
-                    suggestions.forEach(user => {
-                        const userElement = document.createElement('div');
-                        userElement.className = 'compose-user-item';
-                        userElement.innerHTML = `
-                            <img src="${user.profilePicture}" alt="${user.username}" class="user-avatar">
-                            <span>${user.username}</span>
-                        `;
-                        userElement.onclick = () => {
-                            startChat(user.id, user.username);
-                            closeComposeModal();
-                        };
-                        composeResults.appendChild(userElement);
-                    });
-
-                    if (suggestions.length === 0) {
-                        const noResults = document.createElement('div');
-                        noResults.className = 'no-results';
-                        noResults.textContent = 'No users found';
-                        composeResults.appendChild(noResults);
+                    if (username.includes(searchTerm)) {
+                        suggestions.push({
+                            id: doc.id,
+                            username: user.username,
+                            profilePicture: user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'
+                        });
                     }
-                } catch (error) {
-                    console.error('Error searching users:', error);
                 }
-            }
-        });
-    }
+            });
 
-    // Search input event listener
-    const searchInput = document.getElementById('search-user');
-    if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
-            const searchTerm = e.target.value.trim();
-            if (searchTerm) {
-                searchUsers(searchTerm);
-            } else {
-                loadUsers(); // Load all users if search is empty
+            suggestions.sort((a, b) => {
+                const aIndex = a.username.toLowerCase().indexOf(searchTerm);
+                const bIndex = b.username.toLowerCase().indexOf(searchTerm);
+                return aIndex - bIndex;
+            });
+
+            suggestions.forEach(user => {
+                const userElement = document.createElement('div');
+                userElement.className = 'compose-user-item';
+                userElement.innerHTML = `
+                    <img src="${user.profilePicture}" alt="${user.username}" class="user-avatar">
+                    <span>${user.username}</span>
+                `;
+                userElement.onclick = () => {
+                    startChat(user.id, user.username);
+                    closeComposeModal();
+                };
+                composeResults.appendChild(userElement);
+            });
+
+            if (suggestions.length === 0) {
+                const noResults = document.createElement('div');
+                noResults.className = 'no-results';
+                noResults.textContent = 'No users found';
+                composeResults.appendChild(noResults);
             }
-        });
+        } catch (error) {
+            console.error('Error searching users:', error);
+        }
     }
 });
 
-// Close compose modal when clicking outside
-window.addEventListener('click', (event) => {
-    const modal = document.getElementById('compose-modal');
-    if (event.target === modal) {
-        closeComposeModal();
-    }
+// Search through current DMs
+document.getElementById('search-user').addEventListener('input', (e) => {
+    const searchTerm = e.target.value.toLowerCase();
+    const userItems = document.querySelectorAll('.user-item');
+    
+    userItems.forEach(item => {
+        const username = item.querySelector('span').textContent.toLowerCase();
+        if (username.includes(searchTerm)) {
+            item.style.display = 'flex';
+        } else {
+            item.style.display = 'none';
+        }
+    });
 });
 
 // Send message
@@ -733,67 +697,10 @@ document.querySelector('.save-button').addEventListener('click', async () => {
     }
 });
 
-// Search Functions
+// Add this function to handle user search
 async function searchUsers(searchTerm) {
     const usersContainer = document.getElementById('users-container');
     usersContainer.innerHTML = '';
-
-    try {
-        // Get all messages where current user is a participant
-        const messagesQuery = query(
-            collection(db, 'messages'),
-            where('participants', 'array-contains', currentUser.uid)
-        );
-        const messagesSnapshot = await getDocs(messagesQuery);
-
-        // Get unique user IDs from messages
-        const dmUserIds = new Set();
-        messagesSnapshot.forEach(doc => {
-            const message = doc.data();
-            message.participants.forEach(id => {
-                if (id !== currentUser.uid) {
-                    dmUserIds.add(id);
-                }
-            });
-        });
-
-        // Get user details for each DM'd user
-        const usersPromises = Array.from(dmUserIds).map(async (userId) => {
-            const userDoc = await getDoc(doc(db, 'users', userId));
-            return {
-                id: userId,
-                ...userDoc.data()
-            };
-        });
-
-        const users = await Promise.all(usersPromises);
-
-        // Filter users based on search term
-        const filteredUsers = users.filter(user => 
-            user.username.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-
-        // Display filtered users
-        filteredUsers.forEach(user => {
-            const userElement = document.createElement('div');
-            userElement.className = 'user-item';
-            userElement.dataset.uid = user.id;
-            userElement.innerHTML = `
-                <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.username}" class="user-avatar">
-                <span>${user.username}</span>
-            `;
-            userElement.onclick = () => startChat(user.id, user.username);
-            usersContainer.appendChild(userElement);
-        });
-    } catch (error) {
-        console.error('Error searching users:', error);
-    }
-}
-
-// Compose Modal Functions
-async function searchAllUsers(searchTerm) {
-    const composeResults = document.getElementById('compose-results');
-    composeResults.innerHTML = '';
 
     try {
         const usersSnapshot = await getDocs(collection(db, 'users'));
@@ -814,44 +721,16 @@ async function searchAllUsers(searchTerm) {
         // Display users
         users.forEach(user => {
             const userElement = document.createElement('div');
-            userElement.className = 'compose-user-item';
+            userElement.className = 'user-item';
+            userElement.dataset.uid = user.id;
             userElement.innerHTML = `
                 <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.username}" class="user-avatar">
                 <span>${user.username}</span>
             `;
-            userElement.onclick = () => {
-                startChat(user.id, user.username);
-                closeComposeModal();
-            };
-            composeResults.appendChild(userElement);
+            userElement.onclick = () => startChat(user.id, user.username);
+            usersContainer.appendChild(userElement);
         });
     } catch (error) {
-        console.error('Error searching all users:', error);
+        console.error('Error searching users:', error);
     }
-}
-
-// Add event listeners for search
-document.addEventListener('DOMContentLoaded', () => {
-    const searchInput = document.getElementById('search-user');
-    const composeSearch = document.getElementById('compose-search');
-
-    if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
-            const searchTerm = e.target.value.trim();
-            if (searchTerm) {
-                searchUsers(searchTerm);
-            } else {
-                loadUsers();
-            }
-        });
-    }
-
-    if (composeSearch) {
-        composeSearch.addEventListener('input', (e) => {
-            const searchTerm = e.target.value.trim();
-            if (searchTerm) {
-                searchAllUsers(searchTerm);
-            }
-        });
-    }
-}); 
+} 
