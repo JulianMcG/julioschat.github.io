@@ -87,6 +87,29 @@ function showLogin() {
     }
 }
 
+// Add event listeners for auth links
+document.addEventListener('DOMContentLoaded', () => {
+    // ... existing event listeners ...
+
+    // Auth link event listeners
+    const signupLink = document.querySelector('#login-form .auth-link');
+    const loginLink = document.querySelector('#signup-form .auth-link');
+
+    if (signupLink) {
+        signupLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            showSignup();
+        });
+    }
+
+    if (loginLink) {
+        loginLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            showLogin();
+        });
+    }
+});
+
 async function signup() {
     const username = document.getElementById('signup-username').value;
     const email = document.getElementById('signup-email').value;
