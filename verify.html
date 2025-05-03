@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Verification</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <!-- Firebase SDK -->
+    <script type="module" src="firebase-config.js"></script>
+    <script type="module">
+        import { auth, db } from './firebase-config.js';
+        import { getDoc, doc, setDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+        // Admin password (in a real app, this would be server-side)
+        const ADMIN_PASSWORD = 'your-secure-password-here';
+
+        function checkPassword() {
+            const password = document.getElementById('admin-password').value;
+            const errorMessage = document.getElementById('error-message');
+            
+            if (password === ADMIN_PASSWORD) {
+                document.getElementById('password-form').style.display = 'none';
+                document.getElementById('verify-form').style.display = 'block';
+            } else {
+                errorMessage.textContent = 'Incorrect password';
+                errorMessage.style.display = 'block';
+            }
+        }
+
+        async function verifyUser() {
+            const username = document.getElementById('username').value.trim();
+            const verifyMessage = document.getElementById('verify-message');
+            
+            if (!username) {
+                verifyMessage.textContent = 'Please enter a username';
+                verifyMessage.style.display = 'block';
+                return;
+            }
+
+            try {
+                // Search for user by username
+                const usersQuery = query(collection(db, 'users'), where('username', '==', username));
+                const usersSnapshot = await getDocs(usersQuery);
+                
+                if (usersSnapshot.empty) {
+                    verifyMessage.textContent = 'User not found';
+                    verifyMessage.style.display = 'block';
+                    return;
+                }
+
+                const userDoc = usersSnapshot.docs[0];
+                await setDoc(doc(db, 'users', userDoc.id), {
+                    verified: true
+                }, { merge: true });
+
+                verifyMessage.textContent = `Successfully verified ${username}`;
+                verifyMessage.style.color = '#4CAF50';
+                verifyMessage.style.display = 'block';
+            } catch (error) {
+                console.error('Error verifying user:', error);
+                verifyMessage.textContent = 'Error verifying user. Please try again.';
+                verifyMessage.style.display = 'block';
+            }
+        }
+
+        // Add event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('admin-password').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    checkPassword();
+                }
+            });
+
+            document.getElementById('username').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    verifyUser();
+                }
+            });
+        });
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="section">
+            <div class="auth-form" id="password-form">
+                <h2>Admin Access</h2>
+                <div class="form-group">
+                    <input type="password" id="admin-password" placeholder="Enter admin password">
+                </div>
+                <button onclick="checkPassword()">Access</button>
+                <p id="error-message" class="error-message"></p>
+            </div>
+
+            <div class="auth-form" id="verify-form" style="display: none;">
+                <h2>Verify Users</h2>
+                <div class="form-group">
+                    <input type="text" id="username" placeholder="Enter username to verify">
+                </div>
+                <button onclick="verifyUser()">Verify User</button>
+                <p id="verify-message" class="error-message"></p>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 
