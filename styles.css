@@ -301,7 +301,7 @@ body {
 .pinned .username::after {
     content: "keep";
     font-family: 'Material Symbols Outlined';
-    color: #B6B8C8;
+    color: #1F49C7;
     font-size: 16px;
     margin-left: 4px;
     font-variation-settings: 'FILL' 1;
@@ -334,6 +334,7 @@ body {
 }
 
 .pinned .pin-icon {
+    color: #1F49C7;
     font-variation-settings: 'FILL' 1;
 }
 
