@@ -427,7 +427,8 @@ body {
     padding: 20px;
     display: flex;
     flex-direction: column;
-    margin-bottom: 20px;
+    position: relative;
+    z-index: 1;
 }
 
 .message-input {
@@ -435,6 +436,8 @@ body {
     background-color: #1C1F28;
     border-radius: 15px;
     margin: 20px;
+    position: relative;
+    z-index: 2;
 }
 
 .message-input input {
@@ -453,7 +456,7 @@ body {
 .message-bubble {
     max-width: 70%;
     padding: 10px 15px;
-    margin: 0 20px -20px 20px;
+    margin: 0 20px 5px 20px;
     border-radius: 5px;
     position: relative;
 }
