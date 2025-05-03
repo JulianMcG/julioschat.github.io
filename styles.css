@@ -853,8 +853,11 @@ body {
     border-radius: 15px;
     width: 500px;
     max-width: 90%;
-    margin: 10% auto;
+    margin: 15vh auto;
     padding: 30px;
+    position: relative;
+    top: 50%;
+    transform: translateY(-50%);
 }
 
 #settings-modal .modal-header {
@@ -862,11 +865,14 @@ body {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 30px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #1C1F28;
 }
 
 #settings-modal .modal-header h2 {
     font-size: 24px;
     color: #ECEBF7;
+    margin: 0;
 }
 
 #settings-modal .close-modal {
@@ -885,6 +891,7 @@ body {
     flex-direction: column;
     align-items: center;
     margin-bottom: 30px;
+    gap: 15px;
 }
 
 #settings-modal .profile-picture-upload img {
@@ -892,7 +899,6 @@ body {
     height: 120px;
     border-radius: 50%;
     object-fit: cover;
-    margin-bottom: 15px;
     cursor: pointer;
     border: 3px solid #1F49C7;
     transition: transform 0.3s;
@@ -940,29 +946,32 @@ body {
 #settings-modal .save-button {
     width: 100%;
     padding: 14px;
-    background-color: #494C56;
+    background-color: #1F49C7;
     color: #ECEBF7;
-    border: 3px solid rgba(255, 255, 255, 0.05);
+    border: 3px solid rgba(255, 255, 255, 0.1);
     border-radius: 15px;
     cursor: pointer;
     font-size: 16px;
     font-weight: 600;
-    transition: transform 0.1s ease;
-    box-shadow: 0 5px 0 #31333A;
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 0 #13296D;
     margin-bottom: 20px;
 }
 
 #settings-modal .save-button:hover {
+    background-color: #1a3db0;
     transform: translateY(-2px);
 }
 
 #settings-modal .save-button:active {
     transform: translateY(5px);
-    box-shadow: 0 0 0 #31333A;
+    box-shadow: 0 0 0 #13296D;
 }
 
 #settings-modal .signout-section {
-    margin-top: 20px;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #1C1F28;
     display: flex;
     justify-content: center;
 }
@@ -977,11 +986,12 @@ body {
     cursor: pointer;
     font-size: 16px;
     font-weight: 600;
-    transition: transform 0.1s ease;
+    transition: all 0.3s ease;
     box-shadow: 0 5px 0 #8A1315;
 }
 
 #settings-modal .signout-button:hover {
+    background-color: #d14547;
     transform: translateY(-2px);
 }
 
