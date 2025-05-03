@@ -849,7 +849,7 @@ body {
 }
 
 #settings-modal .modal-content {
-    background-color: #0c0e16;
+    background-color: #10121B;
     border-radius: 15px;
     width: 500px;
     max-width: 90%;
@@ -972,7 +972,7 @@ body {
     padding: 14px;
     background-color: #E85658;
     color: #ECEBF7;
-    border: 3px solid rgba(255, 255, 255, 0.05);
+    border: 3px solid rgba(255, 255, 255, 0.1);
     border-radius: 15px;
     cursor: pointer;
     font-size: 16px;
