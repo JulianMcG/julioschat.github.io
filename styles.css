@@ -343,51 +343,6 @@ body {
     padding: 4px 0;
 }
 
-.message .time {
-    font-size: 10px;
-    color: #6b6d7a;
-    text-align: right;
-    opacity: 0;
-    transform: translateY(-10px);
-    transition: all 0.2s ease;
-    position: absolute;
-    width: 100%;
-    left: 0;
-    pointer-events: none;
-    padding-top: 4px;
-}
-
-/* Only apply the lift effect if there's a next message */
-.message:not(:last-child):hover {
-    margin-bottom: 20px;
-}
-
-.message:hover .time {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-/* Only apply the margin-top to the next message if the current message is being hovered */
-.message:not(:last-child):hover + .message {
-    margin-top: 12px;
-}
-
-/* Last message should just show the time without lifting */
-.message:last-child:hover {
-    margin-bottom: 8px;
-}
-
-.message:last-child .time {
-    position: relative;
-    transform: translateY(0);
-    opacity: 0;
-    transition: opacity 0.2s ease;
-}
-
-.message:last-child:hover .time {
-    opacity: 1;
-}
-
 /* Profile Section */
 .profile-section {
     position: absolute;
