@@ -828,6 +828,11 @@ async function searchUsers(searchTerm) {
     usersContainer.innerHTML = '';
 
     try {
+        // Get current user's hidden conversations
+        const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        const hiddenConversations = currentUserDoc.data()?.hiddenConversations || [];
+        const pinnedConversations = currentUserDoc.data()?.pinnedConversations || [];
+
         // Get all messages where current user is a participant
         const messagesQuery = query(
             collection(db, 'messages'),
@@ -857,10 +862,22 @@ async function searchUsers(searchTerm) {
 
         const users = await Promise.all(usersPromises);
 
-        // Filter users based on search term
+        // Filter users based on search term and exclude hidden conversations
         const filteredUsers = users.filter(user => 
+            !hiddenConversations.includes(user.id) &&
             user.username.toLowerCase().includes(searchTerm.toLowerCase())
         );
+
+        // Sort users: pinned first, then alphabetically
+        filteredUsers.sort((a, b) => {
+            const aPinned = pinnedConversations.includes(a.id);
+            const bPinned = pinnedConversations.includes(b.id);
+            
+            if (aPinned && !bPinned) return -1;
+            if (!aPinned && bPinned) return 1;
+            
+            return a.username.localeCompare(b.username);
+        });
 
         // Display filtered users
         filteredUsers.forEach(user => {
@@ -962,12 +979,12 @@ async function searchAllUsers(searchTerm) {
             });
         });
 
-        // Get all users except current user and those already DMed
+        // Get all users except current user
         const usersSnapshot = await getDocs(collection(db, 'users'));
         const users = [];
         
         usersSnapshot.forEach(doc => {
-            if (doc.id !== currentUser.uid && !dmUserIds.has(doc.id)) {
+            if (doc.id !== currentUser.uid) {
                 const user = {
                     id: doc.id,
                     ...doc.data()
@@ -1007,7 +1024,6 @@ async function searchAllUsers(searchTerm) {
 // Add event listeners for search
 document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('search-user');
-    const composeSearch = document.getElementById('compose-search');
     const clearSearch = document.querySelector('.clear-search');
 
     if (searchInput) {
@@ -1017,15 +1033,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 searchUsers(searchTerm);
             } else {
                 loadUsers();
-            }
-        });
-    }
-
-    if (composeSearch) {
-        composeSearch.addEventListener('input', (e) => {
-            const searchTerm = e.target.value.trim();
-            if (searchTerm) {
-                searchAllUsers(searchTerm);
             }
         });
     }
