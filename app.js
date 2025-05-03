@@ -311,9 +311,11 @@ async function loadUsers() {
     usersContainer.innerHTML = '';
 
     try {
-        // Get current user's pinned conversations
+        // Get current user's hidden conversations
         const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
-        const pinnedConversations = currentUserDoc.data()?.pinnedConversations || [];
+        const currentUserData = currentUserDoc.data();
+        const hiddenConversations = currentUserData?.hiddenConversations || [];
+        const pinnedConversations = currentUserData?.pinnedConversations || [];
 
         // Get all messages where current user is a participant
         const messagesQuery = query(
@@ -360,9 +362,12 @@ async function loadUsers() {
             const userElement = createUserElement(user);
             userElement.dataset.uid = user.id;
             
+            if (pinnedConversations.includes(user.id)) {
+                userElement.classList.add('pinned');
+            }
+            
             // Add click handler for the user item
             userElement.onclick = (e) => {
-                // Only start chat if not clicking on action icons
                 if (!e.target.classList.contains('action-icon')) {
                     startChat(user.id, user.username);
                 }
@@ -372,9 +377,7 @@ async function loadUsers() {
             const closeIcon = userElement.querySelector('.close-icon');
             closeIcon.onclick = async (e) => {
                 e.stopPropagation();
-                // Remove the user element
                 userElement.remove();
-                // Update Firestore to mark conversation as hidden
                 try {
                     await setDoc(doc(db, 'users', currentUser.uid), {
                         hiddenConversations: arrayUnion(user.id)
@@ -397,7 +400,10 @@ function createUserElement(user) {
     userElement.innerHTML = `
         <img src="${user.photoURL || 'default-avatar.png'}" alt="${user.username}" class="profile-picture">
         <span class="username">${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
-        <span class="material-symbols-outlined pin-icon">keep</span>
+        <div class="user-actions">
+            <span class="material-symbols-outlined action-icon pin-icon">keep</span>
+            <span class="material-symbols-outlined action-icon close-icon">close</span>
+        </div>
     `;
     
     // Add click handler for pin icon
@@ -947,113 +953,16 @@ document.querySelector('.save-button').addEventListener('click', async () => {
 // Search Functions
 async function searchUsers(searchTerm) {
     const usersContainer = document.getElementById('users-container');
-    usersContainer.innerHTML = ''; // Clear previous results
-
-    try {
-        // Get current user's hidden conversations
-        const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
-        const currentUserData = currentUserDoc.data();
-        const hiddenConversations = currentUserData?.hiddenConversations || [];
-        const pinnedConversations = currentUserData?.pinnedConversations || [];
-
-        // Get all users
-        const usersSnapshot = await getDocs(collection(db, 'users'));
-        const users = [];
-
-        usersSnapshot.forEach(doc => {
-            const userData = doc.data();
-            if (doc.id !== currentUser.uid && 
-                !hiddenConversations.includes(doc.id) &&
-                userData.username.toLowerCase().includes(searchTerm.toLowerCase())) {
-                users.push({
-                    id: doc.id,
-                    username: userData.username,
-                    profilePicture: userData.profilePicture,
-                    verified: userData.verified
-                });
-            }
-        });
-
-        // Sort users: pinned first, then alphabetically
-        users.sort((a, b) => {
-            const aPinned = pinnedConversations.includes(a.id);
-            const bPinned = pinnedConversations.includes(b.id);
-            
-            if (aPinned && !bPinned) return -1;
-            if (!aPinned && bPinned) return 1;
-            
-            return a.username.localeCompare(b.username);
-        });
-
-        // Display filtered users
-        users.forEach(user => {
-            const userElement = document.createElement('div');
-            userElement.className = 'user-item';
-            if (pinnedConversations.includes(user.id)) {
-                userElement.classList.add('pinned');
-            }
-            userElement.dataset.uid = user.id;
-            userElement.innerHTML = `
-                <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.username}" class="user-avatar">
-                <span class="username">${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
-                <div class="user-actions">
-                    <span class="material-symbols-outlined action-icon pin-icon">keep</span>
-                    <span class="material-symbols-outlined action-icon close-icon">close</span>
-                </div>
-            `;
-            
-            // Add click handler for the user item
-            userElement.onclick = (e) => {
-                if (!e.target.classList.contains('action-icon')) {
-                    startChat(user.id, user.username);
-                }
-            };
-
-            // Add click handler for close icon
-            const closeIcon = userElement.querySelector('.close-icon');
-            closeIcon.onclick = async (e) => {
-                e.stopPropagation();
-                userElement.remove();
-                try {
-                    await setDoc(doc(db, 'users', currentUser.uid), {
-                        hiddenConversations: arrayUnion(user.id)
-                    }, { merge: true });
-                } catch (error) {
-                    console.error('Error hiding conversation:', error);
-                }
-            };
-
-            // Add click handler for pin icon
-            const pinIcon = userElement.querySelector('.pin-icon');
-            pinIcon.onclick = async (e) => {
-                e.stopPropagation();
-                const isPinned = userElement.classList.contains('pinned');
-                userElement.classList.toggle('pinned');
-                
-                if (!isPinned) {
-                    usersContainer.insertBefore(userElement, usersContainer.firstChild);
-                }
-                
-                try {
-                    if (!isPinned) {
-                        await setDoc(doc(db, 'users', currentUser.uid), {
-                            pinnedConversations: arrayUnion(user.id)
-                        }, { merge: true });
-                    } else {
-                        await setDoc(doc(db, 'users', currentUser.uid), {
-                            pinnedConversations: arrayRemove(user.id)
-                        }, { merge: true });
-                    }
-                } catch (error) {
-                    console.error('Error pinning conversation:', error);
-                }
-            };
-
-            usersContainer.appendChild(userElement);
-        });
-    } catch (error) {
-        console.error('Error searching users:', error);
-    }
+    const userItems = usersContainer.querySelectorAll('.user-item');
+    
+    userItems.forEach(userItem => {
+        const username = userItem.querySelector('.username').textContent.toLowerCase();
+        if (username.includes(searchTerm.toLowerCase())) {
+            userItem.style.display = 'flex';
+        } else {
+            userItem.style.display = 'none';
+        }
+    });
 }
 
 // Compose Modal Functions
@@ -1133,7 +1042,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (searchTerm) {
                 searchUsers(searchTerm);
             } else {
-                loadUsers();
+                loadUsers(); // Reload all users when search is empty
             }
         });
     }
@@ -1142,7 +1051,7 @@ document.addEventListener('DOMContentLoaded', () => {
         clearSearch.addEventListener('click', () => {
             if (searchInput) {
                 searchInput.value = '';
-                loadUsers();
+                loadUsers(); // Reload all users when search is cleared
             }
         });
     }
