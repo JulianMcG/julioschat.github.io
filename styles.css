@@ -287,6 +287,25 @@ body {
     background-color: #1C1F28;
     border-radius: 15px;
     margin: 20px;
+    transform-origin: bottom;
+    transition: all 0.3s ease;
+    display: none;
+}
+
+.message-input.visible {
+    display: block;
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .message-input input {
@@ -310,6 +329,18 @@ body {
     line-height: 1.4;
     word-wrap: break-word;
     display: inline-block;
+    animation: messageAppear 0.3s ease;
+}
+
+@keyframes messageAppear {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
 .message.sent {
@@ -571,6 +602,14 @@ body {
     font-weight: 500;
 }
 
+.chat-header .to-label {
+    color: #B6B8C8;
+}
+
+.chat-header .username {
+    color: #ECEBF7;
+}
+
 /* Compose Modal Styles */
 #compose-modal .modal-content {
     background-color: #0c0e16;
@@ -635,4 +674,16 @@ body {
 .compose-user-item span {
     font-size: 14px;
     color: #ECEBF7;
+}
+
+.user-item {
+    transition: transform 0.3s ease;
+}
+
+.user-item.shift-up {
+    transform: translateY(-5px);
+}
+
+.user-item.shift-down {
+    transform: translateY(5px);
 } 
