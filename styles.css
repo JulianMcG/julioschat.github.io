@@ -58,8 +58,8 @@ body {
 .form-group input {
     width: 100%;
     padding: 15px;
-    border: 1px solid #1C1F28;
-    border-radius: 15px;
+    border: 2px solid #1C1F28;
+    border-radius: 12.5px;
     font-size: 16px;
     background-color: #10121B;
     color: #ECEBF7;
@@ -72,7 +72,7 @@ body {
 }
 
 .form-group input::placeholder {
-    color: #6b6d7a;
+    color: #1C1F28;
 }
 
 .auth-form button {
@@ -81,7 +81,7 @@ body {
     background-color: #1F49C7;
     color: #ECEBF7;
     border: none;
-    border-radius: 15px;
+    border-radius: 12.5px;
     cursor: pointer;
     font-size: 16px;
     font-weight: 600;
@@ -669,7 +669,7 @@ body {
 
 #auth-section {
     background-image: url('https://i.ibb.co/RkLHZdPq/Julio-s-Wall1.png');
-    background-size: cover;
+    background-size: contain;
     background-position: top;
     background-repeat: no-repeat;
     height: 100%;
