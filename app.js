@@ -1,3 +1,4 @@
+// Trigger new deployment with Vercel Pro
 import { auth, db } from './firebase-config.js';
 import { 
     createUserWithEmailAndPassword, 
