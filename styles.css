@@ -245,9 +245,6 @@ body {
     cursor: pointer;
     border-radius: 8px;
     transition: background-color 0.3s;
-    position: relative;
-    height: 60px;
-    margin: 5px 0;
 }
 
 .user-item:hover {
@@ -266,7 +263,7 @@ body {
     background-color: #13161F;
     border-radius: 15px;
     padding: 10px;
-    height: 60px;
+    margin: 5px 0;
 }
 
 .chat-area {
@@ -350,8 +347,10 @@ body {
     font-size: 10px;
     color: #6b6d7a;
     text-align: right;
-    opacity: 1;
-    position: relative;
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all 0.2s ease;
+    position: absolute;
     width: 100%;
     left: 0;
     pointer-events: none;
@@ -561,7 +560,10 @@ body {
 }
 
 .chat-header img {
-    display: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
 }
 
 .chat-header span {
