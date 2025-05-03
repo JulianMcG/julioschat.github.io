@@ -38,14 +38,13 @@ document.getElementById('profile-picture-input').addEventListener('change', asyn
     if (file) {
         try {
             // Create a storage reference
-            const storageRef = firebase.storage().ref();
-            const fileRef = storageRef.child(`profile_pictures/${currentUser.uid}/${file.name}`);
+            const storageRef = ref(storage, `profile_pictures/${currentUser.uid}/${file.name}`);
             
             // Upload the file
-            await fileRef.put(file);
+            await uploadBytes(storageRef, file);
             
             // Get the download URL
-            const downloadURL = await fileRef.getDownloadURL();
+            const downloadURL = await getDownloadURL(storageRef);
             
             // Update the preview
             document.getElementById('profile-picture-preview').src = downloadURL;
