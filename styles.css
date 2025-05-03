@@ -600,6 +600,8 @@ body {
     border-radius: 15px;
     width: 400px;
     max-width: 90%;
+    margin: 10% auto;
+    padding: 20px;
 }
 
 #compose-modal .search-container {
@@ -607,6 +609,8 @@ body {
     border-radius: 8px;
     padding: 10px;
     margin-bottom: 10px;
+    display: flex;
+    align-items: center;
 }
 
 #compose-modal input {
@@ -614,7 +618,7 @@ body {
     border: none;
     color: #ECEBF7;
     width: 100%;
-    padding: 5px;
+    padding: 8px;
     font-size: 14px;
 }
 
@@ -632,6 +636,9 @@ body {
     max-height: 300px;
     overflow-y: auto;
     margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
 }
 
 .compose-user-item {
@@ -658,4 +665,12 @@ body {
 .compose-user-item span {
     font-size: 14px;
     color: #ECEBF7;
+}
+
+#compose-modal .no-results {
+    color: #6b6d7a;
+    text-align: center;
+    padding: 20px;
+    font-size: 14px;
+    font-style: italic;
 } 
