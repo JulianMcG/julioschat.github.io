@@ -381,7 +381,7 @@ body {
 .user-actions {
     display: none;
     position: absolute;
-    right: 20px;
+    right: 10px;
     gap: 12px;
 }
 
@@ -409,10 +409,6 @@ body {
     font-variation-settings: 'FILL' 1;
 }
 
-.pin-icon:hover {
-    color: #ECEBF7;
-}
-
 .chat-area {
     flex: 1;
     display: flex;
@@ -427,8 +423,6 @@ body {
     padding: 20px;
     display: flex;
     flex-direction: column;
-    position: relative;
-    z-index: 0;
 }
 
 .message-input {
@@ -436,11 +430,6 @@ body {
     background-color: #1C1F28;
     border-radius: 15px;
     margin: 20px;
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 1;
 }
 
 .message-input input {
@@ -459,10 +448,9 @@ body {
 .message-bubble {
     max-width: 70%;
     padding: 10px 15px;
-    margin: 0 20px 5px 20px;
+    margin: 5px 0;
     border-radius: 5px;
     position: relative;
-    z-index: 0;
 }
 
 .message-bubble.sent {
