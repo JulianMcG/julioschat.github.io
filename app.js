@@ -357,20 +357,8 @@ async function loadUsers() {
 
         // Display users
         users.forEach(user => {
-            const userElement = document.createElement('div');
-            userElement.className = 'user-item';
-            if (pinnedConversations.includes(user.id)) {
-                userElement.classList.add('pinned');
-            }
+            const userElement = createUserElement(user);
             userElement.dataset.uid = user.id;
-            userElement.innerHTML = `
-                <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.username}" class="user-avatar">
-                <span class="username">${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
-                <div class="user-actions">
-                    <span class="material-symbols-outlined action-icon pin-icon">keep</span>
-                    <span class="material-symbols-outlined action-icon close-icon">close</span>
-                </div>
-            `;
             
             // Add click handler for the user item
             userElement.onclick = (e) => {
@@ -396,39 +384,49 @@ async function loadUsers() {
                 }
             };
 
-            // Add click handler for pin icon
-            const pinIcon = userElement.querySelector('.pin-icon');
-            pinIcon.onclick = async (e) => {
-                e.stopPropagation();
-                const isPinned = userElement.classList.contains('pinned');
-                userElement.classList.toggle('pinned');
-                
-                // Move the element to the top immediately
-                if (!isPinned) {
-                    usersContainer.insertBefore(userElement, usersContainer.firstChild);
-                }
-                
-                // Update Firestore
-                try {
-                    if (!isPinned) {
-                        await setDoc(doc(db, 'users', currentUser.uid), {
-                            pinnedConversations: arrayUnion(user.id)
-                        }, { merge: true });
-                    } else {
-                        await setDoc(doc(db, 'users', currentUser.uid), {
-                            pinnedConversations: arrayRemove(user.id)
-                        }, { merge: true });
-                    }
-                } catch (error) {
-                    console.error('Error pinning conversation:', error);
-                }
-            };
-
             usersContainer.appendChild(userElement);
         });
     } catch (error) {
         console.error('Error loading users:', error);
     }
+}
+
+function createUserElement(user) {
+    const userElement = document.createElement('div');
+    userElement.className = 'user-item';
+    userElement.innerHTML = `
+        <img src="${user.photoURL || 'default-avatar.png'}" alt="${user.username}" class="profile-picture">
+        <span class="username">${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
+        <span class="material-symbols-outlined pin-icon">keep</span>
+    `;
+    
+    // Add click handler for pin icon
+    const pinIcon = userElement.querySelector('.pin-icon');
+    pinIcon.onclick = async (e) => {
+        e.stopPropagation();
+        const isPinned = userElement.classList.contains('pinned');
+        userElement.classList.toggle('pinned');
+        
+        if (!isPinned) {
+            usersContainer.insertBefore(userElement, usersContainer.firstChild);
+        }
+        
+        try {
+            if (!isPinned) {
+                await setDoc(doc(db, 'users', currentUser.uid), {
+                    pinnedConversations: arrayUnion(user.id)
+                }, { merge: true });
+            } else {
+                await setDoc(doc(db, 'users', currentUser.uid), {
+                    pinnedConversations: arrayRemove(user.id)
+                }, { merge: true });
+            }
+        } catch (error) {
+            console.error('Error pinning conversation:', error);
+        }
+    };
+    
+    return userElement;
 }
 
 async function startChat(userId, username) {
@@ -437,10 +435,11 @@ async function startChat(userId, username) {
     // Check if user is already in sidebar
     const existingUser = document.querySelector(`.user-item[data-uid="${userId}"]`);
     if (!existingUser) {
-        // Get user's profile picture
+        // Get user's profile picture and verification status
         const userDoc = await getDoc(doc(db, 'users', userId));
         const userData = userDoc.data();
         const profilePicture = userData?.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
+        const isVerified = userData?.verified || false;
 
         // Create new user element
         const userElement = document.createElement('div');
@@ -448,7 +447,7 @@ async function startChat(userId, username) {
         userElement.dataset.uid = userId;
         userElement.innerHTML = `
             <img src="${profilePicture}" alt="${username}" class="user-avatar">
-            <span class="username">${username}${userData?.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
+            <span class="username">${username}${isVerified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
             <div class="user-actions">
                 <span class="material-symbols-outlined action-icon pin-icon">keep</span>
                 <span class="material-symbols-outlined action-icon close-icon">close</span>
@@ -486,6 +485,9 @@ async function startChat(userId, username) {
             if (!isPinned) {
                 const usersContainer = document.getElementById('users-container');
                 usersContainer.insertBefore(userElement, usersContainer.firstChild);
+                pinIcon.innerHTML = '<span class="material-symbols-outlined" style="font-variation-settings: \'FILL\' 1; color: #1F49C7;">keep</span>';
+            } else {
+                pinIcon.innerHTML = '<span class="material-symbols-outlined" style="font-variation-settings: \'FILL\' 0; color: #666;">keep</span>';
             }
             
             try {
@@ -518,9 +520,14 @@ async function startChat(userId, username) {
         }
     });
 
-    // Update chat header
-    const verifiedBadge = '<span class="material-symbols-outlined verified-badge">verified</span>';
-    document.getElementById('active-chat-username').innerHTML = `${username}${currentChatUser?.verified ? ` ${verifiedBadge}` : ''}`;
+    // Get user's verification status
+    const userDoc = await getDoc(doc(db, 'users', userId));
+    const userData = userDoc.data();
+    const isVerified = userData?.verified || false;
+
+    // Update chat header with verified badge if user is verified
+    const verifiedBadge = isVerified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : '';
+    document.getElementById('active-chat-username').innerHTML = `${username}${verifiedBadge}`;
 
     // Show message input
     const messageInput = document.querySelector('.message-input');
@@ -767,23 +774,24 @@ async function sendMessage() {
 // Update current user profile in sidebar
 function updateCurrentUserProfile(user) {
     if (user) {
-        document.getElementById('current-username').textContent = user.displayName || 'Username';
-        document.getElementById('current-user-avatar').src = user.photoURL || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
-        
-        // Show verified badge if user is verified
-        const verifiedBadge = '<span class="material-symbols-outlined verified-badge">verified</span>';
-        const usernameElement = document.getElementById('current-username');
-        if (user.verified) {
-            usernameElement.innerHTML = `${user.displayName || 'Username'} ${verifiedBadge}`;
-        }
+        // Get user's verification status from Firestore
+        getDoc(doc(db, 'users', user.uid)).then(userDoc => {
+            const userData = userDoc.data();
+            const isVerified = userData?.verified || false;
+            
+            // Update username with verified badge if user is verified
+            const verifiedBadge = isVerified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : '';
+            document.getElementById('current-username').innerHTML = `${user.displayName || 'Username'}${verifiedBadge}`;
+            document.getElementById('current-user-avatar').src = user.photoURL || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
 
-        // Update user items in the list
-        const userItems = document.querySelectorAll('.user-item');
-        userItems.forEach(item => {
-            if (item.dataset.uid === user.uid) {
-                item.querySelector('span').textContent = user.displayName || 'Username';
-                item.querySelector('img').src = user.photoURL || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
-            }
+            // Update user items in the list
+            const userItems = document.querySelectorAll('.user-item');
+            userItems.forEach(item => {
+                if (item.dataset.uid === user.uid) {
+                    item.querySelector('.username').innerHTML = `${user.displayName || 'Username'}${verifiedBadge}`;
+                    item.querySelector('img').src = user.photoURL || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
+                }
+            });
         });
     }
 }
@@ -948,18 +956,15 @@ async function searchUsers(searchTerm) {
         const hiddenConversations = currentUserData?.hiddenConversations || [];
         const pinnedConversations = currentUserData?.pinnedConversations || [];
 
-        // Search for users
-        const usersQuery = query(
-            collection(db, 'users'),
-            where('username', '>=', searchTerm),
-            where('username', '<=', searchTerm + '\uf8ff')
-        );
-        const usersSnapshot = await getDocs(usersQuery);
+        // Get all users
+        const usersSnapshot = await getDocs(collection(db, 'users'));
         const users = [];
 
         usersSnapshot.forEach(doc => {
             const userData = doc.data();
-            if (doc.id !== currentUser.uid && !hiddenConversations.includes(doc.id)) {
+            if (doc.id !== currentUser.uid && 
+                !hiddenConversations.includes(doc.id) &&
+                userData.username.toLowerCase().includes(searchTerm.toLowerCase())) {
                 users.push({
                     id: doc.id,
                     username: userData.username,
@@ -1153,3 +1158,13 @@ document.querySelector('.signout-button').addEventListener('click', async () => 
         alert('Error signing out. Please try again.');
     }
 });
+
+function updateChatHeader(user) {
+    const chatHeader = document.querySelector('.chat-header');
+    if (!chatHeader) return;
+    
+    chatHeader.innerHTML = `
+        <img src="${user.photoURL || 'default-avatar.png'}" alt="${user.username}" class="profile-picture">
+        <span class="username">${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
+    `;
+}
