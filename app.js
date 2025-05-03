@@ -28,14 +28,41 @@ document.getElementById('profile-picture-preview').addEventListener('click', () 
     document.getElementById('profile-picture-input').click();
 });
 
-document.getElementById('profile-picture-input').addEventListener('change', (e) => {
+document.getElementById('profile-picture-input').addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            document.getElementById('profile-picture-preview').src = e.target.result;
-        };
-        reader.readAsDataURL(file);
+        try {
+            // Create a storage reference
+            const storageRef = firebase.storage().ref();
+            const fileRef = storageRef.child(`profile_pictures/${currentUser.uid}/${file.name}`);
+            
+            // Upload the file
+            await fileRef.put(file);
+            
+            // Get the download URL
+            const downloadURL = await fileRef.getDownloadURL();
+            
+            // Update the preview
+            document.getElementById('profile-picture-preview').src = downloadURL;
+            
+            // Update Firebase Auth profile
+            await updateProfile(currentUser, {
+                photoURL: downloadURL
+            });
+            
+            // Update Firestore
+            await setDoc(doc(db, 'users', currentUser.uid), {
+                profilePicture: downloadURL
+            }, { merge: true });
+            
+            // Update UI
+            document.getElementById('current-user-avatar').src = downloadURL;
+            
+            alert('Profile picture updated successfully!');
+        } catch (error) {
+            console.error('Error uploading profile picture:', error);
+            alert('Error uploading profile picture. Please try again.');
+        }
     }
 });
 
@@ -354,6 +381,19 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Search input event listener
+    const searchInput = document.getElementById('search-user');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.trim();
+            if (searchTerm) {
+                searchUsers(searchTerm);
+            } else {
+                loadUsers(); // Load all users if search is empty
+            }
+        });
+    }
 });
 
 // Close compose modal when clicking outside
@@ -468,7 +508,7 @@ window.addEventListener('click', (event) => {
     }
 });
 
-// Profile Picture Upload in Settings
+// Settings Profile Picture Upload
 document.getElementById('settings-profile-picture').addEventListener('click', () => {
     document.getElementById('settings-profile-picture-input').click();
 });
@@ -491,14 +531,14 @@ document.getElementById('settings-profile-picture-input').addEventListener('chan
             document.getElementById('settings-profile-picture').src = downloadURL;
             
             // Update Firebase Auth profile
-            await currentUser.updateProfile({
+            await updateProfile(currentUser, {
                 photoURL: downloadURL
             });
             
             // Update Firestore
-            await db.collection('users').doc(currentUser.uid).update({
+            await setDoc(doc(db, 'users', currentUser.uid), {
                 profilePicture: downloadURL
-            });
+            }, { merge: true });
             
             // Update UI
             document.getElementById('current-user-avatar').src = downloadURL;
@@ -553,4 +593,42 @@ document.querySelector('.save-button').addEventListener('click', async () => {
         console.error('Error updating profile:', error);
         alert('Error updating profile. Please try again.');
     }
-}); 
+});
+
+// Add this function to handle user search
+async function searchUsers(searchTerm) {
+    const usersContainer = document.getElementById('users-container');
+    usersContainer.innerHTML = '';
+
+    try {
+        const usersSnapshot = await getDocs(collection(db, 'users'));
+        const users = [];
+        
+        usersSnapshot.forEach(doc => {
+            if (doc.id !== currentUser.uid) {
+                const user = {
+                    id: doc.id,
+                    ...doc.data()
+                };
+                if (user.username.toLowerCase().includes(searchTerm.toLowerCase())) {
+                    users.push(user);
+                }
+            }
+        });
+
+        // Display users
+        users.forEach(user => {
+            const userElement = document.createElement('div');
+            userElement.className = 'user-item';
+            userElement.dataset.uid = user.id;
+            userElement.innerHTML = `
+                <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.username}" class="user-avatar">
+                <span>${user.username}</span>
+            `;
+            userElement.onclick = () => startChat(user.id, user.username);
+            usersContainer.appendChild(userElement);
+        });
+    } catch (error) {
+        console.error('Error searching users:', error);
+    }
+} 
