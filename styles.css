@@ -48,7 +48,7 @@ body {
 }
 
 .form-group {
-    margin-bottom: 30px;
+    margin-bottom: 20px;
     position: relative;
 }
 
@@ -82,7 +82,7 @@ body {
 .button-wrapper {
     width: 100%;
     position: relative;
-    margin-bottom: 30px;
+    margin-bottom: 40px;
 }
 
 .button-wrapper button {
