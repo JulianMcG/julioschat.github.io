@@ -1,6 +1,22 @@
 let currentUser = null;
 let currentChatUser = null;
 
+// Profile Picture Upload
+document.getElementById('profile-picture-preview').addEventListener('click', () => {
+    document.getElementById('profile-picture-input').click();
+});
+
+document.getElementById('profile-picture-input').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            document.getElementById('profile-picture-preview').src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
 // Auth Functions
 function showSignup() {
     document.getElementById('login-form').style.display = 'none';
@@ -16,21 +32,21 @@ async function signup() {
     const username = document.getElementById('signup-username').value;
     const email = document.getElementById('signup-email').value;
     const password = document.getElementById('signup-password').value;
+    const profilePicture = document.getElementById('profile-picture-preview').src;
 
     try {
-        // Create user with email and password
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         
-        // Add username to user profile
         await db.collection('users').doc(userCredential.user.uid).set({
             username: username,
             email: email,
+            profilePicture: profilePicture,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 
-        // Update display name
         await userCredential.user.updateProfile({
-            displayName: username
+            displayName: username,
+            photoURL: profilePicture
         });
 
         showChatSection();
@@ -84,7 +100,10 @@ async function loadUsers() {
                 const user = doc.data();
                 const userElement = document.createElement('div');
                 userElement.className = 'user-item';
-                userElement.textContent = user.username;
+                userElement.innerHTML = `
+                    <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.username}" class="user-avatar">
+                    <span>${user.username}</span>
+                `;
                 userElement.onclick = () => startChat(doc.id, user.username);
                 usersContainer.appendChild(userElement);
             }
@@ -132,6 +151,13 @@ async function loadMessages() {
     }
 }
 
+// Send message on Enter key
+document.getElementById('message-input').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        sendMessage();
+    }
+});
+
 async function sendMessage() {
     if (!currentChatUser) return;
 
@@ -161,9 +187,32 @@ document.getElementById('search-user').addEventListener('input', async (e) => {
     const userItems = usersContainer.getElementsByClassName('user-item');
 
     Array.from(userItems).forEach(item => {
-        const username = item.textContent.toLowerCase();
-        item.style.display = username.includes(searchTerm) ? 'block' : 'none';
+        const username = item.querySelector('span').textContent.toLowerCase();
+        item.style.display = username.includes(searchTerm) ? 'flex' : 'none';
     });
+});
+
+// Compose new message
+document.querySelector('.compose-icon').addEventListener('click', () => {
+    const username = prompt('Enter username to message:');
+    if (username) {
+        // Find user by username and start chat
+        db.collection('users')
+            .where('username', '==', username)
+            .get()
+            .then(snapshot => {
+                if (!snapshot.empty) {
+                    const user = snapshot.docs[0];
+                    startChat(user.id, user.data().username);
+                } else {
+                    alert('User not found');
+                }
+            })
+            .catch(error => {
+                console.error('Error finding user:', error);
+                alert('Error finding user');
+            });
+    }
 });
 
 // Auth State Listener
