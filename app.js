@@ -19,7 +19,8 @@ import {
     onSnapshot, 
     addDoc,
     serverTimestamp,
-    arrayUnion
+    arrayUnion,
+    arrayRemove
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
@@ -325,7 +326,7 @@ async function loadUsers() {
             userElement.dataset.uid = user.id;
             userElement.innerHTML = `
                 <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.username}" class="user-avatar">
-                <span>${user.username}</span>
+                <span class="username">${user.username}</span>
                 <div class="user-actions">
                     <span class="material-symbols-outlined action-icon pin-icon">keep</span>
                     <span class="material-symbols-outlined action-icon close-icon">close</span>
@@ -364,9 +365,15 @@ async function loadUsers() {
                 userElement.classList.toggle('pinned');
                 // Update Firestore to mark conversation as pinned
                 try {
-                    await setDoc(doc(db, 'users', currentUser.uid), {
-                        pinnedConversations: arrayUnion(user.id)
-                    }, { merge: true });
+                    if (userElement.classList.contains('pinned')) {
+                        await setDoc(doc(db, 'users', currentUser.uid), {
+                            pinnedConversations: arrayUnion(user.id)
+                        }, { merge: true });
+                    } else {
+                        await setDoc(doc(db, 'users', currentUser.uid), {
+                            pinnedConversations: arrayRemove(user.id)
+                        }, { merge: true });
+                    }
                 } catch (error) {
                     console.error('Error pinning conversation:', error);
                 }
