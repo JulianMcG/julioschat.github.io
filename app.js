@@ -19,9 +19,11 @@ import {
     addDoc,
     serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
 let currentUser = null;
 let currentChatUser = null;
+const storage = getStorage();
 
 // Profile Picture Upload
 document.getElementById('profile-picture-preview').addEventListener('click', () => {
@@ -74,6 +76,7 @@ function showSignup() {
     if (loginForm && signupForm) {
         loginForm.style.display = 'none';
         signupForm.style.display = 'block';
+        clearErrorMessages();
     }
 }
 
@@ -84,14 +87,34 @@ function showLogin() {
     if (loginForm && signupForm) {
         signupForm.style.display = 'none';
         loginForm.style.display = 'block';
+        clearErrorMessages();
     }
 }
 
-// Add event listeners for auth links
+function clearErrorMessages() {
+    document.querySelectorAll('.error-message').forEach(el => {
+        el.classList.remove('show');
+    });
+}
+
+function showError(element, message) {
+    let errorElement = element.nextElementSibling;
+    if (!errorElement || !errorElement.classList.contains('error-message')) {
+        errorElement = document.createElement('div');
+        errorElement.className = 'error-message';
+        element.parentNode.insertBefore(errorElement, element.nextSibling);
+    }
+    errorElement.textContent = message;
+    errorElement.classList.add('show');
+}
+
+// Add event listeners for auth links and buttons
 document.addEventListener('DOMContentLoaded', () => {
     // Auth link event listeners
     const signupLink = document.querySelector('#login-form .auth-link');
     const loginLink = document.querySelector('#signup-form .auth-link');
+    const loginButton = document.getElementById('login-button');
+    const signupButton = document.getElementById('signup-button');
 
     if (signupLink) {
         signupLink.addEventListener('click', (e) => {
@@ -106,65 +129,133 @@ document.addEventListener('DOMContentLoaded', () => {
             showLogin();
         });
     }
+
+    if (loginButton) {
+        loginButton.addEventListener('click', login);
+    }
+
+    if (signupButton) {
+        signupButton.addEventListener('click', signup);
+    }
 });
 
 async function signup() {
-    const username = document.getElementById('signup-username').value;
-    const email = document.getElementById('signup-email').value;
+    const username = document.getElementById('signup-username').value.trim();
+    const email = document.getElementById('signup-email').value.trim();
     const password = document.getElementById('signup-password').value;
     const profilePicture = document.getElementById('profile-picture-preview').src;
+    const signupButton = document.getElementById('signup-button');
 
-    if (!username || !email || !password) {
-        alert('Please fill in all fields');
+    // Clear previous errors
+    clearErrorMessages();
+
+    // Validate inputs
+    if (!username) {
+        showError(document.getElementById('signup-username'), 'Username is required');
+        return;
+    }
+    if (!email) {
+        showError(document.getElementById('signup-email'), 'Email is required');
+        return;
+    }
+    if (!password) {
+        showError(document.getElementById('signup-password'), 'Password is required');
+        return;
+    }
+    if (password.length < 6) {
+        showError(document.getElementById('signup-password'), 'Password must be at least 6 characters');
         return;
     }
 
     try {
-        console.log('Attempting to create user...');
+        signupButton.classList.add('loading');
         
         // Create user with email and password
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        console.log('User created:', userCredential.user.uid);
         
-        // Create user document in Firestore first
+        // Create user document in Firestore
         await setDoc(doc(db, 'users', userCredential.user.uid), {
             username: username,
             email: email,
             profilePicture: profilePicture,
             createdAt: serverTimestamp()
         });
-        console.log('User document created');
 
-        // Then update the profile
+        // Update the profile
         await updateProfile(userCredential.user, {
             displayName: username,
             photoURL: profilePicture
         });
-        console.log('Profile updated');
 
         // Show chat section
         showChatSection();
     } catch (error) {
         console.error('Signup error:', error);
-        alert(error.message);
+        let errorMessage = 'An error occurred during signup';
+        
+        switch (error.code) {
+            case 'auth/email-already-in-use':
+                errorMessage = 'Email is already in use';
+                showError(document.getElementById('signup-email'), errorMessage);
+                break;
+            case 'auth/invalid-email':
+                errorMessage = 'Invalid email address';
+                showError(document.getElementById('signup-email'), errorMessage);
+                break;
+            case 'auth/weak-password':
+                errorMessage = 'Password is too weak';
+                showError(document.getElementById('signup-password'), errorMessage);
+                break;
+            default:
+                alert(errorMessage);
+        }
+    } finally {
+        signupButton.classList.remove('loading');
     }
 }
 
 async function login() {
-    const email = document.getElementById('login-email').value;
+    const email = document.getElementById('login-email').value.trim();
     const password = document.getElementById('login-password').value;
+    const loginButton = document.getElementById('login-button');
 
-    if (!email || !password) {
-        alert('Please fill in all fields');
+    // Clear previous errors
+    clearErrorMessages();
+
+    // Validate inputs
+    if (!email) {
+        showError(document.getElementById('login-email'), 'Email is required');
+        return;
+    }
+    if (!password) {
+        showError(document.getElementById('login-password'), 'Password is required');
         return;
     }
 
     try {
+        loginButton.classList.add('loading');
         await signInWithEmailAndPassword(auth, email, password);
         showChatSection();
     } catch (error) {
         console.error('Login error:', error);
-        alert(error.message);
+        let errorMessage = 'An error occurred during login';
+        
+        switch (error.code) {
+            case 'auth/user-not-found':
+            case 'auth/wrong-password':
+                errorMessage = 'Invalid email or password';
+                showError(document.getElementById('login-email'), errorMessage);
+                showError(document.getElementById('login-password'), errorMessage);
+                break;
+            case 'auth/invalid-email':
+                errorMessage = 'Invalid email address';
+                showError(document.getElementById('login-email'), errorMessage);
+                break;
+            default:
+                alert(errorMessage);
+        }
+    } finally {
+        loginButton.classList.remove('loading');
     }
 }
 
