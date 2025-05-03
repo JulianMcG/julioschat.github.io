@@ -310,20 +310,13 @@ body {
     order: -1;
 }
 
-.pinned .username {
-    position: relative;
-    padding-right: 24px;
+.pinned .pin-icon {
+    color: #1F49C7;
+    font-variation-settings: 'FILL' 1;
 }
 
 .pinned .username::after {
-    content: "keep";
-    font-family: "Material Symbols Outlined";
-    color: #B6B8C8;
-    font-size: 16px;
-    position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
+    content: "";
 }
 
 .chat-area {
@@ -360,6 +353,33 @@ body {
 
 .message-input input:focus {
     outline: none;
+}
+
+.message-bubble {
+    max-width: 70%;
+    padding: 10px 15px;
+    margin: 5px 0;
+    border-radius: 5px;
+    position: relative;
+}
+
+.message-bubble.sent {
+    background-color: #1F49C7;
+    align-self: flex-end;
+}
+
+.message-bubble.received {
+    background-color: #1C1F28;
+    align-self: flex-start;
+}
+
+.message-bubble.consecutive {
+    border-radius: 15px;
+    margin-top: 2px;
+}
+
+.message-bubble.consecutive:last-child {
+    border-radius: 5px;
 }
 
 .message {
@@ -558,6 +578,10 @@ body {
     background-color: #1a3db0;
 }
 
+.save-button:active {
+    transform: translateY(0);
+}
+
 .no-results {
     color: #6b6d7a;
     text-align: center;
@@ -715,7 +739,144 @@ body {
 
 .verified-badge {
     color: #1F49C7;
-    font-size: 16px;
+    font-size: 18px;
     display: inline-flex;
     align-items: center;
+    margin-left: 4px;
+}
+
+#settings-modal .modal-content {
+    background-color: #0c0e16;
+    border-radius: 15px;
+    width: 500px;
+    max-width: 90%;
+    margin: 10% auto;
+    padding: 30px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+#settings-modal .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #1C1F28;
+}
+
+#settings-modal .modal-header h2 {
+    font-size: 24px;
+    color: #ECEBF7;
+}
+
+#settings-modal .close-modal {
+    color: #B6B8C8;
+    cursor: pointer;
+    font-size: 24px;
+    transition: color 0.3s;
+}
+
+#settings-modal .close-modal:hover {
+    color: #ECEBF7;
+}
+
+#settings-modal .profile-picture-upload {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+#settings-modal .profile-picture-upload img {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 15px;
+    cursor: pointer;
+    border: 3px solid #1F49C7;
+    transition: transform 0.3s;
+}
+
+#settings-modal .profile-picture-upload img:hover {
+    transform: scale(1.05);
+}
+
+#settings-modal .username-change {
+    margin-bottom: 30px;
+}
+
+#settings-modal .username-change label {
+    display: block;
+    margin-bottom: 10px;
+    color: #B6B8C8;
+    font-size: 14px;
+}
+
+#settings-modal .username-change input {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid #2a2d3e;
+    border-radius: 8px;
+    font-size: 16px;
+    background-color: #1a1c2a;
+    color: #ECEBF7;
+    transition: border-color 0.3s;
+}
+
+#settings-modal .username-change input:focus {
+    outline: none;
+    border-color: #1F49C7;
+}
+
+#settings-modal .save-button {
+    width: 100%;
+    padding: 14px;
+    background-color: #1F49C7;
+    color: #ECEBF7;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: all 0.3s;
+    margin-bottom: 20px;
+}
+
+#settings-modal .save-button:hover {
+    background-color: #1a3db0;
+    transform: translateY(-2px);
+}
+
+#settings-modal .save-button:active {
+    transform: translateY(0);
+}
+
+#settings-modal .signout-section {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #1C1F28;
+    display: flex;
+    justify-content: center;
+}
+
+#settings-modal .signout-button {
+    background-color: #E85658;
+    color: #ECEBF7;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+#settings-modal .signout-button:hover {
+    background-color: #d14547;
+    transform: translateY(-2px);
+}
+
+#settings-modal .signout-button:active {
+    transform: translateY(0);
 } 
