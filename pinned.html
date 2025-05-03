@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pinned Contacts - Julio's Chat</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .pinned-contacts-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            min-height: 100vh;
+            background-color: #0c0e16;
+        }
+
+        .pinned-contacts-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .contact-circle {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            margin-right: 25px;
+            cursor: pointer;
+            overflow: hidden;
+            position: relative;
+            background-color: #13161F;
+        }
+
+        .contact-circle:last-child {
+            margin-right: 0;
+        }
+
+        .contact-circle img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .add-circle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #13161F;
+        }
+
+        .add-circle .material-icons {
+            color: #B6B8C8;
+            font-size: 24px;
+        }
+
+        .contact-names {
+            display: flex;
+            margin-top: 10px;
+        }
+
+        .contact-name {
+            width: 60px;
+            margin-right: 25px;
+            text-align: center;
+            font-size: 12px;
+            color: #ECEBF7;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .contact-name:last-child {
+            margin-right: 0;
+        }
+
+        .verified-badge {
+            color: #1DA1F2;
+            font-size: 14px;
+            margin-top: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="pinned-contacts-container">
+        <div class="pinned-contacts-row" id="pinned-contacts">
+            <!-- Pinned contacts will be dynamically added here -->
+        </div>
+        <div class="contact-names" id="contact-names">
+            <!-- Contact names will be dynamically added here -->
+        </div>
+    </div>
+
+    <script type="module">
+        import { auth, db } from './firebase-config.js';
+        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        let currentUser = null;
+
+        // Add the plus circle
+        const pinnedContacts = document.getElementById('pinned-contacts');
+        const addCircle = document.createElement('div');
+        addCircle.className = 'contact-circle add-circle';
+        addCircle.innerHTML = '<span class="material-icons">add</span>';
+        addCircle.onclick = () => window.location.href = 'https://www.julios.games/chat';
+        pinnedContacts.appendChild(addCircle);
+
+        // Add empty space for the plus circle in names
+        const contactNames = document.getElementById('contact-names');
+        const emptyName = document.createElement('div');
+        emptyName.className = 'contact-name';
+        contactNames.appendChild(emptyName);
+
+        // Load pinned contacts
+        async function loadPinnedContacts() {
+            if (!currentUser) return;
+
+            try {
+                const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+                const userData = userDoc.data();
+                const pinnedConversations = userData?.pinnedConversations || [];
+
+                // Clear existing contacts (except the add circle)
+                while (pinnedContacts.children.length > 1) {
+                    pinnedContacts.removeChild(pinnedContacts.lastChild);
+                }
+                while (contactNames.children.length > 1) {
+                    contactNames.removeChild(contactNames.lastChild);
+                }
+
+                // Add pinned contacts
+                for (const userId of pinnedConversations) {
+                    const contactDoc = await getDoc(doc(db, 'users', userId));
+                    const contactData = contactDoc.data();
+
+                    // Create contact circle
+                    const contactCircle = document.createElement('div');
+                    contactCircle.className = 'contact-circle';
+                    contactCircle.innerHTML = `<img src="${contactData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${contactData.username}">`;
+                    contactCircle.onclick = () => window.location.href = `https://www.julios.games/chat?user=${userId}`;
+                    pinnedContacts.insertBefore(contactCircle, addCircle);
+
+                    // Create contact name
+                    const contactName = document.createElement('div');
+                    contactName.className = 'contact-name';
+                    contactName.innerHTML = `
+                        ${contactData.username}
+                        ${contactData.verified ? '<span class="verified-badge">✓</span>' : ''}
+                    `;
+                    contactNames.insertBefore(contactName, emptyName);
+                }
+            } catch (error) {
+                console.error('Error loading pinned contacts:', error);
+            }
+        }
+
+        // Auth state listener
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            if (user) {
+                loadPinnedContacts();
+            } else {
+                window.location.href = 'https://www.julios.games/chat';
+            }
+        });
+    </script>
+</body>
+</html> 
