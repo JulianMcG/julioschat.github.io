@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pinned Contacts - Julio's Chat</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <style>
         body {
@@ -59,7 +59,7 @@
             background-color: #13161F;
         }
 
-        .add-circle .material-icons {
+        .add-circle .material-symbols-outlined {
             color: #B6B8C8;
             font-size: 40px;
         }
@@ -91,7 +91,7 @@
             align-items: center;
         }
 
-        .verified-badge .material-icons {
+        .verified-badge .material-symbols-outlined {
             font-size: 16px;
             font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
         }
@@ -118,8 +118,8 @@
         const pinnedContacts = document.getElementById('pinned-contacts');
         const addCircle = document.createElement('div');
         addCircle.className = 'contact-circle add-circle';
-        addCircle.innerHTML = '<span class="material-icons">add</span>';
-        addCircle.onclick = () => window.location.href = 'https://www.julios.games/chat';
+        addCircle.innerHTML = '<span class="material-symbols-outlined">add</span>';
+        addCircle.onclick = () => window.open('https://www.julios.games/chat', '_blank');
         pinnedContacts.appendChild(addCircle);
 
         // Add empty space for the plus circle in names
@@ -154,7 +154,7 @@
                     const contactCircle = document.createElement('div');
                     contactCircle.className = 'contact-circle';
                     contactCircle.innerHTML = `<img src="${contactData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${contactData.username}">`;
-                    contactCircle.onclick = () => window.location.href = `https://www.julios.games/chat?user=${userId}`;
+                    contactCircle.onclick = () => window.open(`https://www.julios.games/chat?user=${userId}`, '_blank');
                     pinnedContacts.insertBefore(contactCircle, addCircle);
 
                     // Create contact name
@@ -162,7 +162,7 @@
                     contactName.className = 'contact-name';
                     contactName.innerHTML = `
                         ${contactData.username}
-                        ${contactData.verified ? '<span class="verified-badge"><span class="material-icons">verified</span></span>' : ''}
+                        ${contactData.verified ? '<span class="verified-badge"><span class="material-symbols-outlined">verified</span></span>' : ''}
                     `;
                     contactNames.insertBefore(contactName, emptyName);
                 }
@@ -177,7 +177,7 @@
             if (user) {
                 loadPinnedContacts();
             } else {
-                window.location.href = 'https://www.julios.games/chat';
+                window.open('https://www.julios.games/chat', '_blank');
             }
         });
     </script>
