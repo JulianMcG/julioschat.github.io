@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CMessenger</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css">
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -25,6 +29,10 @@
                 </div>
                 <div id="signup-form" style="display: none;">
                     <h2>Sign Up</h2>
+                    <div class="profile-picture-upload">
+                        <img src="https://i.ibb.co/Gf9VD2MN/pfp.png" alt="Profile Picture" id="profile-picture-preview">
+                        <input type="file" id="profile-picture-input" accept="image/*">
+                    </div>
                     <input type="text" id="signup-username" placeholder="Username">
                     <input type="email" id="signup-email" placeholder="Email">
                     <input type="password" id="signup-password" placeholder="Password">
@@ -36,22 +44,23 @@
 
         <!-- Chat Section -->
         <div id="chat-section" class="section" style="display: none;">
-            <div class="chat-header">
-                <h2>CMessenger</h2>
-                <button onclick="logout()">Logout</button>
-            </div>
             <div class="chat-container">
-                <div class="users-list">
-                    <h3>Users</h3>
-                    <input type="text" id="search-user" placeholder="Search users...">
-                    <div id="users-container"></div>
-                </div>
                 <div class="chat-area">
                     <div class="chat-messages" id="chat-messages"></div>
                     <div class="message-input">
                         <input type="text" id="message-input" placeholder="Type a message...">
-                        <button onclick="sendMessage()">Send</button>
                     </div>
+                </div>
+                <div class="sidebar">
+                    <div class="sidebar-header">
+                        <h3>Chat</h3>
+                        <span class="material-symbols-outlined compose-icon">edit_square</span>
+                    </div>
+                    <div class="search-container">
+                        <span class="material-symbols-outlined search-icon">search</span>
+                        <input type="text" id="search-user" placeholder="Search">
+                    </div>
+                    <div id="users-container" class="users-list"></div>
                 </div>
             </div>
         </div>
