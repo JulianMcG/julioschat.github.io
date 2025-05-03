@@ -324,19 +324,24 @@ async function loadUsers() {
         );
         const messagesSnapshot = await getDocs(messagesQuery);
 
-        // Get unique user IDs from messages
-        const dmUserIds = new Set();
+        // Create a Map to store unique users with their latest data
+        const uniqueUsers = new Map();
+
+        // Process each message
         messagesSnapshot.forEach(doc => {
             const message = doc.data();
-            message.participants.forEach(id => {
-                if (id !== currentUser.uid) {
-                    dmUserIds.add(id);
+            message.participants.forEach(userId => {
+                if (userId !== currentUser.uid && !hiddenConversations.includes(userId)) {
+                    uniqueUsers.set(userId, {
+                        id: userId,
+                        isPinned: pinnedConversations.includes(userId)
+                    });
                 }
             });
         });
 
-        // Get user details for each DM'd user
-        const usersPromises = Array.from(dmUserIds).map(async (userId) => {
+        // Get user details for each unique user
+        const userPromises = Array.from(uniqueUsers.keys()).map(async (userId) => {
             const userDoc = await getDoc(doc(db, 'users', userId));
             const userData = userDoc.data();
             return {
@@ -344,11 +349,11 @@ async function loadUsers() {
                 username: userData.username,
                 profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
                 verified: userData.verified,
-                isPinned: pinnedConversations.includes(userId)
+                isPinned: uniqueUsers.get(userId).isPinned
             };
         });
 
-        const users = await Promise.all(usersPromises);
+        const users = await Promise.all(userPromises);
 
         // Sort users: pinned first, then alphabetically
         users.sort((a, b) => {
@@ -357,15 +362,11 @@ async function loadUsers() {
             return a.username.localeCompare(b.username);
         });
 
-        // Display users
-        const existingUserIds = new Set();
-        users.forEach(user => {
-            // Skip if we've already added this user
-            if (existingUserIds.has(user.id)) {
-                return;
-            }
-            existingUserIds.add(user.id);
+        // Clear the container before adding users
+        usersContainer.innerHTML = '';
 
+        // Display users
+        users.forEach(user => {
             const userElement = createUserElement(user);
             userElement.dataset.uid = user.id;
             
