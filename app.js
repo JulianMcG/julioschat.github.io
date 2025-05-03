@@ -111,110 +111,42 @@ function showError(element, message) {
     errorElement.classList.add('show');
 }
 
-// Check if user has visited before
-function hasVisitedBefore() {
-    return localStorage.getItem('hasVisited') === 'true';
-}
-
-function setVisited() {
-    localStorage.setItem('hasVisited', 'true');
-}
-
 // Add event listeners for auth links and buttons
 document.addEventListener('DOMContentLoaded', () => {
-    // Show appropriate form based on previous visit
-    if (hasVisitedBefore()) {
-        showLogin();
-    } else {
-        showSignup();
-        setVisited();
-    }
-
     // Auth link event listeners
-    const signupLink = document.getElementById('signup-link');
-    const loginLink = document.getElementById('login-link');
+    const signupLink = document.querySelector('#login-form .auth-link');
+    const loginLink = document.querySelector('#signup-form .auth-link');
     const loginButton = document.getElementById('login-button');
     const signupButton = document.getElementById('signup-button');
 
-    if (loginLink) {
-        loginLink.onclick = (e) => {
-            e.preventDefault();
-            showLogin();
-        };
-    }
-
     if (signupLink) {
-        signupLink.onclick = (e) => {
+        signupLink.addEventListener('click', (e) => {
             e.preventDefault();
             showSignup();
-        };
+        });
+    }
+
+    if (loginLink) {
+        loginLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            showLogin();
+        });
     }
 
     if (loginButton) {
-        loginButton.onclick = async (e) => {
-            e.preventDefault();
-            await login();
-        };
+        loginButton.addEventListener('click', login);
     }
 
     if (signupButton) {
-        signupButton.onclick = async (e) => {
-            e.preventDefault();
-            await signup();
-        };
+        signupButton.addEventListener('click', signup);
     }
 });
-
-async function login() {
-    const email = document.getElementById('login-email').value.trim();
-    const password = document.getElementById('login-password').value;
-    const loginButton = document.getElementById('login-button');
-
-    // Clear previous errors
-    clearErrorMessages();
-
-    // Validate inputs
-    if (!email) {
-        showError(document.getElementById('login-email'), 'Email is required');
-        return;
-    }
-    if (!password) {
-        showError(document.getElementById('login-password'), 'Password is required');
-        return;
-    }
-
-    try {
-        loginButton.classList.add('loading');
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        console.log('Login successful:', userCredential.user);
-        showChatSection();
-    } catch (error) {
-        console.error('Login error:', error);
-        let errorMessage = 'An error occurred during login';
-        
-        switch (error.code) {
-            case 'auth/user-not-found':
-            case 'auth/wrong-password':
-                errorMessage = 'Invalid email or password';
-                showError(document.getElementById('login-email'), errorMessage);
-                showError(document.getElementById('login-password'), errorMessage);
-                break;
-            case 'auth/invalid-email':
-                errorMessage = 'Invalid email address';
-                showError(document.getElementById('login-email'), errorMessage);
-                break;
-            default:
-                alert(errorMessage);
-        }
-    } finally {
-        loginButton.classList.remove('loading');
-    }
-}
 
 async function signup() {
     const username = document.getElementById('signup-username').value.trim();
     const email = document.getElementById('signup-email').value.trim();
     const password = document.getElementById('signup-password').value;
+    const profilePicture = document.getElementById('profile-picture-preview').src;
     const signupButton = document.getElementById('signup-button');
 
     // Clear previous errors
@@ -248,14 +180,14 @@ async function signup() {
         await setDoc(doc(db, 'users', userCredential.user.uid), {
             username: username,
             email: email,
-            profilePicture: 'https://i.ibb.co/Gf9VD2MN/pfp.png',
+            profilePicture: profilePicture,
             createdAt: serverTimestamp()
         });
 
         // Update the profile
         await updateProfile(userCredential.user, {
             displayName: username,
-            photoURL: 'https://i.ibb.co/Gf9VD2MN/pfp.png'
+            photoURL: profilePicture
         });
 
         // Show chat section
@@ -282,6 +214,51 @@ async function signup() {
         }
     } finally {
         signupButton.classList.remove('loading');
+    }
+}
+
+async function login() {
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+    const loginButton = document.getElementById('login-button');
+
+    // Clear previous errors
+    clearErrorMessages();
+
+    // Validate inputs
+    if (!email) {
+        showError(document.getElementById('login-email'), 'Email is required');
+        return;
+    }
+    if (!password) {
+        showError(document.getElementById('login-password'), 'Password is required');
+        return;
+    }
+
+    try {
+        loginButton.classList.add('loading');
+        await signInWithEmailAndPassword(auth, email, password);
+        showChatSection();
+    } catch (error) {
+        console.error('Login error:', error);
+        let errorMessage = 'An error occurred during login';
+        
+        switch (error.code) {
+            case 'auth/user-not-found':
+            case 'auth/wrong-password':
+                errorMessage = 'Invalid email or password';
+                showError(document.getElementById('login-email'), errorMessage);
+                showError(document.getElementById('login-password'), errorMessage);
+                break;
+            case 'auth/invalid-email':
+                errorMessage = 'Invalid email address';
+                showError(document.getElementById('login-email'), errorMessage);
+                break;
+            default:
+                alert(errorMessage);
+        }
+    } finally {
+        loginButton.classList.remove('loading');
     }
 }
 
