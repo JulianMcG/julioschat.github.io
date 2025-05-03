@@ -209,6 +209,12 @@ async function startChat(userId, username) {
     document.getElementById('active-chat-username').textContent = username;
     document.getElementById('active-chat-avatar').src = document.querySelector(`.user-item[data-uid="${userId}"] img`).src;
 
+    // Update message input placeholder
+    const messageInput = document.getElementById('message-input');
+    if (messageInput) {
+        messageInput.placeholder = `Message ${username}`;
+    }
+
     // Load messages
     loadMessages();
 }
@@ -244,12 +250,8 @@ async function loadMessages() {
                     
                     const messageElement = document.createElement('div');
                     messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
-                    
-                    const time = message.timestamp ? new Date(message.timestamp.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
-                    
                     messageElement.innerHTML = `
                         <div class="content">${message.content}</div>
-                        <div class="time">${time}</div>
                     `;
                     chatMessages.appendChild(messageElement);
                 }
