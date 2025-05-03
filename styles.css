@@ -94,8 +94,9 @@ body {
 }
 
 .search-icon {
-    color: #B6B8C8;
+    color: #ECEBF7;
     margin-right: 10px;
+    font-size: 18px;
 }
 
 #search-user {
@@ -142,6 +143,7 @@ body {
     flex-direction: column;
     background-color: #13161F;
     border-top-left-radius: 15px;
+    margin-top: 15px;
 }
 
 .chat-messages {
@@ -157,7 +159,7 @@ body {
     gap: 10px;
     padding: 10px;
     background-color: #1C1F28;
-    border-radius: 8px;
+    border-radius: 15px;
     margin: 20px;
 }
 
@@ -206,6 +208,8 @@ body {
     align-items: center;
     justify-content: space-between;
     background-color: #0c0e16;
+    margin: 0 20px;
+    width: calc(100% - 40px);
 }
 
 .profile-info {
