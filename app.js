@@ -196,28 +196,47 @@ async function loadMessages() {
     chatMessages.innerHTML = '';
 
     try {
+        console.log('Loading messages between:', {
+            currentUser: currentUser.uid,
+            chatUser: currentChatUser.id
+        });
+
+        // Create a query that gets messages between the two users
         const messagesQuery = query(
             collection(db, 'messages'),
             where('participants', 'array-contains', currentUser.uid),
             orderBy('timestamp', 'asc')
         );
 
+        // Clean up any existing listener
+        if (window.currentMessageUnsubscribe) {
+            window.currentMessageUnsubscribe();
+        }
+
         const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
+            console.log('Received snapshot with', snapshot.size, 'messages');
             chatMessages.innerHTML = '';
             
             snapshot.forEach(doc => {
                 const message = doc.data();
+                console.log('Processing message:', message);
                 
-                if (message.participants.includes(currentChatUser.id)) {
+                // Check if the message is between the current users
+                if (message.participants.includes(currentChatUser.id) && 
+                    message.participants.includes(currentUser.uid)) {
+                    
+                    console.log('Displaying message:', message);
                     const messageElement = document.createElement('div');
                     messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
                     messageElement.innerHTML = `
                         <div class="content">${message.content}</div>
+                        <div class="time">${message.timestamp ? new Date(message.timestamp.toDate()).toLocaleTimeString() : ''}</div>
                     `;
                     chatMessages.appendChild(messageElement);
                 }
             });
             
+            // Scroll to bottom
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }, (error) => {
             console.error('Error in message snapshot:', error);
@@ -356,37 +375,36 @@ async function sendMessage() {
     const content = messageInput.value.trim();
     
     if (!content) {
-        console.log('No content to send');
         return;
     }
 
-    console.log('Attempting to send message:', {
-        content,
-        senderId: currentUser.uid,
-        receiverId: currentChatUser.id
-    });
-
     try {
-        await addDoc(collection(db, 'messages'), {
+        console.log('Attempting to send message with data:', {
+            content,
+            senderId: currentUser.uid,
+            receiverId: currentChatUser.id,
+            participants: [currentUser.uid, currentChatUser.id]
+        });
+
+        // Create message data
+        const messageData = {
             content: content,
             senderId: currentUser.uid,
             receiverId: currentChatUser.id,
             participants: [currentUser.uid, currentChatUser.id],
             timestamp: serverTimestamp()
-        });
+        };
 
+        // Add message to Firestore
+        const docRef = await addDoc(collection(db, 'messages'), messageData);
+        console.log('Message sent successfully with ID:', docRef.id);
+        
+        // Clear input
         messageInput.value = '';
-
-        // Add message to UI immediately
+        
+        // Scroll to bottom
         const chatMessages = document.getElementById('chat-messages');
-        const messageElement = document.createElement('div');
-        messageElement.className = 'message sent';
-        messageElement.innerHTML = `
-            <div class="content">${content}</div>
-        `;
-        chatMessages.appendChild(messageElement);
         chatMessages.scrollTop = chatMessages.scrollHeight;
-
     } catch (error) {
         console.error('Error sending message:', error);
         alert('Error sending message: ' + error.message);
