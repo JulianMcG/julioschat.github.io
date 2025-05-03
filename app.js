@@ -513,14 +513,26 @@ async function startChat(userId, username) {
     userItems.forEach(item => {
         if (item.dataset.uid === userId) {
             item.classList.add('active');
+            // Animate other items
+            userItems.forEach(otherItem => {
+                if (otherItem !== item) {
+                    const itemRect = item.getBoundingClientRect();
+                    const otherRect = otherItem.getBoundingClientRect();
+                    if (otherRect.top < itemRect.top) {
+                        otherItem.classList.add('shift-up');
+                    } else {
+                        otherItem.classList.add('shift-down');
+                    }
+                }
+            });
         } else {
             item.classList.remove('active');
+            item.classList.remove('shift-up', 'shift-down');
         }
     });
 
     // Update chat header
-    const verifiedBadge = '<span class="material-symbols-outlined verified-badge">verified</span>';
-    document.getElementById('active-chat-username').innerHTML = `${username}${currentChatUser?.verified ? ` ${verifiedBadge}` : ''}`;
+    document.getElementById('active-chat-username').textContent = username;
 
     // Show message input
     const messageInput = document.querySelector('.message-input');
@@ -770,13 +782,6 @@ function updateCurrentUserProfile(user) {
         document.getElementById('current-username').textContent = user.displayName || 'Username';
         document.getElementById('current-user-avatar').src = user.photoURL || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
         
-        // Show verified badge if user is verified
-        const verifiedBadge = '<span class="material-symbols-outlined verified-badge">verified</span>';
-        const usernameElement = document.getElementById('current-username');
-        if (user.verified) {
-            usernameElement.innerHTML = `${user.displayName || 'Username'} ${verifiedBadge}`;
-        }
-
         // Update user items in the list
         const userItems = document.querySelectorAll('.user-item');
         userItems.forEach(item => {
@@ -1170,4 +1175,4 @@ document.querySelector('.signout-button').addEventListener('click', async () => 
         console.error('Error signing out:', error);
         alert('Error signing out. Please try again.');
     }
-});
+}); 
