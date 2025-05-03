@@ -269,15 +269,11 @@ body {
 .user-actions {
     display: none;
     position: absolute;
-    right: 10px;
+    right: 5px;
     gap: 12px;
 }
 
 .user-item:hover .user-actions {
-    display: flex;
-}
-
-.user-item.active .user-actions {
     display: flex;
 }
 
@@ -287,8 +283,17 @@ body {
     font-size: 20px;
 }
 
+.action-icon:hover {
+    color: #ECEBF7;
+}
+
 .pinned {
     order: -1;
+}
+
+.pinned .username {
+    position: relative;
+    padding-right: 24px;
 }
 
 .pinned .username::after {
@@ -296,8 +301,10 @@ body {
     font-family: "Material Symbols Outlined";
     color: #B6B8C8;
     font-size: 16px;
-    margin-left: 8px;
-    vertical-align: middle;
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
 }
 
 .chat-area {
