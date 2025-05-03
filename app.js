@@ -115,7 +115,7 @@ function showError(element, message) {
 document.addEventListener('DOMContentLoaded', () => {
     // Auth link event listeners
     const signupLink = document.querySelector('#login-form .auth-link');
-    const loginLink = document.querySelector('#login-link');
+    const loginLink = document.getElementById('login-link');
     const loginButton = document.getElementById('login-button');
     const signupButton = document.getElementById('signup-button');
 
@@ -129,7 +129,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (loginLink) {
         loginLink.addEventListener('click', (e) => {
             e.preventDefault();
-            showLogin();
+            const loginForm = document.getElementById('login-form');
+            const signupForm = document.getElementById('signup-form');
+            
+            if (loginForm && signupForm) {
+                signupForm.style.display = 'none';
+                loginForm.style.display = 'block';
+                clearErrorMessages();
+            }
         });
     }
 
