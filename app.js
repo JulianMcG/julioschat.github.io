@@ -324,24 +324,19 @@ async function loadUsers() {
         );
         const messagesSnapshot = await getDocs(messagesQuery);
 
-        // Create a Map to store unique users with their latest data
-        const uniqueUsers = new Map();
-
-        // Process each message
+        // Get unique user IDs from messages
+        const uniqueUserIds = new Set();
         messagesSnapshot.forEach(doc => {
             const message = doc.data();
             message.participants.forEach(userId => {
                 if (userId !== currentUser.uid && !hiddenConversations.includes(userId)) {
-                    uniqueUsers.set(userId, {
-                        id: userId,
-                        isPinned: pinnedConversations.includes(userId)
-                    });
+                    uniqueUserIds.add(userId);
                 }
             });
         });
 
         // Get user details for each unique user
-        const userPromises = Array.from(uniqueUsers.keys()).map(async (userId) => {
+        const userPromises = Array.from(uniqueUserIds).map(async (userId) => {
             const userDoc = await getDoc(doc(db, 'users', userId));
             const userData = userDoc.data();
             return {
@@ -349,7 +344,7 @@ async function loadUsers() {
                 username: userData.username,
                 profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
                 verified: userData.verified,
-                isPinned: uniqueUsers.get(userId).isPinned
+                isPinned: pinnedConversations.includes(userId)
             };
         });
 
@@ -361,9 +356,6 @@ async function loadUsers() {
             if (!a.isPinned && b.isPinned) return 1;
             return a.username.localeCompare(b.username);
         });
-
-        // Clear the container before adding users
-        usersContainer.innerHTML = '';
 
         // Display users
         users.forEach(user => {
