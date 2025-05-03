@@ -83,21 +83,33 @@ async function signup() {
     const password = document.getElementById('signup-password').value;
     const profilePicture = document.getElementById('profile-picture-preview').src;
 
+    if (!username || !email || !password) {
+        alert('Please fill in all fields');
+        return;
+    }
+
     try {
+        console.log('Attempting to create user...');
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        console.log('User created:', userCredential.user.uid);
         
+        // Update user profile
+        await updateProfile(userCredential.user, {
+            displayName: username,
+            photoURL: profilePicture
+        });
+        console.log('Profile updated');
+
+        // Create user document in Firestore
         await setDoc(doc(db, 'users', userCredential.user.uid), {
             username: username,
             email: email,
             profilePicture: profilePicture,
             createdAt: serverTimestamp()
         });
+        console.log('User document created');
 
-        await updateProfile(userCredential.user, {
-            displayName: username,
-            photoURL: profilePicture
-        });
-
+        // Show chat section
         showChatSection();
     } catch (error) {
         console.error('Signup error:', error);
