@@ -161,7 +161,465 @@ document.addEventListener('DOMContentLoaded', () => {
     if (signupButton) {
         signupButton.addEventListener('click', signup);
     }
+});
 
+async function signup() {
+    const username = document.getElementById('signup-username').value.trim();
+    const email = document.getElementById('signup-email').value.trim();
+    const password = document.getElementById('signup-password').value;
+    const profilePicture = document.getElementById('profile-picture-preview').src;
+    const signupButton = document.getElementById('signup-button');
+
+    // Clear previous errors
+    clearErrorMessages();
+
+    // Validate inputs
+    if (!username) {
+        showError(document.getElementById('signup-username'), 'Username is required');
+        return;
+    }
+    if (!email) {
+        showError(document.getElementById('signup-email'), 'Email is required');
+        return;
+    }
+    if (!password) {
+        showError(document.getElementById('signup-password'), 'Password is required');
+        return;
+    }
+    if (password.length < 6) {
+        showError(document.getElementById('signup-password'), 'Password must be at least 6 characters');
+        return;
+    }
+
+    try {
+        signupButton.classList.add('loading');
+        
+        // Create user with email and password
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        
+        // Create user document in Firestore
+        await setDoc(doc(db, 'users', userCredential.user.uid), {
+            username: username,
+            email: email,
+            profilePicture: profilePicture,
+            createdAt: serverTimestamp()
+        });
+
+        // Update the profile
+        await updateProfile(userCredential.user, {
+            displayName: username,
+            photoURL: profilePicture
+        });
+
+        // Show chat section
+        showChatSection();
+    } catch (error) {
+        console.error('Signup error:', error);
+        let errorMessage = 'An error occurred during signup';
+        
+        switch (error.code) {
+            case 'auth/email-already-in-use':
+                errorMessage = 'Email is already in use';
+                showError(document.getElementById('signup-email'), errorMessage);
+                break;
+            case 'auth/invalid-email':
+                errorMessage = 'Invalid email address';
+                showError(document.getElementById('signup-email'), errorMessage);
+                break;
+            case 'auth/weak-password':
+                errorMessage = 'Password is too weak';
+                showError(document.getElementById('signup-password'), errorMessage);
+                break;
+            default:
+                alert(errorMessage);
+        }
+    } finally {
+        signupButton.classList.remove('loading');
+    }
+}
+
+async function login() {
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+    const loginButton = document.getElementById('login-button');
+
+    // Clear previous errors
+    clearErrorMessages();
+
+    // Validate inputs
+    if (!email) {
+        showError(document.getElementById('login-email'), 'Email is required');
+        return;
+    }
+    if (!password) {
+        showError(document.getElementById('login-password'), 'Password is required');
+        return;
+    }
+
+    try {
+        loginButton.classList.add('loading');
+        await signInWithEmailAndPassword(auth, email, password);
+        showChatSection();
+    } catch (error) {
+        console.error('Login error:', error);
+        let errorMessage = 'An error occurred during login';
+        
+        switch (error.code) {
+            case 'auth/user-not-found':
+            case 'auth/wrong-password':
+                errorMessage = 'Invalid email or password';
+                showError(document.getElementById('login-email'), errorMessage);
+                showError(document.getElementById('login-password'), errorMessage);
+                break;
+            case 'auth/invalid-email':
+                errorMessage = 'Invalid email address';
+                showError(document.getElementById('login-email'), errorMessage);
+                break;
+            default:
+                alert(errorMessage);
+        }
+    } finally {
+        loginButton.classList.remove('loading');
+    }
+}
+
+async function logout() {
+    try {
+        await signOut(auth);
+        showAuthSection();
+    } catch (error) {
+        console.error('Logout error:', error);
+        alert(error.message);
+    }
+}
+
+// UI Functions
+function showAuthSection() {
+    document.getElementById('auth-section').style.display = 'block';
+    document.getElementById('chat-section').style.display = 'none';
+}
+
+function showChatSection() {
+    document.getElementById('auth-section').style.display = 'none';
+    document.getElementById('chat-section').style.display = 'block';
+    loadUsers();
+}
+
+// Chat Functions
+async function loadUsers() {
+    const usersContainer = document.getElementById('users-container');
+    usersContainer.innerHTML = '';
+
+    try {
+        // Get current user's hidden conversations
+        const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        const currentUserData = currentUserDoc.data();
+        const hiddenConversations = currentUserData?.hiddenConversations || [];
+        const pinnedConversations = currentUserData?.pinnedConversations || [];
+
+        // Get all messages where current user is a participant
+        const messagesQuery = query(
+            collection(db, 'messages'),
+            where('participants', 'array-contains', currentUser.uid)
+        );
+        const messagesSnapshot = await getDocs(messagesQuery);
+
+        // Get unique user IDs from messages
+        const dmUserIds = new Set();
+        messagesSnapshot.forEach(doc => {
+            const message = doc.data();
+            message.participants.forEach(id => {
+                if (id !== currentUser.uid) {
+                    dmUserIds.add(id);
+                }
+            });
+        });
+
+        // Get user details for each DM'd user
+        const usersPromises = Array.from(dmUserIds).map(async (userId) => {
+            const userDoc = await getDoc(doc(db, 'users', userId));
+            const userData = userDoc.data();
+            return {
+                id: userId,
+                username: userData.username,
+                profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
+                verified: userData.verified,
+                isPinned: pinnedConversations.includes(userId)
+            };
+        });
+
+        const users = await Promise.all(usersPromises);
+
+        // Sort users: pinned first, then alphabetically
+        users.sort((a, b) => {
+            if (a.isPinned && !b.isPinned) return -1;
+            if (!a.isPinned && b.isPinned) return 1;
+            return a.username.localeCompare(b.username);
+        });
+
+        // Display users
+        users.forEach(user => {
+            const userElement = createUserElement(user);
+            userElement.dataset.uid = user.id;
+            
+            if (user.isPinned) {
+                userElement.classList.add('pinned');
+                usersContainer.insertBefore(userElement, usersContainer.firstChild);
+            } else {
+                usersContainer.appendChild(userElement);
+            }
+            
+            // Add click handler for the user item
+            userElement.onclick = (e) => {
+                if (!e.target.classList.contains('action-icon')) {
+                    startChat(user.id, user.username);
+                }
+            };
+
+            // Add click handler for close icon
+            const closeIcon = userElement.querySelector('.close-icon');
+            closeIcon.onclick = async (e) => {
+                e.stopPropagation();
+                userElement.remove();
+                try {
+                    await setDoc(doc(db, 'users', currentUser.uid), {
+                        hiddenConversations: arrayUnion(user.id)
+                    }, { merge: true });
+                } catch (error) {
+                    console.error('Error hiding conversation:', error);
+                }
+            };
+        });
+    } catch (error) {
+        console.error('Error loading users:', error);
+    }
+}
+
+function createUserElement(user) {
+    const userElement = document.createElement('div');
+    userElement.className = 'user-item';
+    userElement.innerHTML = `
+        <img src="${user.profilePicture || 'default-avatar.png'}" alt="${user.username}" class="profile-picture">
+        <span class="username">${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
+        <div class="user-actions">
+            <span class="material-symbols-outlined action-icon pin-icon">keep</span>
+            <span class="material-symbols-outlined action-icon close-icon">close</span>
+        </div>
+    `;
+    
+    // Add click handler for pin icon
+    const pinIcon = userElement.querySelector('.pin-icon');
+    pinIcon.onclick = async (e) => {
+        e.stopPropagation();
+        const isPinned = userElement.classList.contains('pinned');
+        userElement.classList.toggle('pinned');
+        
+        if (!isPinned) {
+            const usersContainer = document.getElementById('users-container');
+            usersContainer.insertBefore(userElement, usersContainer.firstChild);
+        }
+        
+        try {
+            if (!isPinned) {
+                await setDoc(doc(db, 'users', currentUser.uid), {
+                    pinnedConversations: arrayUnion(user.id)
+                }, { merge: true });
+            } else {
+                await setDoc(doc(db, 'users', currentUser.uid), {
+                    pinnedConversations: arrayRemove(user.id)
+                }, { merge: true });
+            }
+        } catch (error) {
+            console.error('Error pinning conversation:', error);
+        }
+    };
+    
+    return userElement;
+}
+
+async function startChat(userId, username) {
+    currentChatUser = { id: userId, username: username };
+    
+    // Check if user is already in sidebar
+    const existingUser = document.querySelector(`.user-item[data-uid="${userId}"]`);
+    if (!existingUser) {
+        // Get user's profile picture and verification status
+        const userDoc = await getDoc(doc(db, 'users', userId));
+        const userData = userDoc.data();
+        const profilePicture = userData?.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
+        const isVerified = userData?.verified || false;
+
+        // Create new user element
+        const userElement = document.createElement('div');
+        userElement.className = 'user-item';
+        userElement.dataset.uid = userId;
+        userElement.innerHTML = `
+            <img src="${profilePicture}" alt="${username}" class="profile-picture">
+            <span class="username">${username}${isVerified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
+            <div class="user-actions">
+                <span class="material-symbols-outlined action-icon pin-icon">keep</span>
+                <span class="material-symbols-outlined action-icon close-icon">close</span>
+            </div>
+        `;
+
+        // Add click handler for the user item
+        userElement.onclick = (e) => {
+            if (!e.target.classList.contains('action-icon')) {
+                startChat(userId, username);
+            }
+        };
+
+        // Add click handler for close icon
+        const closeIcon = userElement.querySelector('.close-icon');
+        closeIcon.onclick = async (e) => {
+            e.stopPropagation();
+            userElement.remove();
+            try {
+                await setDoc(doc(db, 'users', currentUser.uid), {
+                    hiddenConversations: arrayUnion(userId)
+                }, { merge: true });
+            } catch (error) {
+                console.error('Error hiding conversation:', error);
+            }
+        };
+
+        // Add click handler for pin icon
+        const pinIcon = userElement.querySelector('.pin-icon');
+        pinIcon.onclick = async (e) => {
+            e.stopPropagation();
+            const isPinned = userElement.classList.contains('pinned');
+            userElement.classList.toggle('pinned');
+            
+            if (!isPinned) {
+                const usersContainer = document.getElementById('users-container');
+                usersContainer.insertBefore(userElement, usersContainer.firstChild);
+            }
+            
+            try {
+                if (!isPinned) {
+                    await setDoc(doc(db, 'users', currentUser.uid), {
+                        pinnedConversations: arrayUnion(userId)
+                    }, { merge: true });
+                } else {
+                    await setDoc(doc(db, 'users', currentUser.uid), {
+                        pinnedConversations: arrayRemove(userId)
+                    }, { merge: true });
+                }
+            } catch (error) {
+                console.error('Error pinning conversation:', error);
+            }
+        };
+
+        // Add to sidebar
+        const usersContainer = document.getElementById('users-container');
+        usersContainer.appendChild(userElement);
+    }
+    
+    // Update active user in sidebar
+    const userItems = document.querySelectorAll('.user-item');
+    userItems.forEach(item => {
+        if (item.dataset.uid === userId) {
+            item.classList.add('active');
+        } else {
+            item.classList.remove('active');
+        }
+    });
+
+    // Get user's verification status
+    const userDoc = await getDoc(doc(db, 'users', userId));
+    const userData = userDoc.data();
+    const isVerified = userData?.verified || false;
+
+    // Update chat header with verified badge if user is verified
+    const verifiedBadge = isVerified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : '';
+    document.getElementById('active-chat-username').innerHTML = `${username}${verifiedBadge}`;
+
+    // Show message input
+    const messageInput = document.querySelector('.message-input');
+    messageInput.classList.add('visible');
+
+    // Update message input placeholder
+    const messageInputField = document.getElementById('message-input');
+    if (messageInputField) {
+        messageInputField.placeholder = `Message ${username}`;
+        messageInputField.focus();
+    }
+
+    // Load messages
+    loadMessages();
+}
+
+async function loadMessages() {
+    if (!currentUser || !currentChatUser) {
+        console.log('No current user or chat user');
+        return;
+    }
+
+    const chatMessages = document.getElementById('chat-messages');
+    chatMessages.innerHTML = '';
+
+    try {
+        const messagesQuery = query(
+            collection(db, 'messages'),
+            where('participants', 'array-contains', currentUser.uid),
+            orderBy('timestamp', 'asc')
+        );
+
+        if (window.currentMessageUnsubscribe) {
+            window.currentMessageUnsubscribe();
+        }
+
+        const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
+            chatMessages.innerHTML = '';
+            
+            snapshot.forEach(doc => {
+                const message = doc.data();
+                
+                if (message.participants.includes(currentChatUser.id) && 
+                    message.participants.includes(currentUser.uid)) {
+                    
+                    const messageElement = document.createElement('div');
+                    messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
+                    messageElement.innerHTML = `
+                        <div class="content">${message.content}</div>
+                    `;
+                    chatMessages.appendChild(messageElement);
+                }
+            });
+            
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }, (error) => {
+            console.error('Error in message snapshot:', error);
+        });
+
+        window.currentMessageUnsubscribe = unsubscribe;
+    } catch (error) {
+        console.error('Error loading messages:', error);
+    }
+}
+
+// Check Firebase connection
+function checkFirebaseConnection() {
+    if (!auth || !db) {
+        console.error('Firebase is not initialized');
+        return false;
+    }
+    return true;
+}
+
+// Compose Modal
+function openComposeModal() {
+    const modal = document.getElementById('compose-modal');
+    modal.style.display = 'block';
+}
+
+function closeComposeModal() {
+    const modal = document.getElementById('compose-modal');
+    modal.style.display = 'none';
+}
+
+// Compose new message
+document.addEventListener('DOMContentLoaded', () => {
     // Message input event listener
     const messageInput = document.getElementById('message-input');
     if (messageInput) {
@@ -169,41 +627,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 sendMessage();
-            }
-        });
-    }
-
-    // Emoji picker functionality
-    const emojiButton = document.querySelector('.emoji-picker-button');
-    const emojiPickerModal = document.getElementById('emoji-picker-modal');
-    const emojiPicker = emojiPickerModal.querySelector('emoji-picker');
-    const closeEmojiPicker = emojiPickerModal.querySelector('.close-modal');
-
-    if (emojiButton && emojiPicker) {
-        emojiButton.addEventListener('click', () => {
-            emojiPickerModal.style.display = 'block';
-        });
-
-        closeEmojiPicker.addEventListener('click', () => {
-            emojiPickerModal.style.display = 'none';
-        });
-
-        emojiPicker.addEventListener('emoji-click', (event) => {
-            const emoji = event.detail.unicode;
-            const input = document.getElementById('message-input');
-            const start = input.selectionStart;
-            const end = input.selectionEnd;
-            const text = input.value;
-            
-            input.value = text.substring(0, start) + emoji + text.substring(end);
-            input.selectionStart = input.selectionEnd = start + emoji.length;
-            input.focus();
-        });
-
-        // Close emoji picker when clicking outside
-        window.addEventListener('click', (event) => {
-            if (event.target === emojiPickerModal) {
-                emojiPickerModal.style.display = 'none';
             }
         });
     }
