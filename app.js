@@ -558,30 +558,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (searchTerm.length > 0) {
                 try {
-                    const usersSnapshot = await db.collection('users').get();
+                    // Get all users except current user
+                    const usersQuery = query(
+                        collection(db, 'users'),
+                        where('username', '>=', searchTerm),
+                        where('username', '<=', searchTerm + '\uf8ff')
+                    );
+                    const usersSnapshot = await getDocs(usersQuery);
                     const suggestions = [];
                     
                     usersSnapshot.forEach(doc => {
                         if (doc.id !== currentUser.uid) {
                             const user = doc.data();
-                            const username = user.username.toLowerCase();
-                            
-                            if (username.includes(searchTerm)) {
-                                suggestions.push({
-                                    id: doc.id,
-                                    username: user.username,
-                                    profilePicture: user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'
-                                });
-                            }
+                            suggestions.push({
+                                id: doc.id,
+                                username: user.username,
+                                profilePicture: user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'
+                            });
                         }
                     });
 
-                    suggestions.sort((a, b) => {
-                        const aIndex = a.username.toLowerCase().indexOf(searchTerm);
-                        const bIndex = b.username.toLowerCase().indexOf(searchTerm);
-                        return aIndex - bIndex;
-                    });
+                    // Sort suggestions by username
+                    suggestions.sort((a, b) => a.username.localeCompare(b.username));
 
+                    // Display suggestions
                     suggestions.forEach(user => {
                         const userElement = document.createElement('div');
                         userElement.className = 'compose-user-item';
