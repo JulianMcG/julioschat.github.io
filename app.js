@@ -809,11 +809,30 @@ async function searchAllUsers(searchTerm) {
     composeResults.innerHTML = '';
 
     try {
+        // Get all messages where current user is a participant
+        const messagesQuery = query(
+            collection(db, 'messages'),
+            where('participants', 'array-contains', currentUser.uid)
+        );
+        const messagesSnapshot = await getDocs(messagesQuery);
+
+        // Get unique user IDs from messages
+        const dmUserIds = new Set();
+        messagesSnapshot.forEach(doc => {
+            const message = doc.data();
+            message.participants.forEach(id => {
+                if (id !== currentUser.uid) {
+                    dmUserIds.add(id);
+                }
+            });
+        });
+
+        // Get all users except current user and those already DMed
         const usersSnapshot = await getDocs(collection(db, 'users'));
         const users = [];
         
         usersSnapshot.forEach(doc => {
-            if (doc.id !== currentUser.uid) {
+            if (doc.id !== currentUser.uid && !dmUserIds.has(doc.id)) {
                 const user = {
                     id: doc.id,
                     ...doc.data()
@@ -838,6 +857,13 @@ async function searchAllUsers(searchTerm) {
             };
             composeResults.appendChild(userElement);
         });
+
+        if (users.length === 0) {
+            const noResults = document.createElement('div');
+            noResults.className = 'no-results';
+            noResults.textContent = 'No users found';
+            composeResults.appendChild(noResults);
+        }
     } catch (error) {
         console.error('Error searching all users:', error);
     }
