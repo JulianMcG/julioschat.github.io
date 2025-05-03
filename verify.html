@@ -15,7 +15,7 @@
         // Admin password (in a real app, this would be server-side)
         const ADMIN_PASSWORD = 'admin123'; // Set your password here
 
-        window.checkPassword = function() {
+        function checkPassword() {
             const password = document.getElementById('admin-password').value;
             const errorMessage = document.getElementById('error-message');
             
@@ -28,7 +28,7 @@
             }
         }
 
-        window.verifyUser = async function() {
+        async function verifyUser() {
             const username = document.getElementById('username').value.trim();
             const verifyMessage = document.getElementById('verify-message');
             
@@ -64,17 +64,25 @@
             }
         }
 
-        // Add event listeners
+        // Add event listeners when DOM is loaded
         document.addEventListener('DOMContentLoaded', () => {
+            // Password form button
+            document.getElementById('access-button').addEventListener('click', checkPassword);
+            
+            // Password input enter key
             document.getElementById('admin-password').addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
-                    window.checkPassword();
+                    checkPassword();
                 }
             });
 
+            // Verify form button
+            document.getElementById('verify-button').addEventListener('click', verifyUser);
+            
+            // Username input enter key
             document.getElementById('username').addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
-                    window.verifyUser();
+                    verifyUser();
                 }
             });
         });
@@ -88,7 +96,7 @@
                 <div class="form-group">
                     <input type="password" id="admin-password" placeholder="Enter admin password">
                 </div>
-                <button onclick="window.checkPassword()">Access</button>
+                <button id="access-button">Access</button>
                 <p id="error-message" class="error-message"></p>
             </div>
 
@@ -97,7 +105,7 @@
                 <div class="form-group">
                     <input type="text" id="username" placeholder="Enter username to verify">
                 </div>
-                <button onclick="window.verifyUser()">Verify User</button>
+                <button id="verify-button">Verify User</button>
                 <p id="verify-message" class="error-message"></p>
             </div>
         </div>
