@@ -215,13 +215,28 @@ document.querySelector('.compose-icon').addEventListener('click', () => {
     }
 });
 
+// Update current user profile in sidebar
+function updateCurrentUserProfile(user) {
+    if (user) {
+        document.getElementById('current-username').textContent = user.displayName || 'Username';
+        document.getElementById('current-user-avatar').src = user.photoURL || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
+    }
+}
+
 // Auth State Listener
 auth.onAuthStateChanged(user => {
     if (user) {
         currentUser = user;
+        updateCurrentUserProfile(user);
         showChatSection();
     } else {
         currentUser = null;
         showAuthSection();
     }
+});
+
+// Settings icon click handler
+document.querySelector('.settings-icon').addEventListener('click', () => {
+    // Add settings functionality here
+    alert('Settings coming soon!');
 }); 
