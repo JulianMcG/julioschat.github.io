@@ -823,7 +823,7 @@ function closeSettingsModal() {
 
 // Settings Modal Event Listeners
 document.querySelector('.settings-icon').addEventListener('click', openSettingsModal);
-document.querySelector('.close-modal').addEventListener('click', closeSettingsModal);
+document.querySelector('#settings-modal .close-modal').addEventListener('click', closeSettingsModal);
 
 // Close modal when clicking outside
 window.addEventListener('click', (event) => {
@@ -908,17 +908,17 @@ document.querySelector('.save-button').addEventListener('click', async () => {
     }
 
     try {
-        // First update Firebase Auth profile
-        await currentUser.updateProfile({
+        // Update Firebase Auth profile
+        await updateProfile(currentUser, {
             displayName: newUsername,
             photoURL: newProfilePicture
         });
 
-        // Then update Firestore
-        await db.collection('users').doc(currentUser.uid).update({
+        // Update Firestore
+        await setDoc(doc(db, 'users', currentUser.uid), {
             username: newUsername,
             profilePicture: newProfilePicture
-        });
+        }, { merge: true });
 
         // Update UI
         document.getElementById('current-username').textContent = newUsername;
