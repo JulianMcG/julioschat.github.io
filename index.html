@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CMessenger</title>
+    <title>Julio's Chat</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500&display=swap" rel="stylesheet">
@@ -18,7 +18,7 @@
     <div class="container">
         <!-- Auth Section -->
         <div id="auth-section" class="section">
-            <h1>CMessenger</h1>
+            <h1>Julio's Chat</h1>
             <div class="auth-form">
                 <div id="login-form">
                     <h2>Login</h2>
@@ -47,7 +47,7 @@
             <div class="chat-container">
                 <div class="sidebar">
                     <div class="sidebar-header">
-                        <h3>Chat</h3>
+                        <h3>Julio's Chat</h3>
                         <span class="material-symbols-outlined compose-icon">edit_square</span>
                     </div>
                     <div class="search-container">
@@ -72,6 +72,29 @@
             </div>
         </div>
     </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <span class="material-symbols-outlined close-modal">close</span>
+            </div>
+            <div class="modal-body">
+                <div class="profile-picture-upload">
+                    <img src="https://i.ibb.co/Gf9VD2MN/pfp.png" alt="Profile Picture" id="settings-profile-picture">
+                    <input type="file" id="settings-profile-picture-input" accept="image/*">
+                    <button class="upload-button">Change Profile Picture</button>
+                </div>
+                <div class="username-change">
+                    <label for="settings-username">Username</label>
+                    <input type="text" id="settings-username" placeholder="New username">
+                    <button class="save-button">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="firebase-config.js"></script>
     <script src="app.js"></script>
 </body>
