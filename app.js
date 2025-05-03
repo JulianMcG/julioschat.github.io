@@ -18,7 +18,8 @@ import {
     orderBy, 
     onSnapshot, 
     addDoc,
-    serverTimestamp
+    serverTimestamp,
+    arrayUnion
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
@@ -325,8 +326,52 @@ async function loadUsers() {
             userElement.innerHTML = `
                 <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.username}" class="user-avatar">
                 <span>${user.username}</span>
+                <div class="user-actions">
+                    <span class="material-symbols-outlined action-icon pin-icon">keep</span>
+                    <span class="material-symbols-outlined action-icon close-icon">close</span>
+                </div>
             `;
-            userElement.onclick = () => startChat(user.id, user.username);
+            
+            // Add click handler for the user item
+            userElement.onclick = (e) => {
+                // Only start chat if not clicking on action icons
+                if (!e.target.classList.contains('action-icon')) {
+                    startChat(user.id, user.username);
+                }
+            };
+
+            // Add click handler for close icon
+            const closeIcon = userElement.querySelector('.close-icon');
+            closeIcon.onclick = async (e) => {
+                e.stopPropagation();
+                // Remove the user element
+                userElement.remove();
+                // Update Firestore to mark conversation as hidden
+                try {
+                    await setDoc(doc(db, 'users', currentUser.uid), {
+                        hiddenConversations: arrayUnion(user.id)
+                    }, { merge: true });
+                } catch (error) {
+                    console.error('Error hiding conversation:', error);
+                }
+            };
+
+            // Add click handler for pin icon
+            const pinIcon = userElement.querySelector('.pin-icon');
+            pinIcon.onclick = async (e) => {
+                e.stopPropagation();
+                // Move the user element to the top
+                userElement.classList.toggle('pinned');
+                // Update Firestore to mark conversation as pinned
+                try {
+                    await setDoc(doc(db, 'users', currentUser.uid), {
+                        pinnedConversations: arrayUnion(user.id)
+                    }, { merge: true });
+                } catch (error) {
+                    console.error('Error pinning conversation:', error);
+                }
+            };
+
             usersContainer.appendChild(userElement);
         });
     } catch (error) {
