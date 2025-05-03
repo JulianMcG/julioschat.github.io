@@ -349,9 +349,13 @@ async function startChat(userId, username) {
 
     // Update chat header
     document.getElementById('active-chat-username').textContent = username;
-    
-    // Show message input
-    document.querySelector('.message-input').classList.add('visible');
+    document.getElementById('active-chat-avatar').src = document.querySelector(`.user-item[data-uid="${userId}"] img`).src;
+
+    // Update message input placeholder
+    const messageInput = document.getElementById('message-input');
+    if (messageInput) {
+        messageInput.placeholder = `Message ${username}`;
+    }
 
     // Load messages
     loadMessages();
@@ -415,95 +419,102 @@ function checkFirebaseConnection() {
     return true;
 }
 
-// Compose Modal Functions
+// Compose Modal
 function openComposeModal() {
     const modal = document.getElementById('compose-modal');
-    const composeSearch = document.getElementById('compose-search');
-    const composeResults = document.getElementById('compose-results');
-    
     modal.style.display = 'block';
-    composeSearch.value = '';
-    composeResults.innerHTML = '';
-    
-    // Focus the search input
-    composeSearch.focus();
 }
 
 function closeComposeModal() {
-    document.getElementById('compose-modal').style.display = 'none';
+    const modal = document.getElementById('compose-modal');
+    modal.style.display = 'none';
 }
 
-// Compose search functionality
-document.getElementById('compose-search').addEventListener('input', async (e) => {
-    const searchTerm = e.target.value.toLowerCase();
-    const composeResults = document.getElementById('compose-results');
-    composeResults.innerHTML = '';
+// Compose new message
+document.addEventListener('DOMContentLoaded', () => {
+    // Message input event listener
+    const messageInput = document.getElementById('message-input');
+    if (messageInput) {
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    }
 
-    if (searchTerm.length > 0) {
-        try {
-            const usersSnapshot = await getDocs(collection(db, 'users'));
-            const suggestions = [];
-            
-            usersSnapshot.forEach(doc => {
-                if (doc.id !== currentUser.uid) {
-                    const user = doc.data();
-                    const username = user.username.toLowerCase();
-                    
-                    if (username.includes(searchTerm)) {
-                        suggestions.push({
-                            id: doc.id,
-                            username: user.username,
-                            profilePicture: user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'
+    // Compose icon event listener
+    const composeIcon = document.querySelector('.compose-icon');
+    if (composeIcon) {
+        composeIcon.addEventListener('click', openComposeModal);
+    }
+
+    // Close modal event listener
+    const closeModal = document.querySelector('.close-modal');
+    if (closeModal) {
+        closeModal.addEventListener('click', closeComposeModal);
+    }
+
+    // Compose search event listener
+    const composeSearch = document.getElementById('compose-search');
+    if (composeSearch) {
+        composeSearch.addEventListener('keypress', async (e) => {
+            if (e.key === 'Enter') {
+                const searchTerm = e.target.value.trim();
+                if (searchTerm) {
+                    try {
+                        const usersSnapshot = await getDocs(collection(db, 'users'));
+                        const users = [];
+                        
+                        usersSnapshot.forEach(doc => {
+                            if (doc.id !== currentUser.uid) {
+                                const user = doc.data();
+                                if (user.username.toLowerCase() === searchTerm.toLowerCase()) {
+                                    users.push({
+                                        id: doc.id,
+                                        username: user.username,
+                                        profilePicture: user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'
+                                    });
+                                }
+                            }
                         });
+
+                        if (users.length > 0) {
+                            const user = users[0];
+                            startChat(user.id, user.username);
+                            closeComposeModal();
+                            composeSearch.value = '';
+                        } else {
+                            alert('User not found');
+                        }
+                    } catch (error) {
+                        console.error('Error searching users:', error);
                     }
                 }
-            });
-
-            suggestions.sort((a, b) => {
-                const aIndex = a.username.toLowerCase().indexOf(searchTerm);
-                const bIndex = b.username.toLowerCase().indexOf(searchTerm);
-                return aIndex - bIndex;
-            });
-
-            suggestions.forEach(user => {
-                const userElement = document.createElement('div');
-                userElement.className = 'compose-user-item';
-                userElement.innerHTML = `
-                    <img src="${user.profilePicture}" alt="${user.username}" class="user-avatar">
-                    <span>${user.username}</span>
-                `;
-                userElement.onclick = () => {
-                    startChat(user.id, user.username);
-                    closeComposeModal();
-                };
-                composeResults.appendChild(userElement);
-            });
-
-            if (suggestions.length === 0) {
-                const noResults = document.createElement('div');
-                noResults.className = 'no-results';
-                noResults.textContent = 'No users found';
-                composeResults.appendChild(noResults);
             }
-        } catch (error) {
-            console.error('Error searching users:', error);
-        }
+        });
+    }
+
+    // Search input event listener
+    const searchInput = document.getElementById('search-user');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.trim();
+            if (searchTerm) {
+                searchUsers(searchTerm);
+            } else {
+                loadUsers(); // Load all users if search is empty
+            }
+        });
     }
 });
 
-// Search through current DMs
-document.getElementById('search-user').addEventListener('input', (e) => {
-    const searchTerm = e.target.value.toLowerCase();
-    const userItems = document.querySelectorAll('.user-item');
-    
-    userItems.forEach(item => {
-        const username = item.querySelector('span').textContent.toLowerCase();
-        if (username.includes(searchTerm)) {
-            item.style.display = 'flex';
-        } else {
-            item.style.display = 'none';
-        }
-    });
+// Close compose modal when clicking outside
+window.addEventListener('click', (event) => {
+    const modal = document.getElementById('compose-modal');
+    if (event.target === modal) {
+        closeComposeModal();
+    }
 });
 
 // Send message
@@ -703,23 +714,41 @@ async function searchUsers(searchTerm) {
     usersContainer.innerHTML = '';
 
     try {
-        const usersSnapshot = await getDocs(collection(db, 'users'));
-        const users = [];
-        
-        usersSnapshot.forEach(doc => {
-            if (doc.id !== currentUser.uid) {
-                const user = {
-                    id: doc.id,
-                    ...doc.data()
-                };
-                if (user.username.toLowerCase().includes(searchTerm.toLowerCase())) {
-                    users.push(user);
+        // Get all messages where current user is a participant
+        const messagesQuery = query(
+            collection(db, 'messages'),
+            where('participants', 'array-contains', currentUser.uid)
+        );
+        const messagesSnapshot = await getDocs(messagesQuery);
+
+        // Get unique user IDs from messages
+        const dmUserIds = new Set();
+        messagesSnapshot.forEach(doc => {
+            const message = doc.data();
+            message.participants.forEach(id => {
+                if (id !== currentUser.uid) {
+                    dmUserIds.add(id);
                 }
-            }
+            });
         });
 
-        // Display users
-        users.forEach(user => {
+        // Get user details for each DM'd user
+        const usersPromises = Array.from(dmUserIds).map(async (userId) => {
+            const userDoc = await getDoc(doc(db, 'users', userId));
+            return {
+                id: userId,
+                ...userDoc.data()
+            };
+        });
+
+        const users = await Promise.all(usersPromises);
+
+        // Filter and display users based on search term
+        const filteredUsers = users.filter(user => 
+            user.username.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+
+        filteredUsers.forEach(user => {
             const userElement = document.createElement('div');
             userElement.className = 'user-item';
             userElement.dataset.uid = user.id;
