@@ -97,7 +97,7 @@ body {
 }
 
 .form-group input::placeholder {
-    color: #1C1F28;
+    color: #B6B8C8;
 }
 
 .form-group input:-webkit-autofill,
@@ -288,9 +288,9 @@ body {
 }
 
 .search-icon {
-    color: #6b6d7a;
-    margin-right: 10px;
-    font-size: 20px;
+    color: #B6B8C8;
+    margin-right: 8px;
+    font-size: 18px;
 }
 
 #search-user {
@@ -303,6 +303,10 @@ body {
 
 #search-user:focus {
     outline: none;
+}
+
+#search-user::placeholder {
+    color: #B6B8C8;
 }
 
 .clear-search {
@@ -455,6 +459,10 @@ body {
 
 .message-input input:focus {
     outline: none;
+}
+
+.message-input input::placeholder {
+    color: #B6B8C8;
 }
 
 .message-bubble {
@@ -766,9 +774,13 @@ body {
 }
 
 #compose-modal .search-icon {
-    color: #6b6d7a;
-    margin-right: 10px;
-    font-size: 20px;
+    color: #B6B8C8;
+    margin-right: 8px;
+    font-size: 18px;
+}
+
+#compose-modal input::placeholder {
+    color: #B6B8C8;
 }
 
 .compose-results {
