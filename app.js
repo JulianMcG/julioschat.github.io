@@ -559,22 +559,21 @@ document.addEventListener('DOMContentLoaded', () => {
             if (searchTerm.length > 0) {
                 try {
                     // Get all users except current user
-                    const usersQuery = query(
-                        collection(db, 'users'),
-                        where('username', '>=', searchTerm),
-                        where('username', '<=', searchTerm + '\uf8ff')
-                    );
-                    const usersSnapshot = await getDocs(usersQuery);
+                    const usersSnapshot = await getDocs(collection(db, 'users'));
                     const suggestions = [];
                     
                     usersSnapshot.forEach(doc => {
                         if (doc.id !== currentUser.uid) {
                             const user = doc.data();
-                            suggestions.push({
-                                id: doc.id,
-                                username: user.username,
-                                profilePicture: user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'
-                            });
+                            const username = user.username.toLowerCase();
+                            
+                            if (username.includes(searchTerm)) {
+                                suggestions.push({
+                                    id: doc.id,
+                                    username: user.username,
+                                    profilePicture: user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'
+                                });
+                            }
                         }
                     });
 
@@ -604,6 +603,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 } catch (error) {
                     console.error('Error searching users:', error);
+                    const errorElement = document.createElement('div');
+                    errorElement.className = 'no-results';
+                    errorElement.textContent = 'Error searching users. Please try again.';
+                    composeResults.appendChild(errorElement);
                 }
             }
         });
