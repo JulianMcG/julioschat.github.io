@@ -115,7 +115,22 @@ async function loadUsers() {
 
 async function startChat(userId, username) {
     currentChatUser = { id: userId, username: username };
-    document.getElementById('chat-messages').innerHTML = '';
+    
+    // Update active user in sidebar
+    const userItems = document.querySelectorAll('.user-item');
+    userItems.forEach(item => {
+        if (item.dataset.uid === userId) {
+            item.classList.add('active');
+        } else {
+            item.classList.remove('active');
+        }
+    });
+
+    // Update chat header
+    document.getElementById('active-chat-username').textContent = username;
+    document.getElementById('active-chat-avatar').src = document.querySelector(`.user-item[data-uid="${userId}"] img`).src;
+
+    // Load messages
     loadMessages();
 }
 
@@ -164,7 +179,10 @@ document.getElementById('message-input').addEventListener('keypress', (e) => {
 });
 
 async function sendMessage() {
-    if (!currentChatUser) return;
+    if (!currentChatUser) {
+        alert('Please select a chat first');
+        return;
+    }
 
     const messageInput = document.getElementById('message-input');
     const content = messageInput.value.trim();
@@ -173,7 +191,7 @@ async function sendMessage() {
 
     try {
         // Create message in Firestore
-        await db.collection('messages').add({
+        const messageRef = await db.collection('messages').add({
             content: content,
             senderId: currentUser.uid,
             receiverId: currentChatUser.id,
