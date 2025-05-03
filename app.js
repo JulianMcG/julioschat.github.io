@@ -338,9 +338,12 @@ async function loadUsers() {
         // Get user details for each DM'd user
         const usersPromises = Array.from(dmUserIds).map(async (userId) => {
             const userDoc = await getDoc(doc(db, 'users', userId));
+            const userData = userDoc.data();
             return {
                 id: userId,
-                ...userDoc.data()
+                username: userData.username,
+                profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
+                verified: userData.verified
             };
         });
 
@@ -398,7 +401,7 @@ function createUserElement(user) {
     const userElement = document.createElement('div');
     userElement.className = 'user-item';
     userElement.innerHTML = `
-        <img src="${user.photoURL || 'default-avatar.png'}" alt="${user.username}" class="profile-picture">
+        <img src="${user.profilePicture || 'default-avatar.png'}" alt="${user.username}" class="profile-picture">
         <span class="username">${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
         <div class="user-actions">
             <span class="material-symbols-outlined action-icon pin-icon">keep</span>
@@ -452,7 +455,7 @@ async function startChat(userId, username) {
         userElement.className = 'user-item';
         userElement.dataset.uid = userId;
         userElement.innerHTML = `
-            <img src="${profilePicture}" alt="${username}" class="user-avatar">
+            <img src="${profilePicture}" alt="${username}" class="profile-picture">
             <span class="username">${username}${isVerified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
             <div class="user-actions">
                 <span class="material-symbols-outlined action-icon pin-icon">keep</span>
@@ -491,9 +494,6 @@ async function startChat(userId, username) {
             if (!isPinned) {
                 const usersContainer = document.getElementById('users-container');
                 usersContainer.insertBefore(userElement, usersContainer.firstChild);
-                pinIcon.innerHTML = '<span class="material-symbols-outlined" style="font-variation-settings: \'FILL\' 1; color: #1F49C7;">keep</span>';
-            } else {
-                pinIcon.innerHTML = '<span class="material-symbols-outlined" style="font-variation-settings: \'FILL\' 0; color: #666;">keep</span>';
             }
             
             try {
