@@ -105,15 +105,21 @@ async function loadNotificationSettings() {
 
 // Add event listener for notification toggle
 document.addEventListener('DOMContentLoaded', () => {
+    const notificationSettings = document.querySelector('.notification-settings');
     const notificationToggle = document.getElementById('notification-toggle');
-    if (notificationToggle) {
-        notificationToggle.addEventListener('change', async (e) => {
-            if (e.target.checked) {
+    
+    if (notificationSettings && notificationToggle) {
+        notificationSettings.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const newState = !notificationToggle.checked;
+            notificationToggle.checked = newState;
+            
+            if (newState) {
                 const permission = await requestNotificationPermission();
                 if (permission) {
                     await updateNotificationSettings(true);
                 } else {
-                    e.target.checked = false;
+                    notificationToggle.checked = false;
                 }
             } else {
                 await updateNotificationSettings(false);
