@@ -290,6 +290,10 @@ async function loadUsers() {
     usersContainer.innerHTML = '';
 
     try {
+        // Get current user's pinned conversations
+        const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        const pinnedConversations = currentUserDoc.data()?.pinnedConversations || [];
+
         // Get all messages where current user is a participant
         const messagesQuery = query(
             collection(db, 'messages'),
@@ -319,10 +323,24 @@ async function loadUsers() {
 
         const users = await Promise.all(usersPromises);
 
+        // Sort users: pinned first, then alphabetically
+        users.sort((a, b) => {
+            const aPinned = pinnedConversations.includes(a.id);
+            const bPinned = pinnedConversations.includes(b.id);
+            
+            if (aPinned && !bPinned) return -1;
+            if (!aPinned && bPinned) return 1;
+            
+            return a.username.localeCompare(b.username);
+        });
+
         // Display users
         users.forEach(user => {
             const userElement = document.createElement('div');
             userElement.className = 'user-item';
+            if (pinnedConversations.includes(user.id)) {
+                userElement.classList.add('pinned');
+            }
             userElement.dataset.uid = user.id;
             userElement.innerHTML = `
                 <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.username}" class="user-avatar">
@@ -374,6 +392,8 @@ async function loadUsers() {
                             pinnedConversations: arrayRemove(user.id)
                         }, { merge: true });
                     }
+                    // Reload users to maintain proper order
+                    loadUsers();
                 } catch (error) {
                     console.error('Error pinning conversation:', error);
                 }
