@@ -1096,4 +1096,42 @@ input:checked + .toggle-slider:before {
 
 #settings-modal .modal-content::-webkit-scrollbar-thumb:hover {
     background: #1F49C7;
+}
+
+.chat-notification {
+    background-color: #1F49C7;
+    color: #ECEBF7;
+    padding: 10px 15px;
+    border-radius: 8px;
+    margin: 10px 0;
+    animation: slideIn 0.3s ease-out;
+    max-width: 80%;
+    align-self: center;
+}
+
+.chat-notification .notification-content {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.chat-notification .notification-title {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.chat-notification .notification-body {
+    font-size: 13px;
+    opacity: 0.9;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
 } 
