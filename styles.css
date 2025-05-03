@@ -256,7 +256,7 @@ body {
 .auth-form button {
     width: 100%;
     padding: 12px;
-    background-color: #3a3d5e;
+    background-color: #1F49C7;
     color: #ECEBF7;
     border: none;
     border-radius: 5px;
@@ -266,7 +266,7 @@ body {
 }
 
 .auth-form button:hover {
-    background-color: #4a4d6e;
+    background-color: #1a3db0;
 }
 
 .auth-form p {
@@ -353,7 +353,7 @@ body {
 }
 
 .upload-button {
-    background-color: #3a3d5e;
+    background-color: #1F49C7;
     color: #ECEBF7;
     border: none;
     padding: 10px 20px;
@@ -363,7 +363,7 @@ body {
 }
 
 .upload-button:hover {
-    background-color: #4a4d6e;
+    background-color: #1a3db0;
 }
 
 .username-change {
@@ -385,7 +385,7 @@ body {
 }
 
 .save-button {
-    background-color: #3a3d5e;
+    background-color: #1F49C7;
     color: #ECEBF7;
     border: none;
     padding: 10px 20px;
@@ -395,5 +395,5 @@ body {
 }
 
 .save-button:hover {
-    background-color: #4a4d6e;
+    background-color: #1a3db0;
 } 
