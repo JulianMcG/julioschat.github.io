@@ -73,24 +73,32 @@ document.getElementById('profile-picture-input').addEventListener('change', asyn
 
 // Auth Functions
 function showSignup() {
+    console.log('showSignup called');
     const loginForm = document.getElementById('login-form');
     const signupForm = document.getElementById('signup-form');
     
     if (loginForm && signupForm) {
+        console.log('Forms found, switching to signup');
         loginForm.style.display = 'none';
         signupForm.style.display = 'block';
         clearErrorMessages();
+    } else {
+        console.error('Forms not found:', { loginForm, signupForm });
     }
 }
 
 function showLogin() {
+    console.log('showLogin called');
     const loginForm = document.getElementById('login-form');
     const signupForm = document.getElementById('signup-form');
     
     if (loginForm && signupForm) {
+        console.log('Forms found, switching to login');
         signupForm.style.display = 'none';
         loginForm.style.display = 'block';
         clearErrorMessages();
+    } else {
+        console.error('Forms not found:', { loginForm, signupForm });
     }
 }
 
@@ -113,38 +121,64 @@ function showError(element, message) {
 
 // Add event listeners for auth links and buttons
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM Content Loaded');
+    
     // Auth link event listeners
     const signupLink = document.querySelector('#login-form .auth-link');
     const loginLink = document.getElementById('login-link');
     const loginButton = document.getElementById('login-button');
     const signupButton = document.getElementById('signup-button');
 
-    if (signupLink) {
-        signupLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            showSignup();
-        });
-    }
+    console.log('Elements found:', {
+        signupLink: !!signupLink,
+        loginLink: !!loginLink,
+        loginButton: !!loginButton,
+        signupButton: !!signupButton
+    });
 
+    // Add click handlers
     if (loginLink) {
-        loginLink.addEventListener('click', (e) => {
+        console.log('Adding click handler to login link');
+        loginLink.onclick = (e) => {
+            console.log('Login link clicked');
             e.preventDefault();
             showLogin();
-        });
+        };
+    } else {
+        console.error('Login link not found');
+    }
+
+    if (signupLink) {
+        console.log('Adding click handler to signup link');
+        signupLink.onclick = (e) => {
+            console.log('Signup link clicked');
+            e.preventDefault();
+            showSignup();
+        };
+    } else {
+        console.error('Signup link not found');
     }
 
     if (loginButton) {
-        loginButton.addEventListener('click', async (e) => {
+        console.log('Adding click handler to login button');
+        loginButton.onclick = async (e) => {
+            console.log('Login button clicked');
             e.preventDefault();
             await login();
-        });
+        };
+    } else {
+        console.error('Login button not found');
     }
 
     if (signupButton) {
-        signupButton.addEventListener('click', async (e) => {
+        console.log('Adding click handler to signup button');
+        signupButton.onclick = async (e) => {
+            console.log('Signup button clicked');
             e.preventDefault();
             await signup();
-        });
+        };
+    } else {
+        console.error('Signup button not found');
     }
 });
 
