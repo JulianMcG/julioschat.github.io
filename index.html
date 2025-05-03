@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css">
+    <!-- Firebase SDK -->
+    <script type="module" src="firebase-config.js"></script>
+    <script type="module" src="app.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Auth Section -->
+        <div id="auth-section" class="section">
+            <div class="auth-form">
+                <div id="login-form" style="display: none;">
+                    <h2>Login</h2>
+                    <div class="form-group">
+                        <input type="email" id="login-email" placeholder="Email" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="password" id="login-password" placeholder="Password" required>
+                    </div>
+                    <button id="login-button">Login</button>
+                    <p>Don't have an account? <a href="#" class="auth-link">Sign up</a></p>
+                </div>
+                <div id="signup-form">
+                    <h2>Sign Up</h2>
+                    <div class="profile-picture-upload">
+                        <img src="https://i.ibb.co/Gf9VD2MN/pfp.png" alt="Profile Picture" id="profile-picture-preview">
+                        <input type="file" id="profile-picture-input" accept="image/*">
+                    </div>
+                    <div class="form-group">
+                        <input type="text" id="signup-username" placeholder="Username" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="email" id="signup-email" placeholder="Email" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="password" id="signup-password" placeholder="Password" required>
+                    </div>
+                    <button id="signup-button">Sign Up</button>
+                    <p>Already have an account? <a href="#" class="auth-link">Login</a></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Section -->
+        <div id="chat-section" class="section" style="display: none;">
+            <div class="chat-container">
+                <div class="sidebar">
+                    <div class="sidebar-header">
+                        <h3>Chat</h3>
+                        <span class="material-symbols-outlined compose-icon">edit_square</span>
+                    </div>
+                    <div class="search-container">
+                        <span class="material-symbols-outlined search-icon">search</span>
+                        <input type="text" id="search-user" placeholder="Search">
+                    </div>
+                    <div id="users-container" class="users-list"></div>
+                    <div class="profile-section">
+                        <div class="profile-info">
+                            <img id="current-user-avatar" src="https://i.ibb.co/Gf9VD2MN/pfp.png" alt="Profile Picture">
+                            <span id="current-username">Username</span>
+                        </div>
+                        <span class="material-symbols-outlined settings-icon">settings</span>
+                    </div>
+                </div>
+                <div class="chat-area">
+                    <div class="chat-header">
+                        <img id="active-chat-avatar" src="https://i.ibb.co/Gf9VD2MN/pfp.png" alt="Profile Picture">
+                        <span id="active-chat-username">Select a chat</span>
+                    </div>
+                    <div class="chat-messages" id="chat-messages"></div>
+                    <div class="message-input">
+                        <input type="text" id="message-input" placeholder="Type a message...">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Compose Modal -->
+    <div id="compose-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>New Message</h2>
+                <span class="material-symbols-outlined close-modal">close</span>
+            </div>
+            <div class="modal-body">
+                <div class="search-container">
+                    <span class="material-symbols-outlined search-icon">search</span>
+                    <input type="text" id="compose-search" placeholder="Search users...">
+                </div>
+                <div id="compose-results" class="compose-results"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <span class="material-symbols-outlined close-modal">close</span>
+            </div>
+            <div class="modal-body">
+                <div class="profile-picture-upload">
+                    <img src="https://i.ibb.co/Gf9VD2MN/pfp.png" alt="Profile Picture" id="settings-profile-picture">
+                    <input type="file" id="settings-profile-picture-input" accept="image/*">
+                    <button class="upload-button">Change Profile Picture</button>
+                </div>
+                <div class="username-change">
+                    <label for="settings-username">Username</label>
+                    <input type="text" id="settings-username" placeholder="New username">
+                    <button class="save-button">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
