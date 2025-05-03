@@ -162,45 +162,28 @@ async function startChat(userId, username) {
 async function loadMessages() {
     if (!currentChatUser) return;
 
-    console.log('Loading messages for chat with:', currentChatUser.id);
-
     const chatMessages = document.getElementById('chat-messages');
     chatMessages.innerHTML = '';
 
     try {
-        // Query messages where both users are participants
         const messagesRef = db.collection('messages')
             .where('participants', 'array-contains', currentUser.uid)
             .orderBy('timestamp', 'asc');
 
         messagesRef.onSnapshot(snapshot => {
-            console.log('Received message snapshot with', snapshot.size, 'messages');
             chatMessages.innerHTML = '';
-            
             snapshot.forEach(doc => {
                 const message = doc.data();
-                console.log('Processing message:', message);
-                
-                // Only show messages between the current users
                 if (message.participants.includes(currentChatUser.id)) {
                     const messageElement = document.createElement('div');
                     messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
-                    
-                    const time = message.timestamp ? new Date(message.timestamp.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
-                    
                     messageElement.innerHTML = `
                         <div class="content">${message.content}</div>
-                        <div class="time">${time}</div>
                     `;
-                    
                     chatMessages.appendChild(messageElement);
                 }
             });
-            
-            // Scroll to bottom
             chatMessages.scrollTop = chatMessages.scrollHeight;
-        }, error => {
-            console.error('Error in message snapshot:', error);
         });
     } catch (error) {
         console.error('Error loading messages:', error);
@@ -215,6 +198,86 @@ function checkFirebaseConnection() {
     }
     return true;
 }
+
+// Compose Modal
+function openComposeModal() {
+    const modal = document.getElementById('compose-modal');
+    modal.style.display = 'block';
+}
+
+function closeComposeModal() {
+    const modal = document.getElementById('compose-modal');
+    modal.style.display = 'none';
+}
+
+// Compose new message
+document.querySelector('.compose-icon').addEventListener('click', openComposeModal);
+
+// Search in compose modal
+document.getElementById('compose-search').addEventListener('input', async (e) => {
+    const searchTerm = e.target.value.toLowerCase();
+    const composeResults = document.getElementById('compose-results');
+    composeResults.innerHTML = '';
+
+    if (searchTerm.length > 0) {
+        try {
+            const usersSnapshot = await db.collection('users').get();
+            const suggestions = [];
+            
+            usersSnapshot.forEach(doc => {
+                if (doc.id !== currentUser.uid) {
+                    const user = doc.data();
+                    const username = user.username.toLowerCase();
+                    
+                    if (username.includes(searchTerm)) {
+                        suggestions.push({
+                            id: doc.id,
+                            username: user.username,
+                            profilePicture: user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'
+                        });
+                    }
+                }
+            });
+
+            suggestions.sort((a, b) => {
+                const aIndex = a.username.toLowerCase().indexOf(searchTerm);
+                const bIndex = b.username.toLowerCase().indexOf(searchTerm);
+                return aIndex - bIndex;
+            });
+
+            suggestions.forEach(user => {
+                const userElement = document.createElement('div');
+                userElement.className = 'compose-user-item';
+                userElement.innerHTML = `
+                    <img src="${user.profilePicture}" alt="${user.username}" class="user-avatar">
+                    <span>${user.username}</span>
+                `;
+                userElement.onclick = () => {
+                    startChat(user.id, user.username);
+                    closeComposeModal();
+                };
+                composeResults.appendChild(userElement);
+            });
+
+            if (suggestions.length === 0) {
+                const noResults = document.createElement('div');
+                noResults.className = 'no-results';
+                noResults.textContent = 'No users found';
+                composeResults.appendChild(noResults);
+            }
+        } catch (error) {
+            console.error('Error searching users:', error);
+        }
+    }
+});
+
+// Close compose modal when clicking outside
+window.addEventListener('click', (event) => {
+    const modal = document.getElementById('compose-modal');
+    if (event.target === modal) {
+        closeComposeModal();
+    }
+});
 
 async function sendMessage() {
     if (!currentUser) {
@@ -242,7 +305,7 @@ async function sendMessage() {
             participants: [currentUser.uid, currentChatUser.id]
         };
 
-        await db.collection('messages').add(messageData);
+        const messageRef = await db.collection('messages').add(messageData);
         
         // Clear input
         messageInput.value = '';
@@ -253,7 +316,6 @@ async function sendMessage() {
         messageElement.className = 'message sent';
         messageElement.innerHTML = `
             <div class="content">${content}</div>
-            <div class="time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
         `;
         chatMessages.appendChild(messageElement);
         chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -263,81 +325,6 @@ async function sendMessage() {
         alert('Error sending message: ' + error.message);
     }
 }
-
-// Add event listener for Enter key
-document.getElementById('message-input').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-        e.preventDefault(); // Prevent form submission
-        sendMessage();
-    }
-});
-
-// Search Users with suggestions
-document.getElementById('search-user').addEventListener('input', async (e) => {
-    const searchTerm = e.target.value.toLowerCase();
-    const usersContainer = document.getElementById('users-container');
-    usersContainer.innerHTML = '';
-
-    if (searchTerm.length > 0) {
-        try {
-            const usersSnapshot = await db.collection('users').get();
-            const suggestions = [];
-            
-            usersSnapshot.forEach(doc => {
-                if (doc.id !== currentUser.uid) {
-                    const user = doc.data();
-                    const username = user.username.toLowerCase();
-                    
-                    if (username.includes(searchTerm)) {
-                        suggestions.push({
-                            id: doc.id,
-                            username: user.username,
-                            profilePicture: user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'
-                        });
-                    }
-                }
-            });
-
-            // Sort suggestions by how close they match the search term
-            suggestions.sort((a, b) => {
-                const aIndex = a.username.toLowerCase().indexOf(searchTerm);
-                const bIndex = b.username.toLowerCase().indexOf(searchTerm);
-                return aIndex - bIndex;
-            });
-
-            // Display suggestions
-            suggestions.forEach(user => {
-                const userElement = document.createElement('div');
-                userElement.className = 'user-item';
-                userElement.dataset.uid = user.id;
-                userElement.innerHTML = `
-                    <img src="${user.profilePicture}" alt="${user.username}" class="user-avatar">
-                    <span>${user.username}</span>
-                `;
-                userElement.onclick = () => {
-                    startChat(user.id, user.username);
-                    e.target.value = ''; // Clear search input
-                };
-                usersContainer.appendChild(userElement);
-            });
-
-            if (suggestions.length === 0) {
-                const noResults = document.createElement('div');
-                noResults.className = 'no-results';
-                noResults.textContent = 'No users found';
-                usersContainer.appendChild(noResults);
-            }
-        } catch (error) {
-            console.error('Error searching users:', error);
-        }
-    } else {
-        // If search box is empty, show DM'd users
-        loadUsers();
-    }
-});
-
-// Remove the compose icon click handler since we're integrating it into the search
-document.querySelector('.compose-icon').style.display = 'none';
 
 // Update current user profile in sidebar
 function updateCurrentUserProfile(user) {
