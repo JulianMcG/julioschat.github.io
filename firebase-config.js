@@ -1,7 +1,35 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAuth } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { 
+    getAuth, 
+    signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    updateProfile,
+    onAuthStateChanged,
+    signOut
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { 
+    getFirestore,
+    collection,
+    doc,
+    setDoc,
+    getDoc,
+    getDocs,
+    query,
+    where,
+    orderBy,
+    onSnapshot,
+    addDoc,
+    serverTimestamp,
+    arrayUnion,
+    arrayRemove
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { 
+    getStorage,
+    ref,
+    uploadBytes,
+    getDownloadURL
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -17,18 +45,45 @@ const firebaseConfig = {
 let app;
 let auth;
 let db;
+let storage;
 
 try {
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
     db = getFirestore(app);
+    storage = getStorage(app);
     console.log("Firebase initialized successfully");
 } catch (error) {
     console.error("Error initializing Firebase:", error);
 }
 
 // Export Firebase services
-export { auth, db };
+export { 
+    auth, 
+    db,
+    storage,
+    signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    updateProfile,
+    onAuthStateChanged,
+    signOut,
+    collection,
+    doc,
+    setDoc,
+    getDoc,
+    getDocs,
+    query,
+    where,
+    orderBy,
+    onSnapshot,
+    addDoc,
+    serverTimestamp,
+    arrayUnion,
+    arrayRemove,
+    ref,
+    uploadBytes,
+    getDownloadURL
+};
 
 // Security rules for Firestore
 const securityRules = `
