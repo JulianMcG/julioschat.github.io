@@ -56,36 +56,18 @@ async function requestNotificationPermission() {
 }
 
 // Function to show notification
-async function showNotification(title, body, senderId) {
+function showNotification(title, body) {
     if (!notificationPermission || !notificationEnabled) return;
 
-    try {
-        // Get sender's profile picture
-        const senderDoc = await getDoc(doc(db, 'users', senderId));
-        const senderData = senderDoc.data();
-        const senderProfilePicture = senderData?.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
-        const senderName = senderData?.username || 'Unknown User';
+    const options = {
+        body: body,
+        icon: 'https://i.ibb.co/Gf9VD2MN/pfp.png',
+        badge: 'https://i.ibb.co/Gf9VD2MN/pfp.png',
+        vibrate: [200, 100, 200],
+        tag: 'new-message'
+    };
 
-        const options = {
-            body: body,
-            icon: senderProfilePicture,
-            badge: 'https://i.ibb.co/Gf9VD2MN/pfp.png',
-            vibrate: [200, 100, 200],
-            tag: 'new-message'
-        };
-
-        new Notification(senderName, options);
-    } catch (error) {
-        console.error('Error showing notification:', error);
-        // Fallback to basic notification if there's an error
-        new Notification(title, {
-            body: body,
-            icon: 'https://i.ibb.co/Gf9VD2MN/pfp.png',
-            badge: 'https://i.ibb.co/Gf9VD2MN/pfp.png',
-            vibrate: [200, 100, 200],
-            tag: 'new-message'
-        });
-    }
+    new Notification(title, options);
 }
 
 // Update notification settings in Firestore
@@ -709,8 +691,7 @@ async function loadMessages() {
                         notificationEnabled) {
                         showNotification(
                             message.senderUsername || 'New Message',
-                            message.content,
-                            message.senderId
+                            message.content
                         );
                     }
                 }
