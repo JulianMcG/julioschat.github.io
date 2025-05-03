@@ -26,28 +26,25 @@ body {
 
 /* Auth Section */
 .auth-form {
-    max-width: 400px;
+    max-width: 500px;
     margin: 0 auto;
-    padding: 40px;
+    padding: 50px;
     background-color: #10121B;
     border-radius: 20px;
     position: relative;
     top: 50%;
     transform: translateY(-50%);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-    transition: all 0.3s ease;
 }
 
 .auth-form h2 {
     color: #ECEBF7;
-    margin-bottom: 30px;
+    margin-bottom: 40px;
     text-align: center;
     font-size: 28px;
-    font-weight: 600;
 }
 
 .form-group {
-    margin-bottom: 25px;
+    margin-bottom: 30px;
     position: relative;
 }
 
@@ -56,50 +53,42 @@ body {
     color: #B6B8C8;
     font-size: 14px;
     margin-bottom: 8px;
-    transition: color 0.3s;
 }
 
 .form-group input {
     width: 100%;
-    padding: 12px 15px;
+    padding: 15px;
     border: 2px solid #1C1F28;
-    border-radius: 10px;
+    border-radius: 12.5px;
     font-size: 16px;
-    background-color: #13161F;
+    background-color: #10121B;
     color: #ECEBF7;
-    transition: all 0.3s;
+    transition: border-color 0.3s;
 }
 
 .form-group input:focus {
     outline: none;
     border-color: #1F49C7;
-    box-shadow: 0 0 0 2px rgba(31, 73, 199, 0.2);
 }
 
 .form-group input::placeholder {
-    color: #6b6d7a;
-}
-
-.form-group input:-webkit-autofill,
-.form-group input:-webkit-autofill:hover,
-.form-group input:-webkit-autofill:focus,
-.form-group input:-webkit-autofill:active {
-    -webkit-box-shadow: 0 0 0 30px #10121B inset !important;
-    -webkit-text-fill-color: #ECEBF7 !important;
+    color: #1C1F28;
 }
 
 .auth-form button {
     width: 100%;
-    padding: 14px;
+    padding: 16px;
     background-color: #1F49C7;
     color: #ECEBF7;
     border: none;
-    border-radius: 10px;
+    border-radius: 12.5px;
     cursor: pointer;
     font-size: 16px;
     font-weight: 600;
     transition: all 0.3s;
-    margin-top: 10px;
+    position: relative;
+    overflow: hidden;
+    margin-top: 20px;
 }
 
 .auth-form button:hover {
@@ -680,11 +669,8 @@ body {
 
 #auth-section {
     background-image: url('https://i.ibb.co/RkLHZdPq/Julio-s-Wall1.png');
-    background-size: cover;
-    background-position: center;
+    background-size: contain;
+    background-position: top;
     background-repeat: no-repeat;
-    height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    height: 100%;
 } 
