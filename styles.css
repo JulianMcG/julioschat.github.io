@@ -213,6 +213,7 @@ body {
     border-radius: 8px;
     padding: 10px;
     margin-bottom: 20px;
+    position: relative;
 }
 
 .search-icon {
@@ -226,10 +227,28 @@ body {
     border: none;
     flex: 1;
     color: #ECEBF7;
+    padding-right: 30px;
 }
 
 #search-user:focus {
     outline: none;
+}
+
+.clear-search {
+    position: absolute;
+    right: 10px;
+    color: #B6B8C8;
+    cursor: pointer;
+    font-size: 20px;
+    display: none;
+}
+
+.clear-search:hover {
+    color: #ECEBF7;
+}
+
+.search-container:has(input:not(:placeholder-shown)) .clear-search {
+    display: block;
 }
 
 .users-list {
@@ -269,7 +288,7 @@ body {
 .user-actions {
     display: none;
     position: absolute;
-    right: 5px;
+    right: 8px;
     gap: 12px;
 }
 
