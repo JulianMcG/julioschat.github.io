@@ -358,7 +358,14 @@ async function loadUsers() {
         });
 
         // Display users
+        const existingUserIds = new Set();
         users.forEach(user => {
+            // Skip if we've already added this user
+            if (existingUserIds.has(user.id)) {
+                return;
+            }
+            existingUserIds.add(user.id);
+
             const userElement = createUserElement(user);
             userElement.dataset.uid = user.id;
             
