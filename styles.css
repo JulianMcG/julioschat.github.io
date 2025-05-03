@@ -29,6 +29,9 @@ body {
     max-width: 400px;
     margin: 0 auto;
     padding: 20px;
+    background-color: #13161F;
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
 .profile-picture-upload {
@@ -309,6 +312,12 @@ body {
 }
 
 /* Auth Form Styles */
+.auth-form h2 {
+    color: #ECEBF7;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
 .auth-form input {
     width: 100%;
     padding: 12px;
@@ -318,10 +327,6 @@ body {
     font-size: 16px;
     background-color: #1a1c2a;
     color: #ECEBF7;
-}
-
-.auth-form input::placeholder {
-    color: #6b6d7a;
 }
 
 .auth-form button {
@@ -343,17 +348,18 @@ body {
 .auth-form p {
     text-align: center;
     margin-top: 15px;
+    color: #B6B8C8;
 }
 
-.auth-form a {
-    color: #ECEBF7;
+.auth-link {
+    color: #1F49C7;
     text-decoration: none;
     font-weight: 500;
+    transition: color 0.3s;
 }
 
-.auth-form h2 {
-    margin-bottom: 20px;
-    color: #ECEBF7;
+.auth-link:hover {
+    color: #1a3db0;
 }
 
 /* Modal Styles */
