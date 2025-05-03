@@ -245,8 +245,9 @@ body {
     cursor: pointer;
     border-radius: 8px;
     transition: background-color 0.3s;
-    margin: 5px 0;
+    position: relative;
     height: 60px;
+    margin: 5px 0;
 }
 
 .user-item:hover {
@@ -263,9 +264,9 @@ body {
 
 .user-item.active {
     background-color: #13161F;
-    border-radius: 8px;
+    border-radius: 15px;
     padding: 10px;
-    margin: 5px 0;
+    height: 60px;
 }
 
 .chat-area {
@@ -289,11 +290,6 @@ body {
     background-color: #1C1F28;
     border-radius: 15px;
     margin: 20px;
-    display: none;
-}
-
-.message-input.visible {
-    display: block;
 }
 
 .message-input input {
@@ -354,10 +350,8 @@ body {
     font-size: 10px;
     color: #6b6d7a;
     text-align: right;
-    opacity: 0;
-    transform: translateY(-10px);
-    transition: all 0.2s ease;
-    position: absolute;
+    opacity: 1;
+    position: relative;
     width: 100%;
     left: 0;
     pointer-events: none;
@@ -566,27 +560,21 @@ body {
     gap: 10px;
 }
 
-.to-label {
-    color: #B6B8C8;
-    font-size: 16px;
-}
-
-#active-chat-username {
-    color: #ECEBF7;
-    font-size: 16px;
-    font-weight: 500;
-}
-
 .chat-header img {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    object-fit: cover;
+    display: none;
 }
 
 .chat-header span {
     font-size: 16px;
     font-weight: 500;
+}
+
+.chat-header .to-label {
+    color: #B6B8C8;
+}
+
+.chat-header .username {
+    color: #ECEBF7;
 }
 
 /* Compose Modal Styles */
