@@ -25,32 +25,13 @@ body {
 }
 
 /* Auth Section */
-.auth-section {
-    position: relative;
-    width: 100%;
-    height: 100vh;
-    background-color: #0c0e16;
-}
-
-.auth-section::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: url('https://i.ibb.co/RkLHZdPq/Julio-s-Wall1.png');
-    background-size: cover;
-    background-position: top;
-    opacity: 0.1;
-}
-
 .auth-form {
-    max-width: 500px;
+    max-width: 400px;
     margin: 0 auto;
-    padding: 60px;
-    background-color: #10121B;
-    border-radius: 20px;
+    padding: 40px;
+    background-color: #13161F;
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     position: relative;
     top: 50%;
     transform: translateY(-50%);
@@ -58,30 +39,23 @@ body {
 
 .auth-form h2 {
     color: #ECEBF7;
-    margin-bottom: 40px;
+    margin-bottom: 30px;
     text-align: center;
     font-size: 28px;
 }
 
 .form-group {
-    margin-bottom: 30px;
+    margin-bottom: 20px;
     position: relative;
-}
-
-.form-group label {
-    display: block;
-    color: #B6B8C8;
-    font-size: 14px;
-    margin-bottom: 8px;
 }
 
 .form-group input {
     width: 100%;
-    padding: 15px;
-    border: 1px solid #1C1F28;
-    border-radius: 15px;
+    padding: 12px 15px;
+    border: 2px solid #2a2d3e;
+    border-radius: 8px;
     font-size: 16px;
-    background-color: #10121B;
+    background-color: #1a1c2a;
     color: #ECEBF7;
     transition: border-color 0.3s;
 }
@@ -97,11 +71,11 @@ body {
 
 .auth-form button {
     width: 100%;
-    padding: 16px;
+    padding: 14px;
     background-color: #1F49C7;
     color: #ECEBF7;
     border: none;
-    border-radius: 15px;
+    border-radius: 8px;
     cursor: pointer;
     font-size: 16px;
     font-weight: 600;
@@ -146,7 +120,7 @@ body {
 
 .auth-form p {
     text-align: center;
-    margin-top: 30px;
+    margin-top: 25px;
     color: #B6B8C8;
     font-size: 14px;
 }
