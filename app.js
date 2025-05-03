@@ -115,7 +115,7 @@ function showError(element, message) {
 document.addEventListener('DOMContentLoaded', () => {
     // Auth link event listeners
     const signupLink = document.querySelector('#login-form .auth-link');
-    const loginLink = document.querySelector('#signup-form .auth-link');
+    const loginLink = document.querySelector('#login-link');
     const loginButton = document.getElementById('login-button');
     const signupButton = document.getElementById('signup-button');
 
