@@ -1008,6 +1008,7 @@ async function searchAllUsers(searchTerm) {
 document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('search-user');
     const composeSearch = document.getElementById('compose-search');
+    const clearSearch = document.querySelector('.clear-search');
 
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
@@ -1025,6 +1026,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const searchTerm = e.target.value.trim();
             if (searchTerm) {
                 searchAllUsers(searchTerm);
+            }
+        });
+    }
+
+    if (clearSearch) {
+        clearSearch.addEventListener('click', () => {
+            if (searchInput) {
+                searchInput.value = '';
+                loadUsers();
             }
         });
     }
