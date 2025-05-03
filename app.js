@@ -325,18 +325,18 @@ async function loadUsers() {
         const messagesSnapshot = await getDocs(messagesQuery);
 
         // Get unique user IDs from messages
-        const uniqueUserIds = new Set();
+        const dmUserIds = new Set();
         messagesSnapshot.forEach(doc => {
             const message = doc.data();
-            message.participants.forEach(userId => {
-                if (userId !== currentUser.uid && !hiddenConversations.includes(userId)) {
-                    uniqueUserIds.add(userId);
+            message.participants.forEach(id => {
+                if (id !== currentUser.uid) {
+                    dmUserIds.add(id);
                 }
             });
         });
 
-        // Get user details for each unique user
-        const userPromises = Array.from(uniqueUserIds).map(async (userId) => {
+        // Get user details for each DM'd user
+        const usersPromises = Array.from(dmUserIds).map(async (userId) => {
             const userDoc = await getDoc(doc(db, 'users', userId));
             const userData = userDoc.data();
             return {
@@ -348,7 +348,7 @@ async function loadUsers() {
             };
         });
 
-        const users = await Promise.all(userPromises);
+        const users = await Promise.all(usersPromises);
 
         // Sort users: pinned first, then alphabetically
         users.sort((a, b) => {
