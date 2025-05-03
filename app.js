@@ -182,15 +182,26 @@ async function loadMessages() {
     }
 }
 
-// Send message on Enter key
-document.getElementById('message-input').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-        console.log('Enter key pressed, attempting to send message');
-        sendMessage();
+// Check Firebase connection
+function checkFirebaseConnection() {
+    if (!firebase.apps.length) {
+        console.error('Firebase is not initialized');
+        return false;
     }
-});
+    return true;
+}
 
 async function sendMessage() {
+    if (!checkFirebaseConnection()) {
+        alert('Firebase connection error. Please refresh the page.');
+        return;
+    }
+
+    if (!currentUser) {
+        alert('You must be logged in to send messages');
+        return;
+    }
+
     if (!currentChatUser) {
         alert('Please select a chat first');
         return;
@@ -201,14 +212,13 @@ async function sendMessage() {
     
     if (!content) return;
 
-    console.log('Attempting to send message:', {
-        content,
-        senderId: currentUser.uid,
-        receiverId: currentChatUser.id
-    });
-
     try {
-        // Create message in Firestore
+        // First, verify we can write to Firestore
+        const testRef = db.collection('test').doc('test');
+        await testRef.set({ test: 'test' });
+        await testRef.delete();
+        
+        // Now send the actual message
         const messageData = {
             content: content,
             senderId: currentUser.uid,
@@ -217,15 +227,12 @@ async function sendMessage() {
             participants: [currentUser.uid, currentChatUser.id]
         };
 
-        console.log('Message data:', messageData);
-
         const messageRef = await db.collection('messages').add(messageData);
-        console.log('Message sent successfully with ID:', messageRef.id);
-
+        
         // Clear input
         messageInput.value = '';
 
-        // Manually add the message to the chat UI
+        // Add message to UI immediately
         const chatMessages = document.getElementById('chat-messages');
         const messageElement = document.createElement('div');
         messageElement.className = 'message sent';
@@ -237,10 +244,24 @@ async function sendMessage() {
         chatMessages.scrollTop = chatMessages.scrollHeight;
 
     } catch (error) {
-        console.error('Error sending message:', error);
-        alert('Error sending message. Please try again.');
+        console.error('Detailed error:', error);
+        if (error.code === 'permission-denied') {
+            alert('Permission denied. Please check your Firebase security rules.');
+        } else if (error.code === 'unavailable') {
+            alert('Firebase service is unavailable. Please check your internet connection.');
+        } else {
+            alert('Error sending message: ' + error.message);
+        }
     }
 }
+
+// Add event listener for Enter key
+document.getElementById('message-input').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault(); // Prevent form submission
+        sendMessage();
+    }
+});
 
 // Search Users
 document.getElementById('search-user').addEventListener('input', async (e) => {
