@@ -45,12 +45,6 @@
         <!-- Chat Section -->
         <div id="chat-section" class="section" style="display: none;">
             <div class="chat-container">
-                <div class="chat-area">
-                    <div class="chat-messages" id="chat-messages"></div>
-                    <div class="message-input">
-                        <input type="text" id="message-input" placeholder="Type a message...">
-                    </div>
-                </div>
                 <div class="sidebar">
                     <div class="sidebar-header">
                         <h3>Chat</h3>
@@ -61,6 +55,19 @@
                         <input type="text" id="search-user" placeholder="Search">
                     </div>
                     <div id="users-container" class="users-list"></div>
+                    <div class="profile-section">
+                        <div class="profile-info">
+                            <img id="current-user-avatar" src="https://i.ibb.co/Gf9VD2MN/pfp.png" alt="Profile Picture">
+                            <span id="current-username">Username</span>
+                        </div>
+                        <span class="material-symbols-outlined settings-icon">settings</span>
+                    </div>
+                </div>
+                <div class="chat-area">
+                    <div class="chat-messages" id="chat-messages"></div>
+                    <div class="message-input">
+                        <input type="text" id="message-input" placeholder="Type a message...">
+                    </div>
                 </div>
             </div>
         </div>
