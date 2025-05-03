@@ -415,6 +415,7 @@ function createUserElement(user) {
         userElement.classList.toggle('pinned');
         
         if (!isPinned) {
+            const usersContainer = document.getElementById('users-container');
             usersContainer.insertBefore(userElement, usersContainer.firstChild);
         }
         
