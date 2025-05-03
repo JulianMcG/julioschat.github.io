@@ -343,7 +343,8 @@ async function loadUsers() {
                 id: userId,
                 username: userData.username,
                 profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
-                verified: userData.verified
+                verified: userData.verified,
+                isPinned: pinnedConversations.includes(userId)
             };
         });
 
@@ -351,12 +352,8 @@ async function loadUsers() {
 
         // Sort users: pinned first, then alphabetically
         users.sort((a, b) => {
-            const aPinned = pinnedConversations.includes(a.id);
-            const bPinned = pinnedConversations.includes(b.id);
-            
-            if (aPinned && !bPinned) return -1;
-            if (!aPinned && bPinned) return 1;
-            
+            if (a.isPinned && !b.isPinned) return -1;
+            if (!a.isPinned && b.isPinned) return 1;
             return a.username.localeCompare(b.username);
         });
 
@@ -365,8 +362,11 @@ async function loadUsers() {
             const userElement = createUserElement(user);
             userElement.dataset.uid = user.id;
             
-            if (pinnedConversations.includes(user.id)) {
+            if (user.isPinned) {
                 userElement.classList.add('pinned');
+                usersContainer.insertBefore(userElement, usersContainer.firstChild);
+            } else {
+                usersContainer.appendChild(userElement);
             }
             
             // Add click handler for the user item
@@ -389,8 +389,6 @@ async function loadUsers() {
                     console.error('Error hiding conversation:', error);
                 }
             };
-
-            usersContainer.appendChild(userElement);
         });
     } catch (error) {
         console.error('Error loading users:', error);
