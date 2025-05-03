@@ -82,6 +82,7 @@ body {
 .button-wrapper {
     width: 100%;
     position: relative;
+    margin-bottom: 20px;
 }
 
 .button-wrapper button {
@@ -95,10 +96,12 @@ body {
     font-size: 16px;
     font-weight: 600;
     transition: transform 0.1s ease;
+    box-shadow: 0 5px 0 #13296D;
 }
 
 .button-wrapper button:active {
     transform: translateY(5px);
+    box-shadow: 0 0 0 #13296D;
 }
 
 .button-wrapper::after {
