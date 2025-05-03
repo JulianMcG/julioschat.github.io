@@ -912,21 +912,4 @@ body {
 
 #settings-modal .signout-button:active {
     transform: translateY(0);
-}
-
-.unread-indicator {
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 8px;
-    height: 8px;
-    background-color: #1F49C7;
-    border-radius: 50%;
-    margin-left: 5px;
-    display: none;
-}
-
-.user-item.has-unread .unread-indicator {
-    display: block;
 } 
