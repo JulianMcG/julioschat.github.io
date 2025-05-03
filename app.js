@@ -342,19 +342,36 @@ async function startChat(userId, username) {
     userItems.forEach(item => {
         if (item.dataset.uid === userId) {
             item.classList.add('active');
+            // Animate other items
+            userItems.forEach(otherItem => {
+                if (otherItem !== item) {
+                    const itemRect = item.getBoundingClientRect();
+                    const otherRect = otherItem.getBoundingClientRect();
+                    if (otherRect.top < itemRect.top) {
+                        otherItem.classList.add('shift-up');
+                    } else {
+                        otherItem.classList.add('shift-down');
+                    }
+                }
+            });
         } else {
             item.classList.remove('active');
+            item.classList.remove('shift-up', 'shift-down');
         }
     });
 
     // Update chat header
     document.getElementById('active-chat-username').textContent = username;
-    document.getElementById('active-chat-avatar').src = document.querySelector(`.user-item[data-uid="${userId}"] img`).src;
+
+    // Show message input
+    const messageInput = document.querySelector('.message-input');
+    messageInput.classList.add('visible');
 
     // Update message input placeholder
-    const messageInput = document.getElementById('message-input');
-    if (messageInput) {
-        messageInput.placeholder = `Message ${username}`;
+    const messageInputField = document.getElementById('message-input');
+    if (messageInputField) {
+        messageInputField.placeholder = `Message ${username}`;
+        messageInputField.focus();
     }
 
     // Load messages
@@ -729,10 +746,67 @@ document.querySelector('.save-button').addEventListener('click', async () => {
     }
 });
 
-// Add this function to handle user search
+// Search Functions
 async function searchUsers(searchTerm) {
     const usersContainer = document.getElementById('users-container');
     usersContainer.innerHTML = '';
+
+    try {
+        // Get all messages where current user is a participant
+        const messagesQuery = query(
+            collection(db, 'messages'),
+            where('participants', 'array-contains', currentUser.uid)
+        );
+        const messagesSnapshot = await getDocs(messagesQuery);
+
+        // Get unique user IDs from messages
+        const dmUserIds = new Set();
+        messagesSnapshot.forEach(doc => {
+            const message = doc.data();
+            message.participants.forEach(id => {
+                if (id !== currentUser.uid) {
+                    dmUserIds.add(id);
+                }
+            });
+        });
+
+        // Get user details for each DM'd user
+        const usersPromises = Array.from(dmUserIds).map(async (userId) => {
+            const userDoc = await getDoc(doc(db, 'users', userId));
+            return {
+                id: userId,
+                ...userDoc.data()
+            };
+        });
+
+        const users = await Promise.all(usersPromises);
+
+        // Filter users based on search term
+        const filteredUsers = users.filter(user => 
+            user.username.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+
+        // Display filtered users
+        filteredUsers.forEach(user => {
+            const userElement = document.createElement('div');
+            userElement.className = 'user-item';
+            userElement.dataset.uid = user.id;
+            userElement.innerHTML = `
+                <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.username}" class="user-avatar">
+                <span>${user.username}</span>
+            `;
+            userElement.onclick = () => startChat(user.id, user.username);
+            usersContainer.appendChild(userElement);
+        });
+    } catch (error) {
+        console.error('Error searching users:', error);
+    }
+}
+
+// Compose Modal Functions
+async function searchAllUsers(searchTerm) {
+    const composeResults = document.getElementById('compose-results');
+    composeResults.innerHTML = '';
 
     try {
         const usersSnapshot = await getDocs(collection(db, 'users'));
@@ -753,16 +827,44 @@ async function searchUsers(searchTerm) {
         // Display users
         users.forEach(user => {
             const userElement = document.createElement('div');
-            userElement.className = 'user-item';
-            userElement.dataset.uid = user.id;
+            userElement.className = 'compose-user-item';
             userElement.innerHTML = `
                 <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.username}" class="user-avatar">
                 <span>${user.username}</span>
             `;
-            userElement.onclick = () => startChat(user.id, user.username);
-            usersContainer.appendChild(userElement);
+            userElement.onclick = () => {
+                startChat(user.id, user.username);
+                closeComposeModal();
+            };
+            composeResults.appendChild(userElement);
         });
     } catch (error) {
-        console.error('Error searching users:', error);
+        console.error('Error searching all users:', error);
     }
-} 
+}
+
+// Add event listeners for search
+document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('search-user');
+    const composeSearch = document.getElementById('compose-search');
+
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.trim();
+            if (searchTerm) {
+                searchUsers(searchTerm);
+            } else {
+                loadUsers();
+            }
+        });
+    }
+
+    if (composeSearch) {
+        composeSearch.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.trim();
+            if (searchTerm) {
+                searchAllUsers(searchTerm);
+            }
+        });
+    }
+}); 
