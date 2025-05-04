@@ -162,6 +162,259 @@ document.addEventListener('DOMContentLoaded', () => {
     if (signupButton) {
         signupButton.addEventListener('click', signup);
     }
+
+    // Compose button event listener
+    document.querySelector('.compose-icon').addEventListener('click', openComposeModal);
+    
+    // Close compose modal button
+    document.querySelector('#compose-modal .close-modal').addEventListener('click', closeComposeModal);
+    
+    // Close modal when clicking outside
+    window.addEventListener('click', (event) => {
+        const modal = document.getElementById('compose-modal');
+        if (event.target === modal) {
+            closeComposeModal();
+        }
+    });
+
+    // Compose search event listener
+    const composeSearch = document.getElementById('compose-search');
+    if (composeSearch) {
+        composeSearch.addEventListener('input', async (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const composeResults = document.getElementById('compose-results');
+            composeResults.innerHTML = '';
+
+            if (searchTerm.length > 0) {
+                try {
+                    // Get all users except current user
+                    const usersSnapshot = await getDocs(collection(db, 'users'));
+                    const suggestions = [];
+                    
+                    usersSnapshot.forEach(doc => {
+                        if (doc.id !== currentUser.uid) {
+                            const user = doc.data();
+                            const username = user.username.toLowerCase();
+                            
+                            if (username.includes(searchTerm)) {
+                                suggestions.push({
+                                    id: doc.id,
+                                    username: user.username,
+                                    profilePicture: user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'
+                                });
+                            }
+                        }
+                    });
+
+                    // Sort suggestions by username
+                    suggestions.sort((a, b) => a.username.localeCompare(b.username));
+
+                    // Display suggestions
+                    suggestions.forEach(user => {
+                        const userElement = document.createElement('div');
+                        userElement.className = `compose-user-item ${selectedUsers.has(user.id) ? 'selected' : ''}`;
+                        userElement.innerHTML = `
+                            <img src="${user.profilePicture}" alt="${user.username}" class="user-avatar">
+                            <span>${user.username}</span>
+                            <span class="material-symbols-outlined select-user">${selectedUsers.has(user.id) ? 'check_box' : 'check_box_outline_blank'}</span>
+                        `;
+                        
+                        userElement.onclick = (e) => {
+                            if (!e.target.classList.contains('select-user')) {
+                                if (selectedUsers.has(user.id)) {
+                                    selectedUsers.delete(user.id);
+                                    userElement.classList.remove('selected');
+                                    userElement.querySelector('.select-user').textContent = 'check_box_outline_blank';
+                                } else {
+                                    selectedUsers.add(user.id);
+                                    userElement.classList.add('selected');
+                                    userElement.querySelector('.select-user').textContent = 'check_box';
+                                }
+                                updateSelectedUsers();
+                            }
+                        };
+                        
+                        composeResults.appendChild(userElement);
+                    });
+
+                    if (suggestions.length === 0) {
+                        const noResults = document.createElement('div');
+                        noResults.className = 'no-results';
+                        noResults.textContent = 'No users found';
+                        composeResults.appendChild(noResults);
+                    }
+                } catch (error) {
+                    console.error('Error searching users:', error);
+                    const errorElement = document.createElement('div');
+                    errorElement.className = 'no-results';
+                    errorElement.textContent = 'Error searching users. Please try again.';
+                    composeResults.appendChild(errorElement);
+                }
+            }
+        });
+    }
+
+    // Function to update selected users display
+    async function updateSelectedUsers() {
+        const searchContainer = document.querySelector('#compose-modal .search-container');
+        const searchInput = document.getElementById('compose-search');
+        const selectedUsersContainer = document.createElement('div');
+        selectedUsersContainer.className = 'selected-users';
+        
+        for (const userId of selectedUsers) {
+            const userDoc = await getDoc(doc(db, 'users', userId));
+            const userData = userDoc.data();
+            
+            const userElement = document.createElement('div');
+            userElement.className = 'selected-user';
+            userElement.innerHTML = `
+                <span>${userData.username}</span>
+                <span class="material-symbols-outlined remove-user">close</span>
+            `;
+            
+            userElement.querySelector('.remove-user').onclick = () => {
+                selectedUsers.delete(userId);
+                updateSelectedUsers();
+                // Update the checkmark in the search results
+                const userItem = document.querySelector(`.compose-user-item[data-id="${userId}"]`);
+                if (userItem) {
+                    userItem.classList.remove('selected');
+                    userElement.querySelector('.select-user').textContent = 'check_box_outline_blank';
+                }
+            };
+            
+            selectedUsersContainer.appendChild(userElement);
+        }
+        
+        // Replace existing selected users with new ones
+        const existingSelectedUsers = searchContainer.querySelector('.selected-users');
+        if (existingSelectedUsers) {
+            existingSelectedUsers.remove();
+        }
+        searchContainer.insertBefore(selectedUsersContainer, searchInput);
+    }
+
+    // Message input event listener
+    const messageInput = document.getElementById('message-input');
+    if (messageInput) {
+        messageInput.addEventListener('keypress', async (e) => {
+            if (e.key === 'Enter' && messageInput.value.trim()) {
+                const content = messageInput.value.trim();
+                messageInput.value = '';
+                
+                if (currentGroupChat) {
+                    // Send group message
+                    try {
+                        await addDoc(collection(db, 'messages'), {
+                            content: content,
+                            senderId: currentUser.uid,
+                            groupId: currentGroupChat.id,
+                            timestamp: serverTimestamp()
+                        });
+                    } catch (error) {
+                        console.error('Error sending group message:', error);
+                        alert('Error sending message. Please try again.');
+                    }
+                } else if (currentChatUser) {
+                    // Send direct message
+                    try {
+                        await addDoc(collection(db, 'messages'), {
+                            content: content,
+                            senderId: currentUser.uid,
+                            receiverId: currentChatUser.id,
+                            participants: [currentUser.uid, currentChatUser.id],
+                            timestamp: serverTimestamp()
+                        });
+                    } catch (error) {
+                        console.error('Error sending direct message:', error);
+                        alert('Error sending message. Please try again.');
+                    }
+                }
+            }
+        });
+    }
+
+    // User options modal event listeners
+    const userOptionsModal = document.getElementById('user-options-modal');
+    if (userOptionsModal) {
+        // Open user options modal
+        document.querySelector('.chat-header svg').addEventListener('click', () => {
+            if (currentChatUser) {
+                userOptionsModal.style.display = 'block';
+                // Load current user alias if exists
+                getDoc(doc(db, 'users', currentUser.uid)).then(userDoc => {
+                    const userData = userDoc.data();
+                    const aliases = userData?.aliases || {};
+                    const alias = aliases[currentChatUser.id];
+                    document.getElementById('user-alias').value = alias || '';
+                    
+                    // Check if user is blocked
+                    const blockedUsers = userData?.blockedUsers || [];
+                    const isBlocked = blockedUsers.includes(currentChatUser.id);
+                    document.getElementById('block-user').style.display = isBlocked ? 'none' : 'block';
+                    document.getElementById('unblock-user').style.display = isBlocked ? 'block' : 'none';
+                });
+            }
+        });
+
+        // Save alias
+        document.getElementById('save-alias').addEventListener('click', async () => {
+            const alias = document.getElementById('user-alias').value.trim();
+            try {
+                await setDoc(doc(db, 'users', currentUser.uid), {
+                    aliases: {
+                        [currentChatUser.id]: alias
+                    }
+                }, { merge: true });
+                alert('Alias saved successfully!');
+            } catch (error) {
+                console.error('Error saving alias:', error);
+                alert('Error saving alias. Please try again.');
+            }
+        });
+
+        // Block user
+        document.getElementById('block-user').addEventListener('click', async () => {
+            try {
+                await setDoc(doc(db, 'users', currentUser.uid), {
+                    blockedUsers: arrayUnion(currentChatUser.id)
+                }, { merge: true });
+                document.getElementById('block-user').style.display = 'none';
+                document.getElementById('unblock-user').style.display = 'block';
+                alert('User blocked successfully!');
+            } catch (error) {
+                console.error('Error blocking user:', error);
+                alert('Error blocking user. Please try again.');
+            }
+        });
+
+        // Unblock user
+        document.getElementById('unblock-user').addEventListener('click', async () => {
+            try {
+                await setDoc(doc(db, 'users', currentUser.uid), {
+                    blockedUsers: arrayRemove(currentChatUser.id)
+                }, { merge: true });
+                document.getElementById('block-user').style.display = 'block';
+                document.getElementById('unblock-user').style.display = 'none';
+                alert('User unblocked successfully!');
+            } catch (error) {
+                console.error('Error unblocking user:', error);
+                alert('Error unblocking user. Please try again.');
+            }
+        });
+
+        // Close user options modal
+        userOptionsModal.querySelector('.close-modal').addEventListener('click', () => {
+            userOptionsModal.style.display = 'none';
+        });
+
+        // Close modal when clicking outside
+        window.addEventListener('click', (event) => {
+            if (event.target === userOptionsModal) {
+                userOptionsModal.style.display = 'none';
+            }
+        });
+    }
 });
 
 async function signup() {
@@ -709,26 +962,6 @@ function closeComposeModal() {
 let selectedUsers = new Set();
 let currentGroupChat = null;
 let selectedColor = '#1F49C7'; // Default color
-
-document.addEventListener('DOMContentLoaded', () => {
-    // ... existing code ...
-
-    // Compose button event listener
-    document.querySelector('.compose-icon').addEventListener('click', openComposeModal);
-    
-    // Close compose modal button
-    document.querySelector('#compose-modal .close-modal').addEventListener('click', closeComposeModal);
-    
-    // Close modal when clicking outside
-    window.addEventListener('click', (event) => {
-        const modal = document.getElementById('compose-modal');
-        if (event.target === modal) {
-            closeComposeModal();
-        }
-    });
-
-    // ... rest of the existing code ...
-});
 
 // Emoji Picker
 const emojis = ['😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '😈', '👿', '👹', '👺', '🤡', '💩', '👻', '💀', '☠️', '👽', '👾', '🤖', '🎃', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾'];
