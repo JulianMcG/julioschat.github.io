@@ -269,6 +269,15 @@ body {
 
 .sidebar-header h3 {
     font-size: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sidebar-header svg {
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
 }
 
 .compose-icon {
@@ -980,6 +989,80 @@ body {
 #settings-modal .signout-button:active {
     transform: translateY(5px);
     box-shadow: 0 0 0 #8A1315;
+}
+
+/* User Options Modal Styles */
+#user-options-modal .modal-content {
+    background-color: #10121B;
+    border-radius: 15px;
+    width: 400px;
+    max-width: 90%;
+    margin: 10% auto;
+    padding: 20px;
+}
+
+.user-options-section {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.option-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.option-group label {
+    color: #B6B8C8;
+    font-size: 14px;
+}
+
+.option-group input {
+    width: 100%;
+    padding: 12px;
+    background-color: #13161F;
+    border: 1px solid #1C1F28;
+    border-radius: 8px;
+    color: #ECEBF7;
+    font-size: 14px;
+}
+
+.option-group input:focus {
+    outline: none;
+    border-color: #1F49C7;
+}
+
+.block-button {
+    background-color: #E85658;
+    color: #ECEBF7;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: background-color 0.3s;
+}
+
+.block-button:hover {
+    background-color: #d14547;
+}
+
+.unblock-button {
+    background-color: #1F49C7;
+    color: #ECEBF7;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: background-color 0.3s;
+}
+
+.unblock-button:hover {
+    background-color: #1a3db0;
 }
 
 /* Add scrollbar hiding for all scrollable elements */
