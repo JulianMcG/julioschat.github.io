@@ -619,7 +619,6 @@ body {
     position: absolute;
     padding: 4px 8px;
     border-radius: 50px 50px 5px 50px;
-    background-color: #1F49C7;
     color: #ECEBF7;
     font-size: 12px;
     border: 4px solid #13161F;
@@ -628,8 +627,15 @@ body {
     right: 0;
 }
 
-.message.received .reaction-indicator {
+.reaction-indicator.reactor {
+    background-color: #1F49C7;
+}
+
+.reaction-indicator.reactee {
     background-color: #1C1F28;
+}
+
+.message.received .reaction-indicator {
     border-radius: 50px 50px 50px 5px;
     left: 0;
     right: auto;
