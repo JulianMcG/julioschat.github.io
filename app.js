@@ -20,7 +20,8 @@ import {
     addDoc,
     serverTimestamp,
     arrayUnion,
-    arrayRemove
+    arrayRemove,
+    updateDoc
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
@@ -637,9 +638,46 @@ async function loadMessages() {
                     
                     const messageElement = document.createElement('div');
                     messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
+                    messageElement.dataset.messageId = doc.id;
+                    
+                    // Add reaction icon
+                    const reactionIcon = document.createElement('span');
+                    reactionIcon.className = 'material-symbols-outlined reaction-icon';
+                    reactionIcon.textContent = 'sentiment_satisfied';
+                    reactionIcon.onclick = (e) => {
+                        e.stopPropagation();
+                        showEmojiList(messageElement, doc.id);
+                    };
+                    
+                    // Add emoji list
+                    const emojiList = document.createElement('div');
+                    emojiList.className = 'emoji-list';
+                    const emojis = ['❤️', '👍', '👎', '😂', '‼️', '❓', '🔥'];
+                    emojis.forEach(emoji => {
+                        const emojiOption = document.createElement('span');
+                        emojiOption.className = 'emoji-option';
+                        emojiOption.textContent = emoji;
+                        emojiOption.onclick = (e) => {
+                            e.stopPropagation();
+                            addReaction(doc.id, emoji);
+                            emojiList.classList.remove('show');
+                        };
+                        emojiList.appendChild(emojiOption);
+                    });
+                    
+                    // Add reaction indicator if exists
+                    let reactionIndicator = '';
+                    if (message.reaction) {
+                        reactionIndicator = `<div class="reaction-indicator">${message.reaction}</div>`;
+                    }
+                    
                     messageElement.innerHTML = `
+                        ${reactionIndicator}
                         <div class="content">${message.content}</div>
                     `;
+                    
+                    messageElement.appendChild(reactionIcon);
+                    messageElement.appendChild(emojiList);
                     chatMessages.appendChild(messageElement);
                 }
             });
@@ -654,6 +692,37 @@ async function loadMessages() {
         console.error('Error loading messages:', error);
     }
 }
+
+function showEmojiList(messageElement, messageId) {
+    const emojiList = messageElement.querySelector('.emoji-list');
+    emojiList.classList.toggle('show');
+    
+    // Close other emoji lists
+    document.querySelectorAll('.emoji-list.show').forEach(list => {
+        if (list !== emojiList) {
+            list.classList.remove('show');
+        }
+    });
+}
+
+async function addReaction(messageId, emoji) {
+    try {
+        await updateDoc(doc(db, 'messages', messageId), {
+            reaction: emoji
+        });
+    } catch (error) {
+        console.error('Error adding reaction:', error);
+    }
+}
+
+// Close emoji lists when clicking outside
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.emoji-list') && !e.target.closest('.reaction-icon')) {
+        document.querySelectorAll('.emoji-list.show').forEach(list => {
+            list.classList.remove('show');
+        });
+    }
+});
 
 // Check Firebase connection
 function checkFirebaseConnection() {
