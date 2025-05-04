@@ -458,6 +458,7 @@ body {
     display: flex;
     align-items: center;
     gap: 10px;
+    height: 50px;
 }
 
 .message-input input {
@@ -483,7 +484,7 @@ body {
 
 .message-input.blocked input {
     color: #ECEBF7;
-    opacity: 0.5;
+    opacity: 1;
 }
 
 .message-bubble {
@@ -1159,22 +1160,23 @@ button:hover {
 .unblock-button {
     background-color: #494C56;
     color: #ECEBF7;
-    border: 3px solid rgba(255, 255, 255, 0.05);
-    border-radius: 15px;
+    border: none;
+    border-radius: 8px;
     cursor: pointer;
-    font-size: 16px;
-    font-weight: 600;
-    padding: 14px;
-    transition: transform 0.1s ease;
-    box-shadow: 0 5px 0 #31333A;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 8px 16px;
+    height: 34px;
     white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .unblock-button:hover {
-    transform: translateY(-2px);
+    background-color: #5a5d68;
 }
 
 .unblock-button:active {
-    transform: translateY(5px);
-    box-shadow: 0 0 0 #31333A;
+    background-color: #3d3f46;
 } 
