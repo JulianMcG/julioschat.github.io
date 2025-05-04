@@ -430,17 +430,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         participants: [currentUser.uid, otherUser.id],
                         createdAt: serverTimestamp()
                     });
+                    
+                    // Add chat to both users' chats array
+                    const batch = writeBatch(db);
+                    batch.update(doc(db, 'users', currentUser.uid), {
+                        chats: arrayUnion(chatId)
+                    });
+                    batch.update(doc(db, 'users', otherUser.id), {
+                        chats: arrayUnion(chatId)
+                    });
+                    await batch.commit();
                 }
-                
-                // Add chat to both users' chats array
-                const batch = writeBatch(db);
-                batch.update(doc(db, 'users', currentUser.uid), {
-                    chats: arrayUnion(chatId)
-                });
-                batch.update(doc(db, 'users', otherUser.id), {
-                    chats: arrayUnion(chatId)
-                });
-                await batch.commit();
                 
                 // Update UI
                 closeComposeModal();
@@ -448,7 +448,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 // Create group chat
                 const groupName = selectedUsers.map(user => user.username).join(', ');
-                const groupChatRef = doc(collection(db, 'groupChats'));
+                const groupChatRef = collection(db, 'groupChats');
                 const groupChatData = {
                     name: groupName,
                     emoji: '🗑️',
@@ -457,13 +457,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     createdAt: serverTimestamp()
                 };
                 
-                await setDoc(groupChatRef, groupChatData);
+                const newGroupChat = await addDoc(groupChatRef, groupChatData);
                 
                 // Add group chat to each member's groupChats array
                 const batch = writeBatch(db);
                 selectedUsers.forEach(user => {
                     batch.update(doc(db, 'users', user.id), {
-                        groupChats: arrayUnion(groupChatRef.id)
+                        groupChats: arrayUnion(newGroupChat.id)
                     });
                 });
                 await batch.commit();
