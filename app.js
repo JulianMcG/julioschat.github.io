@@ -337,11 +337,6 @@ async function loadUsers() {
 
         // Get user details for each DM'd user
         const usersPromises = Array.from(dmUserIds).map(async (userId) => {
-            // Skip hidden conversations
-            if (hiddenConversations.includes(userId)) {
-                return null;
-            }
-            
             const userDoc = await getDoc(doc(db, 'users', userId));
             const userData = userDoc.data();
             return {
@@ -353,7 +348,10 @@ async function loadUsers() {
             };
         });
 
-        const users = (await Promise.all(usersPromises)).filter(user => user !== null);
+        let users = await Promise.all(usersPromises);
+        
+        // Filter out hidden conversations after getting all user data
+        users = users.filter(user => !hiddenConversations.includes(user.id));
 
         // Sort users: pinned first, then alphabetically
         users.sort((a, b) => {
