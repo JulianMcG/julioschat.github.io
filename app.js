@@ -651,6 +651,11 @@ async function addReaction(messageId, emoji) {
 }
 
 function showEmojiList(messageElement, messageId) {
+    console.log('Showing emoji list for message:', messageId);
+    
+    // Remove any existing emoji lists first
+    document.querySelectorAll('.emoji-list').forEach(list => list.remove());
+    
     const emojiList = document.createElement('div');
     emojiList.className = 'emoji-list';
     emojiList.dataset.messageId = messageId;
@@ -662,6 +667,7 @@ function showEmojiList(messageElement, messageId) {
         emojiOption.textContent = emoji;
         emojiOption.onclick = (e) => {
             e.stopPropagation();
+            console.log('Selected emoji:', emoji);
             addReaction(messageId, emoji);
             emojiList.remove();
         };
@@ -670,19 +676,19 @@ function showEmojiList(messageElement, messageId) {
     
     // Position the emoji list
     const messageRect = messageElement.getBoundingClientRect();
-    emojiList.style.position = 'absolute';
-    emojiList.style.top = `${messageRect.top - 40}px`;
+    emojiList.style.position = 'fixed';
+    emojiList.style.top = `${messageRect.top - 50}px`;
     emojiList.style.left = `${messageRect.left}px`;
+    emojiList.style.zIndex = '1000';
+    emojiList.style.backgroundColor = '#13161F';
+    emojiList.style.padding = '10px';
+    emojiList.style.borderRadius = '15px';
+    emojiList.style.display = 'flex';
+    emojiList.style.gap = '8px';
+    emojiList.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
     
     // Add to document
     document.body.appendChild(emojiList);
-    
-    // Close other emoji lists
-    document.querySelectorAll('.emoji-list').forEach(list => {
-        if (list !== emojiList) {
-            list.remove();
-        }
-    });
     
     // Close on click outside
     const closeOnClickOutside = (e) => {
@@ -692,9 +698,10 @@ function showEmojiList(messageElement, messageId) {
         }
     };
     
+    // Add click event listener after a short delay to prevent immediate closing
     setTimeout(() => {
         document.addEventListener('click', closeOnClickOutside);
-    }, 0);
+    }, 100);
 }
 
 async function loadMessages() {
@@ -728,9 +735,6 @@ async function loadMessages() {
             snapshot.forEach(doc => {
                 const message = doc.data();
                 
-                // Only show messages if:
-                // 1. The message is between current user and current chat user
-                // 2. The sender is not blocked
                 if (message.participants.includes(currentChatUser.id) && 
                     message.participants.includes(currentUser.uid) &&
                     !blockedUsers.includes(message.senderId)) {
@@ -744,12 +748,26 @@ async function loadMessages() {
                     contentDiv.className = 'content';
                     contentDiv.textContent = message.content;
                     
-                    // Add reaction icon
+                    // Add reaction icon with proper event handling
                     const reactionIcon = document.createElement('span');
                     reactionIcon.className = 'material-symbols-outlined reaction-icon';
                     reactionIcon.textContent = 'sentiment_satisfied';
+                    reactionIcon.style.cursor = 'pointer';
+                    reactionIcon.style.opacity = '0';
+                    reactionIcon.style.transition = 'opacity 0.2s';
+                    
+                    // Show icon on hover
+                    messageElement.addEventListener('mouseenter', () => {
+                        reactionIcon.style.opacity = '1';
+                    });
+                    
+                    messageElement.addEventListener('mouseleave', () => {
+                        reactionIcon.style.opacity = '0';
+                    });
+                    
                     reactionIcon.onclick = (e) => {
                         e.stopPropagation();
+                        console.log('Reaction icon clicked for message:', doc.id);
                         showEmojiList(messageElement, doc.id);
                     };
                     
