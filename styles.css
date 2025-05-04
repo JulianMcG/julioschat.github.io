@@ -292,15 +292,21 @@ body {
     background-color: #13161F;
     border-radius: 8px;
     padding: 10px;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
     position: relative;
+}
+
+.search-icon {
+    color: #B6B8C8;
+    margin-right: 8px;
+    font-size: 18px;
 }
 
 .direct-messages-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
     color: #B6B8C8;
     font-size: 14px;
     padding: 0 10px;
@@ -315,12 +321,6 @@ body {
 
 .add-group-icon:hover {
     color: #ECEBF7;
-}
-
-.search-icon {
-    color: #B6B8C8;
-    margin-right: 8px;
-    font-size: 18px;
 }
 
 #search-user {
@@ -635,6 +635,10 @@ body {
     height: 100%;
     background-color: rgba(0, 0, 0, 0.5);
     z-index: 1000;
+}
+
+.modal.active {
+    display: block;
 }
 
 .modal-content {
@@ -1338,10 +1342,4 @@ button:hover {
 #create-group-modal .create-button:active {
     transform: translateY(5px);
     box-shadow: 0 0 0 #13296D;
-}
-
-#create-group-modal .create-button:disabled {
-    background-color: #494C56;
-    cursor: not-allowed;
-    box-shadow: 0 5px 0 #31333A;
 } 
