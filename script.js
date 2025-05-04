@@ -11,20 +11,20 @@ const MAX_GROUP_SIZE = 10;
 
 // Open create group modal
 addGroupIcon.addEventListener('click', () => {
-    createGroupModal.style.display = 'block';
+    createGroupModal.classList.add('active');
     populateGroupUserList();
 });
 
 // Close create group modal
 closeGroupModal.addEventListener('click', () => {
-    createGroupModal.style.display = 'none';
+    createGroupModal.classList.remove('active');
     resetGroupModal();
 });
 
 // Close modal when clicking outside
 window.addEventListener('click', (event) => {
     if (event.target === createGroupModal) {
-        createGroupModal.style.display = 'none';
+        createGroupModal.classList.remove('active');
         resetGroupModal();
     }
 });
@@ -134,7 +134,7 @@ createGroupButton.addEventListener('click', async () => {
             // Add group to sidebar
             addGroupToSidebar(group);
             // Close modal and reset
-            createGroupModal.style.display = 'none';
+            createGroupModal.classList.remove('active');
             resetGroupModal();
         } else {
             throw new Error('Failed to create group');
