@@ -726,12 +726,28 @@ async function addReaction(messageId, emoji) {
             }, { merge: true });
         } else {
             // Otherwise, set the new reaction
-            await setDoc(messageRef, {
+            const newData = {
                 ...currentData,
                 reaction: emoji,
                 reactorId: currentUser.uid,
                 reactionTimestamp: serverTimestamp()
-            }, { merge: true });
+            };
+            await setDoc(messageRef, newData, { merge: true });
+            
+            // Force a re-render of the message
+            const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+            if (messageElement) {
+                const reactionIndicator = messageElement.querySelector('.reaction-indicator');
+                if (reactionIndicator) {
+                    reactionIndicator.textContent = emoji;
+                    reactionIndicator.className = `reaction-indicator ${currentUser.uid === currentData?.senderId ? 'reactor' : 'reactee'}`;
+                } else {
+                    const newReactionIndicator = document.createElement('div');
+                    newReactionIndicator.className = `reaction-indicator ${currentUser.uid === currentData?.senderId ? 'reactor' : 'reactee'}`;
+                    newReactionIndicator.textContent = emoji;
+                    messageElement.insertBefore(newReactionIndicator, messageElement.firstChild);
+                }
+            }
         }
     } catch (error) {
         console.error('Error adding reaction:', error);
