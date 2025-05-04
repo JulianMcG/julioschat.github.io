@@ -1405,4 +1405,36 @@ button:hover {
 .start-chat-button:active {
     transform: translateY(5px);
     box-shadow: 0 0 0 #13296D;
+}
+
+/* Selected Users Styles */
+.selected-users {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px;
+    background-color: #13161F;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    min-height: 40px;
+}
+
+.selected-user {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    background-color: #1C1F28;
+    border-radius: 15px;
+    font-size: 14px;
+}
+
+.selected-user .remove-user {
+    color: #B6B8C8;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.selected-user .remove-user:hover {
+    color: #ECEBF7;
 } 
