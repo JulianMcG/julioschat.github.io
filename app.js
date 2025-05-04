@@ -666,16 +666,15 @@ async function loadMessages() {
                     });
                     
                     // Add reaction indicator if exists
-                    let reactionIndicator = '';
                     if (message.reaction && message.reactorId) {
-                        // Determine if current user is the reactor
                         const isReactor = message.reactorId === currentUser.uid;
-                        const reactionClass = isReactor ? 'reactor' : 'reactee';
-                        reactionIndicator = `<div class="reaction-indicator ${reactionClass}">${message.reaction}</div>`;
+                        const reactionIndicator = document.createElement('div');
+                        reactionIndicator.className = `reaction-indicator ${isReactor ? 'reactor' : 'reactee'}`;
+                        reactionIndicator.textContent = message.reaction;
+                        messageElement.appendChild(reactionIndicator);
                     }
                     
                     messageElement.innerHTML = `
-                        ${reactionIndicator}
                         <div class="content">${message.content}</div>
                     `;
                     
@@ -725,28 +724,32 @@ async function addReaction(messageId, emoji) {
                 reactionTimestamp: null
             }, { merge: true });
         } else {
-            // Otherwise, set the new reaction
+            // Create the new data object
             const newData = {
                 ...currentData,
                 reaction: emoji,
                 reactorId: currentUser.uid,
                 reactionTimestamp: serverTimestamp()
             };
+            
+            // Update Firestore
             await setDoc(messageRef, newData, { merge: true });
             
-            // Force a re-render of the message
+            // Update the UI immediately
             const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
             if (messageElement) {
-                const reactionIndicator = messageElement.querySelector('.reaction-indicator');
-                if (reactionIndicator) {
-                    reactionIndicator.textContent = emoji;
-                    reactionIndicator.className = `reaction-indicator ${currentUser.uid === currentData?.senderId ? 'reactor' : 'reactee'}`;
-                } else {
-                    const newReactionIndicator = document.createElement('div');
-                    newReactionIndicator.className = `reaction-indicator ${currentUser.uid === currentData?.senderId ? 'reactor' : 'reactee'}`;
-                    newReactionIndicator.textContent = emoji;
-                    messageElement.insertBefore(newReactionIndicator, messageElement.firstChild);
+                // Remove any existing reaction indicator
+                const existingIndicator = messageElement.querySelector('.reaction-indicator');
+                if (existingIndicator) {
+                    existingIndicator.remove();
                 }
+                
+                // Create and add new reaction indicator
+                const reactionIndicator = document.createElement('div');
+                const isReactor = currentUser.uid === currentData?.senderId;
+                reactionIndicator.className = `reaction-indicator ${isReactor ? 'reactor' : 'reactee'}`;
+                reactionIndicator.textContent = emoji;
+                messageElement.insertBefore(reactionIndicator, messageElement.firstChild);
             }
         }
     } catch (error) {
