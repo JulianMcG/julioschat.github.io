@@ -531,16 +531,20 @@ body {
     text-align: right;
     border-radius: 15px 15px 5px 15px;
     position: relative;
+    padding-right: 20px;
 }
 
 .message-actions {
     position: absolute;
-    left: -60px;
+    left: -80px;
     top: 50%;
     transform: translateY(-50%);
     display: none;
     gap: 8px;
     z-index: 1;
+    background-color: #0c0e16;
+    padding: 4px 8px;
+    border-radius: 8px;
 }
 
 .message.sent:hover .message-actions {
@@ -555,6 +559,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 24px;
+    height: 24px;
 }
 
 .message-action:hover {
