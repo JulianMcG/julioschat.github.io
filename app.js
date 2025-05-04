@@ -622,10 +622,10 @@ async function loadMessages() {
             );
         } else {
             messagesQuery = query(
-                collection(db, 'messages'),
-                where('participants', 'array-contains', currentUser.uid),
-                orderBy('timestamp', 'asc')
-            );
+            collection(db, 'messages'),
+            where('participants', 'array-contains', currentUser.uid),
+            orderBy('timestamp', 'asc')
+        );
         }
 
         if (window.currentMessageUnsubscribe) {
@@ -653,13 +653,13 @@ async function loadMessages() {
                         // Get sender's info
                         getDoc(doc(db, 'users', message.senderId)).then(senderDoc => {
                             const senderData = senderDoc.data();
-                            messageElement.innerHTML = `
+                    messageElement.innerHTML = `
                                 <div class="sender-info">
                                     <img src="${senderData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${senderData.username}">
                                     <span class="sender-name">${senderData.username}</span>
                                 </div>
-                                <div class="content">${message.content}</div>
-                            `;
+                        <div class="content">${message.content}</div>
+                    `;
                         });
                     } else {
                         messageElement.innerHTML = `
@@ -1068,11 +1068,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (!e.target.classList.contains('select-user')) {
                                 if (selectedUsers.has(user.id)) {
                                     selectedUsers.delete(user.id);
-                                } else if (selectedUsers.size < 10) { // Limit to 10 users
-                                    selectedUsers.add(user.id);
+                                    updateSelectedUsers();
                                 } else {
-                                    alert('You can only select up to 10 users for a group chat');
-                                    return;
+                                    selectedUsers.add(user.id);
+                                    updateSelectedUsers();
                                 }
                                 userElement.querySelector('.select-user').textContent = 
                                     selectedUsers.has(user.id) ? 'check_circle' : 'radio_button_unchecked';
@@ -1099,33 +1098,93 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Add event listener for the "Start Chat" button in compose modal
-    const startChatButton = document.createElement('button');
-    startChatButton.className = 'start-chat-button';
-    startChatButton.textContent = 'Start Chat';
-    startChatButton.onclick = async () => {
+    // Function to update selected users display
+    async function updateSelectedUsers() {
+        const selectedUsersContainer = document.getElementById('selected-users');
+        selectedUsersContainer.innerHTML = '';
+        
+        for (const userId of selectedUsers) {
+            const userDoc = await getDoc(doc(db, 'users', userId));
+            const userData = userDoc.data();
+            
+            const userElement = document.createElement('div');
+            userElement.className = 'selected-user';
+            userElement.innerHTML = `
+                <span>${userData.username}</span>
+                <span class="material-symbols-outlined remove-user">close</span>
+            `;
+            
+            userElement.querySelector('.remove-user').onclick = () => {
+                selectedUsers.delete(userId);
+                updateSelectedUsers();
+                // Update the checkmark in the search results
+                const userItem = document.querySelector(`.compose-user-item[data-id="${userId}"]`);
+                if (userItem) {
+                    userItem.querySelector('.select-user').textContent = 'radio_button_unchecked';
+                }
+            };
+            
+            selectedUsersContainer.appendChild(userElement);
+        }
+    }
+
+    // Update the start chat button functionality
+    document.querySelector('.start-chat-button').onclick = async () => {
         if (selectedUsers.size === 0) {
             alert('Please select at least one user');
             return;
         }
 
-        if (selectedUsers.size === 1) {
-            // Start a DM
-            const userId = Array.from(selectedUsers)[0];
-            const userDoc = await getDoc(doc(db, 'users', userId));
-            const userData = userDoc.data();
-            startChat(userId, userData.username);
-        } else {
-            // Start a group chat
-            openGroupChatSettings();
+        try {
+            // Create group chat with default settings
+            const members = [currentUser.uid, ...Array.from(selectedUsers)];
+            const memberNames = [];
+            
+            // Get usernames for the group name
+            for (const memberId of members) {
+                const memberDoc = await getDoc(doc(db, 'users', memberId));
+                const memberData = memberDoc.data();
+                memberNames.push(memberData.username);
+            }
+            
+            const groupData = {
+                name: memberNames.join(', '),
+                emoji: '🗑️',
+                backgroundColor: '#1F49C7',
+                members: members,
+                createdAt: serverTimestamp()
+            };
+            
+            const groupRef = await addDoc(collection(db, 'groupChats'), groupData);
+            
+            // Add the group chat to each member's groupChats array
+            const updatePromises = members.map(async (memberId) => {
+                const userRef = doc(db, 'users', memberId);
+                await updateDoc(userRef, {
+                    groupChats: arrayUnion(groupRef.id)
+                });
+            });
+            
+            await Promise.all(updatePromises);
+            
+            // Update local state
+            currentGroupChat = {
+                id: groupRef.id,
+                ...groupData
+            };
+            
+            // Close compose modal and clear selected users
+            closeComposeModal();
+            selectedUsers.clear();
+            document.getElementById('selected-users').innerHTML = '';
+            
+            // Load the new chat
+            loadChats();
+        } catch (error) {
+            console.error('Error creating group chat:', error);
+            alert('Error creating group chat. Please try again.');
         }
-        
-        closeComposeModal();
-        selectedUsers.clear();
     };
-
-    const composeModal = document.getElementById('compose-modal');
-    composeModal.querySelector('.modal-body').appendChild(startChatButton);
 });
 
 // Group Chat Settings Button
@@ -1195,23 +1254,23 @@ async function sendMessage(content) {
                 timestamp: serverTimestamp()
             };
         } else {
-            // Get receiver's blocked users list
-            const receiverDoc = await getDoc(doc(db, 'users', currentChatUser.id));
-            const receiverData = receiverDoc.data();
-            const receiverBlockedUsers = receiverData?.blockedUsers || [];
+        // Get receiver's blocked users list
+        const receiverDoc = await getDoc(doc(db, 'users', currentChatUser.id));
+        const receiverData = receiverDoc.data();
+        const receiverBlockedUsers = receiverData?.blockedUsers || [];
 
-            if (receiverBlockedUsers.includes(currentUser.uid)) {
-                alert('You cannot send messages to this user as they have blocked you.');
-                return;
-            }
+        if (receiverBlockedUsers.includes(currentUser.uid)) {
+            alert('You cannot send messages to this user as they have blocked you.');
+            return;
+        }
 
             messageData = {
-                content: content,
-                senderId: currentUser.uid,
-                receiverId: currentChatUser.id,
-                participants: [currentUser.uid, currentChatUser.id],
-                timestamp: serverTimestamp()
-            };
+            content: content,
+            senderId: currentUser.uid,
+            receiverId: currentChatUser.id,
+            participants: [currentUser.uid, currentChatUser.id],
+            timestamp: serverTimestamp()
+        };
         }
 
         // Add message to Firestore
