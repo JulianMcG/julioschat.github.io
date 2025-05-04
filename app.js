@@ -1383,6 +1383,7 @@ function createMessageElement(message, isSent) {
 
         const deleteAction = document.createElement('span');
         deleteAction.className = 'material-symbols-outlined message-action delete-action';
+        deleteAction.setAttribute('style', 'font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24');
         deleteAction.textContent = 'delete';
         deleteAction.onclick = (e) => {
             e.stopPropagation();
@@ -1393,6 +1394,7 @@ function createMessageElement(message, isSent) {
 
         const editAction = document.createElement('span');
         editAction.className = 'material-symbols-outlined message-action edit-action';
+        editAction.setAttribute('style', 'font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24');
         editAction.textContent = 'edit';
         editAction.onclick = (e) => {
             e.stopPropagation();
