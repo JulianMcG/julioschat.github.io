@@ -705,124 +705,34 @@ function closeComposeModal() {
 // Group Chat State
 let selectedUsers = new Set();
 let currentGroupChat = null;
+let selectedColor = '#1F49C7'; // Default color
 
-// Compose Modal Event Listeners
-document.addEventListener('DOMContentLoaded', () => {
-    // ... existing event listeners ...
-
-    // Compose search event listener
-    const composeSearch = document.getElementById('compose-search');
-    if (composeSearch) {
-        composeSearch.addEventListener('input', async (e) => {
-            const searchTerm = e.target.value.toLowerCase();
-            const composeResults = document.getElementById('compose-results');
-            composeResults.innerHTML = '';
-
-            if (searchTerm.length > 0) {
-                try {
-                    // Get all users except current user
-                    const usersSnapshot = await getDocs(collection(db, 'users'));
-                    const suggestions = [];
-                    
-                    usersSnapshot.forEach(doc => {
-                        if (doc.id !== currentUser.uid) {
-                            const user = doc.data();
-                            const username = user.username.toLowerCase();
-                            
-                            if (username.includes(searchTerm)) {
-                                suggestions.push({
-                                    id: doc.id,
-                                    username: user.username,
-                                    profilePicture: user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'
-                                });
-                            }
-                        }
-                    });
-
-                    // Sort suggestions by username
-                    suggestions.sort((a, b) => a.username.localeCompare(b.username));
-
-                    // Display suggestions
-                    suggestions.forEach(user => {
-                        const userElement = document.createElement('div');
-                        userElement.className = 'compose-user-item';
-                        userElement.innerHTML = `
-                            <img src="${user.profilePicture}" alt="${user.username}" class="user-avatar">
-                            <span>${user.username}</span>
-                            <span class="material-symbols-outlined select-user">${selectedUsers.has(user.id) ? 'check_circle' : 'radio_button_unchecked'}</span>
-                        `;
-                        
-                        userElement.onclick = (e) => {
-                            if (!e.target.classList.contains('select-user')) {
-                                if (selectedUsers.has(user.id)) {
-                                    selectedUsers.delete(user.id);
-                                } else {
-                                    selectedUsers.add(user.id);
-                                }
-                                userElement.querySelector('.select-user').textContent = 
-                                    selectedUsers.has(user.id) ? 'check_circle' : 'radio_button_unchecked';
-                            }
-                        };
-                        
-                        composeResults.appendChild(userElement);
-                    });
-
-                    if (suggestions.length === 0) {
-                        const noResults = document.createElement('div');
-                        noResults.className = 'no-results';
-                        noResults.textContent = 'No users found';
-                        composeResults.appendChild(noResults);
-                    }
-                } catch (error) {
-                    console.error('Error searching users:', error);
-                    const errorElement = document.createElement('div');
-                    errorElement.className = 'no-results';
-                    errorElement.textContent = 'Error searching users. Please try again.';
-                    composeResults.appendChild(errorElement);
-                }
-            }
-        });
-    }
-
-    // Add event listener for the "Start Chat" button in compose modal
-    const startChatButton = document.createElement('button');
-    startChatButton.className = 'start-chat-button';
-    startChatButton.textContent = 'Start Chat';
-    startChatButton.onclick = async () => {
-        if (selectedUsers.size === 0) {
-            alert('Please select at least one user');
-            return;
-        }
-
-        if (selectedUsers.size === 1) {
-            // Start a DM
-            const userId = Array.from(selectedUsers)[0];
-            const userDoc = await getDoc(doc(db, 'users', userId));
-            const userData = userDoc.data();
-            startChat(userId, userData.username);
-        } else {
-            // Start a group chat
-            openGroupChatSettings();
-        }
+// Initialize color picker
+function initializeColorPicker() {
+    const colorGrid = document.getElementById('color-grid');
+    const colorItems = colorGrid.querySelectorAll('.color-item');
+    
+    colorItems.forEach(item => {
+        const color = item.dataset.color;
+        item.style.backgroundColor = color;
         
-        closeComposeModal();
-        selectedUsers.clear();
-    };
+        item.onclick = () => {
+            // Remove selected class from all items
+            colorItems.forEach(i => i.classList.remove('selected'));
+            // Add selected class to clicked item
+            item.classList.add('selected');
+            // Update selected color
+            selectedColor = color;
+        };
+        
+        // Select default color
+        if (color === selectedColor) {
+            item.classList.add('selected');
+        }
+    });
+}
 
-    const composeModal = document.getElementById('compose-modal');
-    composeModal.querySelector('.modal-body').appendChild(startChatButton);
-});
-
-// Group Chat Settings Button
-document.querySelector('.chat-header svg').addEventListener('click', () => {
-    if (currentGroupChat) {
-        openGroupChatSettings();
-    } else if (currentChatUser) {
-        openUserOptionsModal(currentChatUser.id, currentChatUser.username);
-    }
-});
-
-// Modify openGroupChatSettings to handle existing group chats
+// Modify openGroupChatSettings to handle color
 function openGroupChatSettings() {
     const modal = document.getElementById('group-chat-settings-modal');
     const groupMembersList = document.getElementById('group-members-list');
@@ -834,11 +744,16 @@ function openGroupChatSettings() {
         // Editing existing group chat
         groupNameInput.value = currentGroupChat.name;
         groupEmojiInput.value = currentGroupChat.emoji;
+        selectedColor = currentGroupChat.backgroundColor || '#1F49C7';
     } else {
         // Creating new group chat
         groupNameInput.value = '';
-        groupEmojiInput.value = '';
+        groupEmojiInput.value = '🗑️';
+        selectedColor = '#1F49C7';
     }
+
+    // Initialize color picker
+    initializeColorPicker();
 
     // Add current user
     const currentUserElement = document.createElement('div');
@@ -890,7 +805,7 @@ function openGroupChatSettings() {
     modal.style.display = 'block';
 }
 
-// Modify saveGroupChatSettings to handle both new and existing group chats
+// Modify saveGroupChatSettings to include background color
 document.getElementById('save-group-settings').addEventListener('click', async () => {
     const groupName = document.getElementById('group-name').value.trim();
     const groupEmoji = document.getElementById('group-emoji').value.trim();
@@ -910,17 +825,20 @@ document.getElementById('save-group-settings').addEventListener('click', async (
             // Update existing group chat
             await updateDoc(doc(db, 'groupChats', currentGroupChat.id), {
                 name: groupName,
-                emoji: groupEmoji
+                emoji: groupEmoji,
+                backgroundColor: selectedColor
             });
             
             // Update local state
             currentGroupChat.name = groupName;
             currentGroupChat.emoji = groupEmoji;
+            currentGroupChat.backgroundColor = selectedColor;
         } else {
             // Create new group chat
             const groupData = {
                 name: groupName,
                 emoji: groupEmoji,
+                backgroundColor: selectedColor,
                 members: [currentUser.uid, ...Array.from(selectedUsers)],
                 createdAt: serverTimestamp()
             };
@@ -932,13 +850,14 @@ document.getElementById('save-group-settings').addEventListener('click', async (
                 id: groupRef.id,
                 name: groupName,
                 emoji: groupEmoji,
+                backgroundColor: selectedColor,
                 members: groupData.members
             };
         }
 
         // Update UI
         document.getElementById('active-chat-username').innerHTML = `
-            <span class="group-emoji">${groupEmoji}</span>
+            <span class="group-emoji" style="background-color: ${selectedColor}">${groupEmoji}</span>
             ${groupName}
         `;
         document.querySelector('.chat-header svg').style.display = 'block';
@@ -1088,6 +1007,134 @@ document.addEventListener('DOMContentLoaded', () => {
             closeUserOptionsModal();
         }
     });
+
+    // Compose button event listener
+    document.querySelector('.compose-icon').addEventListener('click', openComposeModal);
+    
+    // Close compose modal button
+    document.querySelector('#compose-modal .close-modal').addEventListener('click', closeComposeModal);
+    
+    // Close modal when clicking outside
+    window.addEventListener('click', (event) => {
+        const modal = document.getElementById('compose-modal');
+        if (event.target === modal) {
+            closeComposeModal();
+        }
+    });
+
+    // Compose search event listener
+    const composeSearch = document.getElementById('compose-search');
+    if (composeSearch) {
+        composeSearch.addEventListener('input', async (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const composeResults = document.getElementById('compose-results');
+            composeResults.innerHTML = '';
+
+            if (searchTerm.length > 0) {
+                try {
+                    // Get all users except current user
+                    const usersSnapshot = await getDocs(collection(db, 'users'));
+                    const suggestions = [];
+                    
+                    usersSnapshot.forEach(doc => {
+                        if (doc.id !== currentUser.uid) {
+                            const user = doc.data();
+                            const username = user.username.toLowerCase();
+                            
+                            if (username.includes(searchTerm)) {
+                                suggestions.push({
+                                    id: doc.id,
+                                    username: user.username,
+                                    profilePicture: user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'
+                                });
+                            }
+                        }
+                    });
+
+                    // Sort suggestions by username
+                    suggestions.sort((a, b) => a.username.localeCompare(b.username));
+
+                    // Display suggestions
+                    suggestions.forEach(user => {
+                        const userElement = document.createElement('div');
+                        userElement.className = 'compose-user-item';
+                        userElement.innerHTML = `
+                            <img src="${user.profilePicture}" alt="${user.username}" class="user-avatar">
+                            <span>${user.username}</span>
+                            <span class="material-symbols-outlined select-user">${selectedUsers.has(user.id) ? 'check_circle' : 'radio_button_unchecked'}</span>
+                        `;
+                        
+                        userElement.onclick = (e) => {
+                            if (!e.target.classList.contains('select-user')) {
+                                if (selectedUsers.has(user.id)) {
+                                    selectedUsers.delete(user.id);
+                                } else if (selectedUsers.size < 10) { // Limit to 10 users
+                                    selectedUsers.add(user.id);
+                                } else {
+                                    alert('You can only select up to 10 users for a group chat');
+                                    return;
+                                }
+                                userElement.querySelector('.select-user').textContent = 
+                                    selectedUsers.has(user.id) ? 'check_circle' : 'radio_button_unchecked';
+                            }
+                        };
+                        
+                        composeResults.appendChild(userElement);
+                    });
+
+                    if (suggestions.length === 0) {
+                        const noResults = document.createElement('div');
+                        noResults.className = 'no-results';
+                        noResults.textContent = 'No users found';
+                        composeResults.appendChild(noResults);
+                    }
+                } catch (error) {
+                    console.error('Error searching users:', error);
+                    const errorElement = document.createElement('div');
+                    errorElement.className = 'no-results';
+                    errorElement.textContent = 'Error searching users. Please try again.';
+                    composeResults.appendChild(errorElement);
+                }
+            }
+        });
+    }
+
+    // Add event listener for the "Start Chat" button in compose modal
+    const startChatButton = document.createElement('button');
+    startChatButton.className = 'start-chat-button';
+    startChatButton.textContent = 'Start Chat';
+    startChatButton.onclick = async () => {
+        if (selectedUsers.size === 0) {
+            alert('Please select at least one user');
+            return;
+        }
+
+        if (selectedUsers.size === 1) {
+            // Start a DM
+            const userId = Array.from(selectedUsers)[0];
+            const userDoc = await getDoc(doc(db, 'users', userId));
+            const userData = userDoc.data();
+            startChat(userId, userData.username);
+        } else {
+            // Start a group chat
+            openGroupChatSettings();
+        }
+        
+        closeComposeModal();
+        selectedUsers.clear();
+    };
+
+    const composeModal = document.getElementById('compose-modal');
+    composeModal.querySelector('.modal-body').appendChild(startChatButton);
+});
+
+// Group Chat Settings Button
+document.querySelector('.chat-header svg').addEventListener('click', () => {
+    if (currentGroupChat) {
+        openGroupChatSettings();
+    } else if (currentChatUser) {
+        openUserOptionsModal(currentChatUser.id, currentChatUser.username);
+    }
 });
 
 // Emoji Picker
