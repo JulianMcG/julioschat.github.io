@@ -667,7 +667,7 @@ async function loadMessages() {
                     
                     // Add reaction indicator if exists
                     let reactionIndicator = '';
-                    if (message.reaction) {
+                    if (message.reaction && message.reactorId) {
                         // Determine if current user is the reactor
                         const isReactor = message.reactorId === currentUser.uid;
                         const reactionClass = isReactor ? 'reactor' : 'reactee';
@@ -713,15 +713,17 @@ async function addReaction(messageId, emoji) {
         const messageRef = doc(db, 'messages', messageId);
         const messageDoc = await getDoc(messageRef);
         const currentReaction = messageDoc.data()?.reaction;
+        const currentReactor = messageDoc.data()?.reactorId;
 
-        if (currentReaction === emoji) {
-            // If clicking the same emoji, remove the reaction
+        // If the current user already reacted with this emoji, remove the reaction
+        if (currentReaction === emoji && currentReactor === currentUser.uid) {
             await updateDoc(messageRef, {
                 reaction: null,
-                reactorId: null
+                reactorId: null,
+                reactionTimestamp: null
             });
         } else {
-            // Otherwise, update with new reaction
+            // Otherwise, set the new reaction
             await updateDoc(messageRef, {
                 reaction: emoji,
                 reactorId: currentUser.uid,
