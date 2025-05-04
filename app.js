@@ -348,10 +348,7 @@ async function loadUsers() {
             };
         });
 
-        let users = await Promise.all(usersPromises);
-        
-        // Filter out hidden conversations after getting all user data
-        users = users.filter(user => !hiddenConversations.includes(user.id));
+        const users = await Promise.all(usersPromises);
 
         // Sort users: pinned first, then alphabetically
         users.sort((a, b) => {
