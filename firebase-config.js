@@ -101,7 +101,9 @@ service cloud.firestore {
       allow write: if request.auth != null && request.auth.uid == user;
     }
     match /typing/{typingId} {
-      allow read: if request.auth != null;
+      allow read: if request.auth != null && 
+        (request.auth.uid == resource.data.userId || 
+         request.auth.uid == resource.data.otherUserId);
       allow write: if request.auth != null && 
         (request.auth.uid == request.resource.data.userId || 
          request.auth.uid == request.resource.data.otherUserId);
