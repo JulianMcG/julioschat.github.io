@@ -530,6 +530,38 @@ body {
     margin-right: 20px;
     text-align: right;
     border-radius: 15px 15px 5px 15px;
+    position: relative;
+}
+
+.message-actions {
+    position: absolute;
+    left: -60px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: none;
+    gap: 8px;
+}
+
+.message.sent:hover .message-actions {
+    display: flex;
+}
+
+.message-action {
+    cursor: pointer;
+    font-size: 20px;
+    transition: opacity 0.2s;
+}
+
+.message-action:hover {
+    opacity: 0.8;
+}
+
+.delete-action {
+    color: #E85658;
+}
+
+.edit-action {
+    color: #B6B8C8;
 }
 
 .message.received {
@@ -1203,4 +1235,26 @@ button:hover {
 
 .unblock-button:active {
     background-color: #3d3f46;
+}
+
+.message-edit-input {
+    width: 100%;
+    padding: 8px 12px;
+    background-color: #1F49C7;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: #ECEBF7;
+    font-size: 14px;
+}
+
+.message-edit-input:focus {
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.edited-badge {
+    color: #B6B8C8;
+    font-size: 12px;
+    margin-left: 4px;
+    font-style: italic;
 } 
