@@ -317,96 +317,79 @@ async function loadUsers() {
         const hiddenConversations = currentUserData?.hiddenConversations || [];
         const pinnedConversations = currentUserData?.pinnedConversations || [];
 
-        // Set up real-time listener for messages
+        // Get all messages where current user is a participant
         const messagesQuery = query(
             collection(db, 'messages'),
             where('participants', 'array-contains', currentUser.uid)
         );
+        const messagesSnapshot = await getDocs(messagesQuery);
 
-        // Clear any existing message listener
-        if (window.currentMessageUnsubscribe) {
-            window.currentMessageUnsubscribe();
-        }
-
-        // Set up real-time listener for messages
-        const unsubscribe = onSnapshot(messagesQuery, async (snapshot) => {
-            // Get unique user IDs from messages
-            const dmUserIds = new Set();
-            snapshot.forEach(doc => {
-                const message = doc.data();
-                message.participants.forEach(id => {
-                    if (id !== currentUser.uid) {
-                        dmUserIds.add(id);
-                    }
-                });
-            });
-
-            // Get user details for each DM'd user
-            const usersPromises = Array.from(dmUserIds).map(async (userId) => {
-                const userDoc = await getDoc(doc(db, 'users', userId));
-                const userData = userDoc.data();
-                return {
-                    id: userId,
-                    username: userData.username,
-                    profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
-                    verified: userData.verified,
-                    isPinned: pinnedConversations.includes(userId)
-                };
-            });
-
-            const users = await Promise.all(usersPromises);
-
-            // Sort users: pinned first, then alphabetically
-            users.sort((a, b) => {
-                if (a.isPinned && !b.isPinned) return -1;
-                if (!a.isPinned && b.isPinned) return 1;
-                return a.username.localeCompare(b.username);
-            });
-
-            // Clear existing users
-            usersContainer.innerHTML = '';
-
-            // Display users
-            users.forEach(user => {
-                if (!hiddenConversations.includes(user.id)) {
-                    const userElement = createUserElement(user);
-                    userElement.dataset.uid = user.id;
-                    
-                    if (user.isPinned) {
-                        userElement.classList.add('pinned');
-                        usersContainer.insertBefore(userElement, usersContainer.firstChild);
-                    } else {
-                        usersContainer.appendChild(userElement);
-                    }
-                    
-                    // Add click handler for the user item
-                    userElement.onclick = (e) => {
-                        if (!e.target.classList.contains('action-icon')) {
-                            startChat(user.id, user.username);
-                        }
-                    };
-
-                    // Add click handler for close icon
-                    const closeIcon = userElement.querySelector('.close-icon');
-                    closeIcon.onclick = async (e) => {
-                        e.stopPropagation();
-                        userElement.remove();
-                        try {
-                            await setDoc(doc(db, 'users', currentUser.uid), {
-                                hiddenConversations: arrayUnion(user.id)
-                            }, { merge: true });
-                        } catch (error) {
-                            console.error('Error hiding conversation:', error);
-                        }
-                    };
+        // Get unique user IDs from messages
+        const dmUserIds = new Set();
+        messagesSnapshot.forEach(doc => {
+            const message = doc.data();
+            message.participants.forEach(id => {
+                if (id !== currentUser.uid) {
+                    dmUserIds.add(id);
                 }
             });
-        }, (error) => {
-            console.error('Error in message snapshot:', error);
         });
 
-        // Store unsubscribe function for cleanup
-        window.currentMessageUnsubscribe = unsubscribe;
+        // Get user details for each DM'd user
+        const usersPromises = Array.from(dmUserIds).map(async (userId) => {
+            const userDoc = await getDoc(doc(db, 'users', userId));
+            const userData = userDoc.data();
+            return {
+                id: userId,
+                username: userData.username,
+                profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
+                verified: userData.verified,
+                isPinned: pinnedConversations.includes(userId)
+            };
+        });
+
+        const users = await Promise.all(usersPromises);
+
+        // Sort users: pinned first, then alphabetically
+        users.sort((a, b) => {
+            if (a.isPinned && !b.isPinned) return -1;
+            if (!a.isPinned && b.isPinned) return 1;
+            return a.username.localeCompare(b.username);
+        });
+
+        // Display users
+        users.forEach(user => {
+            const userElement = createUserElement(user);
+            userElement.dataset.uid = user.id;
+            
+            if (user.isPinned) {
+                userElement.classList.add('pinned');
+                usersContainer.insertBefore(userElement, usersContainer.firstChild);
+            } else {
+                usersContainer.appendChild(userElement);
+            }
+            
+            // Add click handler for the user item
+            userElement.onclick = (e) => {
+                if (!e.target.classList.contains('action-icon')) {
+                    startChat(user.id, user.username);
+                }
+            };
+
+            // Add click handler for close icon
+            const closeIcon = userElement.querySelector('.close-icon');
+            closeIcon.onclick = async (e) => {
+                e.stopPropagation();
+                userElement.remove();
+                try {
+                    await setDoc(doc(db, 'users', currentUser.uid), {
+                        hiddenConversations: arrayUnion(user.id)
+                    }, { merge: true });
+                } catch (error) {
+                    console.error('Error hiding conversation:', error);
+                }
+            };
+        });
     } catch (error) {
         console.error('Error loading users:', error);
     }
@@ -848,81 +831,6 @@ async function sendMessage(content) {
         // Add message to Firestore
         const docRef = await addDoc(collection(db, 'messages'), messageData);
         console.log('Message sent successfully with ID:', docRef.id);
-        
-        // Update the sidebar to show the user if they're not already there
-        const existingUser = document.querySelector(`.user-item[data-uid="${currentChatUser.id}"]`);
-        if (!existingUser) {
-            // Get user's profile picture and verification status
-            const userDoc = await getDoc(doc(db, 'users', currentChatUser.id));
-            const userData = userDoc.data();
-            const profilePicture = userData?.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
-            const isVerified = userData?.verified || false;
-
-            // Create new user element
-            const userElement = document.createElement('div');
-            userElement.className = 'user-item';
-            userElement.dataset.uid = currentChatUser.id;
-            userElement.innerHTML = `
-                <img src="${profilePicture}" alt="${currentChatUser.username}" class="profile-picture">
-                <span class="username">${currentChatUser.username}${isVerified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
-                <div class="user-actions">
-                    <span class="material-symbols-outlined action-icon pin-icon">keep</span>
-                    <span class="material-symbols-outlined action-icon close-icon">close</span>
-                </div>
-            `;
-
-            // Add click handler for the user item
-            userElement.onclick = (e) => {
-                if (!e.target.classList.contains('action-icon')) {
-                    startChat(currentChatUser.id, currentChatUser.username);
-                }
-            };
-
-            // Add click handler for close icon
-            const closeIcon = userElement.querySelector('.close-icon');
-            closeIcon.onclick = async (e) => {
-                e.stopPropagation();
-                userElement.remove();
-                try {
-                    await setDoc(doc(db, 'users', currentUser.uid), {
-                        hiddenConversations: arrayUnion(currentChatUser.id)
-                    }, { merge: true });
-                } catch (error) {
-                    console.error('Error hiding conversation:', error);
-                }
-            };
-
-            // Add click handler for pin icon
-            const pinIcon = userElement.querySelector('.pin-icon');
-            pinIcon.onclick = async (e) => {
-                e.stopPropagation();
-                const isPinned = userElement.classList.contains('pinned');
-                userElement.classList.toggle('pinned');
-                
-                if (!isPinned) {
-                    const usersContainer = document.getElementById('users-container');
-                    usersContainer.insertBefore(userElement, usersContainer.firstChild);
-                }
-                
-                try {
-                    if (!isPinned) {
-                        await setDoc(doc(db, 'users', currentUser.uid), {
-                            pinnedConversations: arrayUnion(currentChatUser.id)
-                        }, { merge: true });
-                    } else {
-                        await setDoc(doc(db, 'users', currentUser.uid), {
-                            pinnedConversations: arrayRemove(currentChatUser.id)
-                        }, { merge: true });
-                    }
-                } catch (error) {
-                    console.error('Error pinning conversation:', error);
-                }
-            };
-
-            // Add to sidebar
-            const usersContainer = document.getElementById('users-container');
-            usersContainer.appendChild(userElement);
-        }
         
         // Scroll to bottom
         const chatMessages = document.getElementById('chat-messages');
