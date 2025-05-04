@@ -683,7 +683,11 @@ document.addEventListener('DOMContentLoaded', () => {
         messageInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                sendMessage();
+                const content = messageInput.value.trim();
+                if (content) {
+                    messageInput.value = ''; // Clear input immediately
+                    sendMessage(content); // Pass content to sendMessage
+                }
             }
         });
     }
@@ -787,36 +791,22 @@ window.addEventListener('click', (event) => {
 });
 
 // Send message
-async function sendMessage() {
+async function sendMessage(content) {
     if (!currentUser || !currentChatUser) {
         console.log('No current user or chat user');
         return;
     }
-
-    const messageInput = document.getElementById('message-input');
-    const content = messageInput.value.trim();
     
     if (!content) {
         return;
     }
 
     try {
-        // Get current user's data to check blocked users
-        const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
-        const currentUserData = currentUserDoc.data();
-        const blockedUsers = currentUserData?.blockedUsers || [];
-
-        // Check if the current user has blocked the receiver
-        if (blockedUsers.includes(currentChatUser.id)) {
-            return; // Don't show alert as the UI already indicates the blocked state
-        }
-
-        // Get receiver's data to check if they've blocked the sender
+        // Get receiver's blocked users list
         const receiverDoc = await getDoc(doc(db, 'users', currentChatUser.id));
         const receiverData = receiverDoc.data();
         const receiverBlockedUsers = receiverData?.blockedUsers || [];
 
-        // Check if the receiver has blocked the current user
         if (receiverBlockedUsers.includes(currentUser.uid)) {
             alert('You cannot send messages to this user as they have blocked you.');
             return;
@@ -842,15 +832,11 @@ async function sendMessage() {
         const docRef = await addDoc(collection(db, 'messages'), messageData);
         console.log('Message sent successfully with ID:', docRef.id);
         
-        // Clear input
-        messageInput.value = '';
-        
         // Scroll to bottom
         const chatMessages = document.getElementById('chat-messages');
         chatMessages.scrollTop = chatMessages.scrollHeight;
     } catch (error) {
         console.error('Error sending message:', error);
-        alert('Error sending message: ' + error.message);
     }
 }
 
