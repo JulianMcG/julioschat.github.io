@@ -668,7 +668,10 @@ async function loadMessages() {
                     // Add reaction indicator if exists
                     let reactionIndicator = '';
                     if (message.reaction) {
-                        reactionIndicator = `<div class="reaction-indicator">${message.reaction}</div>`;
+                        // Determine if current user is the reactor
+                        const isReactor = message.reactorId === currentUser.uid;
+                        const reactionClass = isReactor ? 'reactor' : 'reactee';
+                        reactionIndicator = `<div class="reaction-indicator ${reactionClass}">${message.reaction}</div>`;
                     }
                     
                     messageElement.innerHTML = `
@@ -714,12 +717,15 @@ async function addReaction(messageId, emoji) {
         if (currentReaction === emoji) {
             // If clicking the same emoji, remove the reaction
             await updateDoc(messageRef, {
-                reaction: null
+                reaction: null,
+                reactorId: null
             });
         } else {
             // Otherwise, update with new reaction
             await updateDoc(messageRef, {
-                reaction: emoji
+                reaction: emoji,
+                reactorId: currentUser.uid,
+                reactionTimestamp: serverTimestamp()
             });
         }
     } catch (error) {
