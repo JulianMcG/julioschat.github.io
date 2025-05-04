@@ -1305,6 +1305,8 @@ async function updateTypingStatus(typing) {
     try {
         await setDoc(doc(db, 'typing', `${currentUser.uid}_${currentChatUser.id}`), {
             isTyping: typing,
+            userId: currentUser.uid,
+            otherUserId: currentChatUser.id,
             timestamp: serverTimestamp()
         }, { merge: true });
     } catch (error) {
