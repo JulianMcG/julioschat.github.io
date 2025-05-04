@@ -788,29 +788,53 @@ body {
     margin-bottom: 10px;
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
-#compose-modal input {
+#compose-modal .search-container input {
     background-color: transparent;
     border: none;
     color: #ECEBF7;
-    width: 100%;
+    width: auto;
+    flex: 1;
+    min-width: 200px;
     padding: 8px;
     font-size: 14px;
 }
 
-#compose-modal input:focus {
+#compose-modal .search-container input:focus {
     outline: none;
 }
 
-#compose-modal .search-icon {
-    color: #B6B8C8;
-    margin-right: 8px;
-    font-size: 18px;
+#compose-modal .selected-user {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    background-color: #1C1F28;
+    border-radius: 15px;
+    font-size: 14px;
 }
 
-#compose-modal input::placeholder {
+#compose-modal .selected-user .remove-user {
     color: #B6B8C8;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+#compose-modal .selected-user .remove-user:hover {
+    color: #ECEBF7;
+}
+
+#compose-modal .compose-user-item .select-user {
+    color: #B6B8C8;
+    font-variation-settings: 'FILL' 0;
+}
+
+#compose-modal .compose-user-item.selected .select-user {
+    color: #1F49C7;
+    font-variation-settings: 'FILL' 1;
 }
 
 .compose-results {
