@@ -551,19 +551,22 @@ body {
     padding: 12px 20px;
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
-    min-height: 40px;
+    height: 40px;
     line-height: 1.4;
     word-wrap: break-word;
-    display: inline-block;
     max-width: 70%;
     position: relative;
+    margin-bottom: 8px;
 }
 
 .typing-indicator lord-icon {
     width: 24px;
     height: 24px;
-    vertical-align: middle;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .message .sender {
