@@ -691,205 +691,43 @@ function checkFirebaseConnection() {
     return true;
 }
 
-// Compose Modal
+// Compose Modal Functions
+function openComposeModal() {
+    const modal = document.getElementById('compose-modal');
+    modal.style.display = 'block';
+}
+
+function closeComposeModal() {
+    const modal = document.getElementById('compose-modal');
+    modal.style.display = 'none';
+    selectedUsers.clear();
+    document.getElementById('compose-search').value = '';
+    document.getElementById('compose-results').innerHTML = '';
+}
+
+// Group Chat State
+let selectedUsers = new Set();
+let currentGroupChat = null;
+let selectedColor = '#1F49C7'; // Default color
+
 document.addEventListener('DOMContentLoaded', () => {
     // ... existing code ...
 
-    // Compose search event listener
-    const composeSearch = document.getElementById('compose-search');
-    if (composeSearch) {
-        composeSearch.addEventListener('input', async (e) => {
-            const searchTerm = e.target.value.toLowerCase();
-            const composeResults = document.getElementById('compose-results');
-            composeResults.innerHTML = '';
-
-            if (searchTerm.length > 0) {
-                try {
-                    // Get all users except current user
-                    const usersSnapshot = await getDocs(collection(db, 'users'));
-                    const suggestions = [];
-                    
-                    usersSnapshot.forEach(doc => {
-                        if (doc.id !== currentUser.uid) {
-                            const user = doc.data();
-                            const username = user.username.toLowerCase();
-                            
-                            if (username.includes(searchTerm)) {
-                                suggestions.push({
-                                    id: doc.id,
-                                    username: user.username,
-                                    profilePicture: user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'
-                                });
-                            }
-                        }
-                    });
-
-                    // Sort suggestions by username
-                    suggestions.sort((a, b) => a.username.localeCompare(b.username));
-
-                    // Display suggestions
-                    suggestions.forEach(user => {
-                        const userElement = document.createElement('div');
-                        userElement.className = `compose-user-item ${selectedUsers.has(user.id) ? 'selected' : ''}`;
-                        userElement.innerHTML = `
-                            <img src="${user.profilePicture}" alt="${user.username}" class="user-avatar">
-                            <span>${user.username}</span>
-                            <span class="material-symbols-outlined select-user">${selectedUsers.has(user.id) ? 'check_box' : 'check_box_outline_blank'}</span>
-                        `;
-                        
-                        userElement.onclick = (e) => {
-                            if (!e.target.classList.contains('select-user')) {
-                                if (selectedUsers.has(user.id)) {
-                                    selectedUsers.delete(user.id);
-                                    userElement.classList.remove('selected');
-                                    userElement.querySelector('.select-user').textContent = 'check_box_outline_blank';
-                                } else {
-                                    selectedUsers.add(user.id);
-                                    userElement.classList.add('selected');
-                                    userElement.querySelector('.select-user').textContent = 'check_box';
-                                }
-                                updateSelectedUsers();
-                            }
-                        };
-                        
-                        composeResults.appendChild(userElement);
-                    });
-
-                    if (suggestions.length === 0) {
-                        const noResults = document.createElement('div');
-                        noResults.className = 'no-results';
-                        noResults.textContent = 'No users found';
-                        composeResults.appendChild(noResults);
-                    }
-                } catch (error) {
-                    console.error('Error searching users:', error);
-                    const errorElement = document.createElement('div');
-                    errorElement.className = 'no-results';
-                    errorElement.textContent = 'Error searching users. Please try again.';
-                    composeResults.appendChild(errorElement);
-                }
-            }
-        });
-    }
-
-    // Function to update selected users display
-    async function updateSelectedUsers() {
-        const searchContainer = document.querySelector('#compose-modal .search-container');
-        const searchInput = document.getElementById('compose-search');
-        const selectedUsersContainer = document.createElement('div');
-        selectedUsersContainer.className = 'selected-users';
-        
-        for (const userId of selectedUsers) {
-            const userDoc = await getDoc(doc(db, 'users', userId));
-            const userData = userDoc.data();
-            
-            const userElement = document.createElement('div');
-            userElement.className = 'selected-user';
-            userElement.innerHTML = `
-                <span>${userData.username}</span>
-                <span class="material-symbols-outlined remove-user">close</span>
-            `;
-            
-            userElement.querySelector('.remove-user').onclick = () => {
-                selectedUsers.delete(userId);
-                updateSelectedUsers();
-                // Update the checkmark in the search results
-                const userItem = document.querySelector(`.compose-user-item[data-id="${userId}"]`);
-                if (userItem) {
-                    userItem.classList.remove('selected');
-                    userItem.querySelector('.select-user').textContent = 'check_box_outline_blank';
-                }
-            };
-            
-            selectedUsersContainer.appendChild(userElement);
+    // Compose button event listener
+    document.querySelector('.compose-icon').addEventListener('click', openComposeModal);
+    
+    // Close compose modal button
+    document.querySelector('#compose-modal .close-modal').addEventListener('click', closeComposeModal);
+    
+    // Close modal when clicking outside
+    window.addEventListener('click', (event) => {
+        const modal = document.getElementById('compose-modal');
+        if (event.target === modal) {
+            closeComposeModal();
         }
-        
-        // Replace existing selected users with new ones
-        const existingSelectedUsers = searchContainer.querySelector('.selected-users');
-        if (existingSelectedUsers) {
-            existingSelectedUsers.remove();
-        }
-        searchContainer.insertBefore(selectedUsersContainer, searchInput);
-    }
+    });
 
-    // Update the start chat button functionality
-    document.querySelector('.start-chat-button').onclick = async () => {
-        if (selectedUsers.size === 0) {
-            alert('Please select at least one user');
-            return;
-        }
-
-        try {
-            if (selectedUsers.size === 1) {
-                // Create direct message
-                const userId = Array.from(selectedUsers)[0];
-                const userDoc = await getDoc(doc(db, 'users', userId));
-                const userData = userDoc.data();
-                
-                // Start the chat
-                currentChatUser = { id: userId, username: userData.username };
-                closeComposeModal();
-                selectedUsers.clear();
-                loadChats();
-            } else {
-                // Create group chat with default settings
-                const members = [currentUser.uid, ...Array.from(selectedUsers)];
-                const memberNames = [];
-                
-                // Get usernames for the group name
-                for (const memberId of members) {
-                    const memberDoc = await getDoc(doc(db, 'users', memberId));
-                    const memberData = memberDoc.data();
-                    memberNames.push(memberData.username);
-                }
-                
-                const groupData = {
-                    name: memberNames.join(', '),
-                    emoji: '🗑️',
-                    backgroundColor: '#1F49C7',
-                    members: members,
-                    createdAt: serverTimestamp()
-                };
-                
-                const groupRef = await addDoc(collection(db, 'groupChats'), groupData);
-                
-                // Add the group chat to each member's groupChats array
-                const updatePromises = members.map(async (memberId) => {
-                    const userRef = doc(db, 'users', memberId);
-                    await updateDoc(userRef, {
-                        groupChats: arrayUnion(groupRef.id)
-                    });
-                });
-                
-                await Promise.all(updatePromises);
-                
-                // Update local state
-                currentGroupChat = {
-                    id: groupRef.id,
-                    ...groupData
-                };
-                
-                // Close compose modal and clear selected users
-                closeComposeModal();
-                selectedUsers.clear();
-                
-                // Load the new chat
-                loadChats();
-            }
-        } catch (error) {
-            console.error('Error creating chat:', error);
-            alert('Error creating chat. Please try again.');
-        }
-    };
-});
-
-// Group Chat Settings Button
-document.querySelector('.chat-header svg').addEventListener('click', () => {
-    if (currentGroupChat) {
-        openGroupChatSettings();
-    } else if (currentChatUser) {
-        openUserOptionsModal(currentChatUser.id, currentChatUser.username);
-    }
+    // ... rest of the existing code ...
 });
 
 // Emoji Picker
