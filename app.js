@@ -335,6 +335,21 @@ async function loadUsers() {
             });
         });
 
+        // Get all messages where current user is the receiver
+        const receivedMessagesQuery = query(
+            collection(db, 'messages'),
+            where('receiverId', '==', currentUser.uid)
+        );
+        const receivedMessagesSnapshot = await getDocs(receivedMessagesQuery);
+        
+        // Add senders of received messages to the set
+        receivedMessagesSnapshot.forEach(doc => {
+            const message = doc.data();
+            if (message.senderId !== currentUser.uid) {
+                dmUserIds.add(message.senderId);
+            }
+        });
+
         // Get user details for each DM'd user
         const usersPromises = Array.from(dmUserIds).map(async (userId) => {
             const userDoc = await getDoc(doc(db, 'users', userId));
@@ -359,6 +374,8 @@ async function loadUsers() {
 
         // Display users
         users.forEach(user => {
+            if (hiddenConversations.includes(user.id)) return; // Skip hidden conversations
+            
             const userElement = createUserElement(user);
             userElement.dataset.uid = user.id;
             
