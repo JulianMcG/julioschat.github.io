@@ -692,335 +692,8 @@ function checkFirebaseConnection() {
 }
 
 // Compose Modal
-function openComposeModal() {
-    const modal = document.getElementById('compose-modal');
-    modal.style.display = 'block';
-}
-
-function closeComposeModal() {
-    const modal = document.getElementById('compose-modal');
-    modal.style.display = 'none';
-}
-
-// Group Chat State
-let selectedUsers = new Set();
-let currentGroupChat = null;
-let selectedColor = '#1F49C7'; // Default color
-
-// Initialize color picker
-function initializeColorPicker() {
-    const colorGrid = document.getElementById('color-grid');
-    const colorItems = colorGrid.querySelectorAll('.color-item');
-    
-    colorItems.forEach(item => {
-        const color = item.dataset.color;
-        item.style.backgroundColor = color;
-        
-        item.onclick = () => {
-            // Remove selected class from all items
-            colorItems.forEach(i => i.classList.remove('selected'));
-            // Add selected class to clicked item
-            item.classList.add('selected');
-            // Update selected color
-            selectedColor = color;
-        };
-        
-        // Select default color
-        if (color === selectedColor) {
-            item.classList.add('selected');
-        }
-    });
-}
-
-// Modify openGroupChatSettings to handle color
-function openGroupChatSettings() {
-    const modal = document.getElementById('group-chat-settings-modal');
-    const groupMembersList = document.getElementById('group-members-list');
-    const groupNameInput = document.getElementById('group-name');
-    const groupEmojiInput = document.getElementById('group-emoji');
-    groupMembersList.innerHTML = '';
-
-    if (currentGroupChat) {
-        // Editing existing group chat
-        groupNameInput.value = currentGroupChat.name;
-        groupEmojiInput.value = currentGroupChat.emoji;
-        selectedColor = currentGroupChat.backgroundColor || '#1F49C7';
-    } else {
-        // Creating new group chat
-        groupNameInput.value = '';
-        groupEmojiInput.value = '🗑️';
-        selectedColor = '#1F49C7';
-    }
-
-    // Initialize color picker
-    initializeColorPicker();
-
-    // Add current user
-    const currentUserElement = document.createElement('div');
-    currentUserElement.className = 'group-member';
-    currentUserElement.innerHTML = `
-        <img src="${currentUser.photoURL || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${currentUser.displayName}">
-        <span class="username">${currentUser.displayName} (You)</span>
-    `;
-    groupMembersList.appendChild(currentUserElement);
-
-    // Add other members
-    const members = currentGroupChat ? currentGroupChat.members : Array.from(selectedUsers);
-    members.forEach(async (userId) => {
-        if (userId === currentUser.uid) return;
-        
-        const userDoc = await getDoc(doc(db, 'users', userId));
-        const userData = userDoc.data();
-        const userElement = document.createElement('div');
-        userElement.className = 'group-member';
-        userElement.innerHTML = `
-            <img src="${userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${userData.username}">
-            <span class="username">${userData.username}</span>
-            <span class="material-symbols-outlined remove-member">close</span>
-        `;
-        
-        userElement.querySelector('.remove-member').onclick = async () => {
-            if (currentGroupChat) {
-                // Update group chat in Firestore
-                try {
-                    await updateDoc(doc(db, 'groupChats', currentGroupChat.id), {
-                        members: arrayRemove(userId)
-                    });
-                    
-                    // Update local state
-                    currentGroupChat.members = currentGroupChat.members.filter(id => id !== userId);
-                } catch (error) {
-                    console.error('Error removing member:', error);
-                    alert('Error removing member. Please try again.');
-                }
-            } else {
-                selectedUsers.delete(userId);
-            }
-            userElement.remove();
-        };
-        
-        groupMembersList.appendChild(userElement);
-    });
-
-    modal.style.display = 'block';
-}
-
-// Modify saveGroupChatSettings to include background color
-document.getElementById('save-group-settings').addEventListener('click', async () => {
-    const groupName = document.getElementById('group-name').value.trim();
-    const groupEmoji = document.getElementById('group-emoji').value.trim();
-
-    if (!groupName) {
-        alert('Please enter a group name');
-        return;
-    }
-
-    if (!groupEmoji) {
-        alert('Please select a group emoji');
-        return;
-    }
-
-    try {
-        if (currentGroupChat) {
-            // Update existing group chat
-            await updateDoc(doc(db, 'groupChats', currentGroupChat.id), {
-                name: groupName,
-                emoji: groupEmoji,
-                backgroundColor: selectedColor
-            });
-            
-            // Update local state
-            currentGroupChat.name = groupName;
-            currentGroupChat.emoji = groupEmoji;
-            currentGroupChat.backgroundColor = selectedColor;
-        } else {
-            // Create new group chat
-            const groupData = {
-                name: groupName,
-                emoji: groupEmoji,
-                backgroundColor: selectedColor,
-                members: [currentUser.uid, ...Array.from(selectedUsers)],
-                createdAt: serverTimestamp()
-            };
-
-            const groupRef = await addDoc(collection(db, 'groupChats'), groupData);
-            
-            // Start the group chat
-            currentGroupChat = {
-                id: groupRef.id,
-                name: groupName,
-                emoji: groupEmoji,
-                backgroundColor: selectedColor,
-                members: groupData.members
-            };
-        }
-
-        // Update UI
-        document.getElementById('active-chat-username').innerHTML = `
-            <span class="group-emoji" style="background-color: ${selectedColor}">${groupEmoji}</span>
-            ${groupName}
-        `;
-        document.querySelector('.chat-header svg').style.display = 'block';
-
-        closeGroupChatSettings();
-        loadMessages();
-    } catch (error) {
-        console.error('Error saving group chat:', error);
-        alert('Error saving group chat. Please try again.');
-    }
-});
-
-// Close Group Chat Settings
-function closeGroupChatSettings() {
-    document.getElementById('group-chat-settings-modal').style.display = 'none';
-}
-
-// User Options Modal
-let currentSelectedUser = null;
-
-// Open user options modal
-function openUserOptionsModal(userId, username) {
-    currentSelectedUser = { id: userId, username };
-    const modal = document.getElementById('user-options-modal');
-    const aliasInput = document.getElementById('user-alias');
-    const blockButton = document.getElementById('block-user');
-    const unblockButton = document.getElementById('unblock-user');
-    
-    // Check if user is blocked
-    getDoc(doc(db, 'users', currentUser.uid)).then(userDoc => {
-        const userData = userDoc.data();
-        const blockedUsers = userData?.blockedUsers || [];
-        const userAliases = userData?.userAliases || {};
-        
-        // Set alias input value if exists
-        aliasInput.value = userAliases[userId] || '';
-        
-        // Show appropriate block/unblock button
-        if (blockedUsers.includes(userId)) {
-            blockButton.style.display = 'none';
-            unblockButton.style.display = 'block';
-        } else {
-            blockButton.style.display = 'block';
-            unblockButton.style.display = 'none';
-        }
-    });
-    
-    modal.style.display = 'block';
-}
-
-// Close user options modal
-function closeUserOptionsModal() {
-    const modal = document.getElementById('user-options-modal');
-    modal.style.display = 'none';
-    currentSelectedUser = null;
-}
-
-// Save user alias
-async function saveUserAlias() {
-    if (!currentSelectedUser) return;
-    
-    const aliasInput = document.getElementById('user-alias');
-    const alias = aliasInput.value.trim();
-    
-    try {
-        await setDoc(doc(db, 'users', currentUser.uid), {
-            userAliases: {
-                [currentSelectedUser.id]: alias
-            }
-        }, { merge: true });
-        
-        // Update username display if this is the current chat
-        if (currentChatUser && currentChatUser.id === currentSelectedUser.id) {
-            document.getElementById('active-chat-username').textContent = alias || currentSelectedUser.username;
-        }
-        
-        closeUserOptionsModal();
-    } catch (error) {
-        console.error('Error saving user alias:', error);
-    }
-}
-
-// Block user
-async function blockUser() {
-    if (!currentSelectedUser) return;
-    
-    try {
-        await setDoc(doc(db, 'users', currentUser.uid), {
-            blockedUsers: arrayUnion(currentSelectedUser.id)
-        }, { merge: true });
-        
-        // Close the chat if it's with the blocked user
-        if (currentChatUser && currentChatUser.id === currentSelectedUser.id) {
-            currentChatUser = null;
-            document.getElementById('active-chat-username').textContent = 'Select a chat';
-            document.getElementById('message-input').placeholder = 'Type a message...';
-            document.querySelector('.message-input').classList.remove('visible');
-        }
-        
-        closeUserOptionsModal();
-    } catch (error) {
-        console.error('Error blocking user:', error);
-    }
-}
-
-// Unblock user
-async function unblockUser() {
-    if (!currentSelectedUser) return;
-    
-    try {
-        await setDoc(doc(db, 'users', currentUser.uid), {
-            blockedUsers: arrayRemove(currentSelectedUser.id)
-        }, { merge: true });
-        
-        closeUserOptionsModal();
-    } catch (error) {
-        console.error('Error unblocking user:', error);
-    }
-}
-
-// Event Listeners
 document.addEventListener('DOMContentLoaded', () => {
-    // ... existing event listeners ...
-    
-    // User options modal event listeners
-    const userOptionsModal = document.getElementById('user-options-modal');
-    const closeUserOptionsBtn = userOptionsModal.querySelector('.close-modal');
-    const saveAliasBtn = document.getElementById('save-alias');
-    const blockUserBtn = document.getElementById('block-user');
-    const unblockUserBtn = document.getElementById('unblock-user');
-    
-    closeUserOptionsBtn.addEventListener('click', closeUserOptionsModal);
-    saveAliasBtn.addEventListener('click', saveUserAlias);
-    blockUserBtn.addEventListener('click', blockUser);
-    unblockUserBtn.addEventListener('click', unblockUser);
-    
-    // Add click handler for the user options icon
-    document.querySelector('.chat-header svg').addEventListener('click', () => {
-        if (currentChatUser) {
-            openUserOptionsModal(currentChatUser.id, currentChatUser.username);
-        }
-    });
-    
-    // Close modal when clicking outside
-    window.addEventListener('click', (e) => {
-        if (e.target === userOptionsModal) {
-            closeUserOptionsModal();
-        }
-    });
-
-    // Compose button event listener
-    document.querySelector('.compose-icon').addEventListener('click', openComposeModal);
-    
-    // Close compose modal button
-    document.querySelector('#compose-modal .close-modal').addEventListener('click', closeComposeModal);
-    
-    // Close modal when clicking outside
-    window.addEventListener('click', (event) => {
-        const modal = document.getElementById('compose-modal');
-        if (event.target === modal) {
-            closeComposeModal();
-        }
-    });
+    // ... existing code ...
 
     // Compose search event listener
     const composeSearch = document.getElementById('compose-search');
@@ -1057,24 +730,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Display suggestions
                     suggestions.forEach(user => {
                         const userElement = document.createElement('div');
-                        userElement.className = 'compose-user-item';
+                        userElement.className = `compose-user-item ${selectedUsers.has(user.id) ? 'selected' : ''}`;
                         userElement.innerHTML = `
                             <img src="${user.profilePicture}" alt="${user.username}" class="user-avatar">
                             <span>${user.username}</span>
-                            <span class="material-symbols-outlined select-user">${selectedUsers.has(user.id) ? 'check_circle' : 'radio_button_unchecked'}</span>
+                            <span class="material-symbols-outlined select-user">${selectedUsers.has(user.id) ? 'check_box' : 'check_box_outline_blank'}</span>
                         `;
                         
                         userElement.onclick = (e) => {
                             if (!e.target.classList.contains('select-user')) {
                                 if (selectedUsers.has(user.id)) {
                                     selectedUsers.delete(user.id);
-                                    updateSelectedUsers();
+                                    userElement.classList.remove('selected');
+                                    userElement.querySelector('.select-user').textContent = 'check_box_outline_blank';
                                 } else {
                                     selectedUsers.add(user.id);
-                                    updateSelectedUsers();
+                                    userElement.classList.add('selected');
+                                    userElement.querySelector('.select-user').textContent = 'check_box';
                                 }
-                                userElement.querySelector('.select-user').textContent = 
-                                    selectedUsers.has(user.id) ? 'check_circle' : 'radio_button_unchecked';
+                                updateSelectedUsers();
                             }
                         };
                         
@@ -1100,8 +774,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Function to update selected users display
     async function updateSelectedUsers() {
-        const selectedUsersContainer = document.getElementById('selected-users');
-        selectedUsersContainer.innerHTML = '';
+        const searchContainer = document.querySelector('#compose-modal .search-container');
+        const searchInput = document.getElementById('compose-search');
+        const selectedUsersContainer = document.createElement('div');
+        selectedUsersContainer.className = 'selected-users';
         
         for (const userId of selectedUsers) {
             const userDoc = await getDoc(doc(db, 'users', userId));
@@ -1120,12 +796,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Update the checkmark in the search results
                 const userItem = document.querySelector(`.compose-user-item[data-id="${userId}"]`);
                 if (userItem) {
-                    userItem.querySelector('.select-user').textContent = 'radio_button_unchecked';
+                    userItem.classList.remove('selected');
+                    userItem.querySelector('.select-user').textContent = 'check_box_outline_blank';
                 }
             };
             
             selectedUsersContainer.appendChild(userElement);
         }
+        
+        // Replace existing selected users with new ones
+        const existingSelectedUsers = searchContainer.querySelector('.selected-users');
+        if (existingSelectedUsers) {
+            existingSelectedUsers.remove();
+        }
+        searchContainer.insertBefore(selectedUsersContainer, searchInput);
     }
 
     // Update the start chat button functionality
@@ -1136,53 +820,65 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            // Create group chat with default settings
-            const members = [currentUser.uid, ...Array.from(selectedUsers)];
-            const memberNames = [];
-            
-            // Get usernames for the group name
-            for (const memberId of members) {
-                const memberDoc = await getDoc(doc(db, 'users', memberId));
-                const memberData = memberDoc.data();
-                memberNames.push(memberData.username);
-            }
-            
-            const groupData = {
-                name: memberNames.join(', '),
-                emoji: '🗑️',
-                backgroundColor: '#1F49C7',
-                members: members,
-                createdAt: serverTimestamp()
-            };
-            
-            const groupRef = await addDoc(collection(db, 'groupChats'), groupData);
-            
-            // Add the group chat to each member's groupChats array
-            const updatePromises = members.map(async (memberId) => {
-                const userRef = doc(db, 'users', memberId);
-                await updateDoc(userRef, {
-                    groupChats: arrayUnion(groupRef.id)
+            if (selectedUsers.size === 1) {
+                // Create direct message
+                const userId = Array.from(selectedUsers)[0];
+                const userDoc = await getDoc(doc(db, 'users', userId));
+                const userData = userDoc.data();
+                
+                // Start the chat
+                currentChatUser = { id: userId, username: userData.username };
+                closeComposeModal();
+                selectedUsers.clear();
+                loadChats();
+            } else {
+                // Create group chat with default settings
+                const members = [currentUser.uid, ...Array.from(selectedUsers)];
+                const memberNames = [];
+                
+                // Get usernames for the group name
+                for (const memberId of members) {
+                    const memberDoc = await getDoc(doc(db, 'users', memberId));
+                    const memberData = memberDoc.data();
+                    memberNames.push(memberData.username);
+                }
+                
+                const groupData = {
+                    name: memberNames.join(', '),
+                    emoji: '🗑️',
+                    backgroundColor: '#1F49C7',
+                    members: members,
+                    createdAt: serverTimestamp()
+                };
+                
+                const groupRef = await addDoc(collection(db, 'groupChats'), groupData);
+                
+                // Add the group chat to each member's groupChats array
+                const updatePromises = members.map(async (memberId) => {
+                    const userRef = doc(db, 'users', memberId);
+                    await updateDoc(userRef, {
+                        groupChats: arrayUnion(groupRef.id)
+                    });
                 });
-            });
-            
-            await Promise.all(updatePromises);
-            
-            // Update local state
-            currentGroupChat = {
-                id: groupRef.id,
-                ...groupData
-            };
-            
-            // Close compose modal and clear selected users
-            closeComposeModal();
-            selectedUsers.clear();
-            document.getElementById('selected-users').innerHTML = '';
-            
-            // Load the new chat
-            loadChats();
+                
+                await Promise.all(updatePromises);
+                
+                // Update local state
+                currentGroupChat = {
+                    id: groupRef.id,
+                    ...groupData
+                };
+                
+                // Close compose modal and clear selected users
+                closeComposeModal();
+                selectedUsers.clear();
+                
+                // Load the new chat
+                loadChats();
+            }
         } catch (error) {
-            console.error('Error creating group chat:', error);
-            alert('Error creating group chat. Please try again.');
+            console.error('Error creating chat:', error);
+            alert('Error creating chat. Please try again.');
         }
     };
 });
