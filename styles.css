@@ -541,6 +541,24 @@ body {
     border-radius: 15px 15px 15px 5px;
 }
 
+.typing-indicator {
+    background-color: #1C1F28;
+    color: #ECEBF7;
+    margin-right: auto;
+    margin-left: 20px;
+    text-align: left;
+    border-radius: 15px 15px 15px 5px;
+    padding: 8px 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.typing-indicator lord-icon {
+    width: 24px;
+    height: 24px;
+}
+
 .message .sender {
     font-weight: 500;
     margin-bottom: 5px;
