@@ -1354,10 +1354,10 @@ function setupTypingListener() {
                     <lord-icon
                         src="https://cdn.lordicon.com/jpgpblwn.json"
                         trigger="loop"
+                        state="loop-scale"
                         colors="primary:#b6b8c8"
                         style="width:24px;height:24px">
                     </lord-icon>
-                    <span>${currentChatUser.username} is typing...</span>
                 `;
                 chatMessages.appendChild(typingIndicator);
                 chatMessages.scrollTop = chatMessages.scrollHeight;
