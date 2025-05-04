@@ -540,16 +540,21 @@ body {
     transform: translateY(-50%);
     display: none;
     gap: 8px;
+    z-index: 1;
 }
 
 .message.sent:hover .message-actions {
     display: flex;
+    align-items: center;
 }
 
 .message-action {
     cursor: pointer;
     font-size: 20px;
     transition: opacity 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .message-action:hover {
