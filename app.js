@@ -737,23 +737,6 @@ async function addReaction(messageId, emoji) {
             
             // Update Firestore
             await setDoc(messageRef, newData, { merge: true });
-            
-            // Update the UI immediately
-            const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
-            if (messageElement) {
-                // Remove any existing reaction indicator
-                const existingIndicator = messageElement.querySelector('.reaction-indicator');
-                if (existingIndicator) {
-                    existingIndicator.remove();
-                }
-                
-                // Create and add new reaction indicator
-                const reactionIndicator = document.createElement('div');
-                const isReactor = currentUser.uid === currentData?.senderId;
-                reactionIndicator.className = `reaction-indicator ${isReactor ? 'reactor' : 'reactee'}`;
-                reactionIndicator.textContent = emoji;
-                messageElement.insertBefore(reactionIndicator, messageElement.firstChild);
-            }
         }
     } catch (error) {
         console.error('Error adding reaction:', error);
