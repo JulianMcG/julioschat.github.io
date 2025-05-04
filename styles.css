@@ -1177,4 +1177,143 @@ button:hover {
 
 .unblock-button:active {
     background-color: #3d3f46;
+}
+
+/* Group Chat Settings Modal */
+.group-settings-section {
+    margin-bottom: 20px;
+}
+
+.group-settings-section label {
+    display: block;
+    color: #B6B8C8;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.group-settings-section input {
+    width: 100%;
+    background-color: #13161F;
+    border: 1px solid #1C1F28;
+    border-radius: 8px;
+    padding: 10px;
+    color: #ECEBF7;
+    font-size: 14px;
+}
+
+.emoji-picker {
+    position: relative;
+}
+
+.emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 5px;
+    padding: 10px;
+    background-color: #13161F;
+    border-radius: 8px;
+    margin-top: 5px;
+    max-height: 200px;
+    overflow-y: auto;
+    display: none;
+}
+
+.emoji-grid.active {
+    display: grid;
+}
+
+.emoji-item {
+    font-size: 20px;
+    text-align: center;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 4px;
+}
+
+.emoji-item:hover {
+    background-color: #1C1F28;
+}
+
+#group-members-list {
+    background-color: #13161F;
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.group-member {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    border-radius: 4px;
+    margin-bottom: 5px;
+    background-color: #1C1F28;
+}
+
+.group-member:last-child {
+    margin-bottom: 0;
+}
+
+.group-member img {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+
+.group-member .username {
+    flex: 1;
+}
+
+.group-member .remove-member {
+    color: #E85658;
+    cursor: pointer;
+    font-size: 18px;
+}
+
+.add-member-button {
+    width: 100%;
+    padding: 10px;
+    background-color: #1F49C7;
+    color: #ECEBF7;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s;
+}
+
+.add-member-button:hover {
+    background-color: #1a3db0;
+}
+
+/* Group Chat Messages */
+.message.group {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.message.group .sender-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.message.group .sender-info img {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+}
+
+.message.group .sender-info .sender-name {
+    font-size: 12px;
+    color: #B6B8C8;
+}
+
+.message.group .content {
+    flex: 1;
 } 
