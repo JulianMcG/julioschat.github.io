@@ -1198,7 +1198,7 @@ document.addEventListener('DOMContentLoaded', () => {
     unblockUserBtn.addEventListener('click', unblockUser);
     
     // Add click handler for the user options icon
-    document.querySelector('.sidebar-header svg').addEventListener('click', () => {
+    document.querySelector('.chat-header svg').addEventListener('click', () => {
         if (currentChatUser) {
             openUserOptionsModal(currentChatUser.id, currentChatUser.username);
         }
