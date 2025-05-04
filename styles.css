@@ -531,36 +531,25 @@ body {
     text-align: right;
     border-radius: 15px 15px 5px 15px;
     position: relative;
-    padding-right: 20px;
 }
 
 .message-actions {
     position: absolute;
-    left: -80px;
+    left: -60px;
     top: 50%;
     transform: translateY(-50%);
     display: none;
     gap: 8px;
-    z-index: 1;
-    background-color: #0c0e16;
-    padding: 4px 8px;
-    border-radius: 8px;
 }
 
 .message.sent:hover .message-actions {
     display: flex;
-    align-items: center;
 }
 
 .message-action {
     cursor: pointer;
-    font-size: 24px;
+    font-size: 20px;
     transition: opacity 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
 }
 
 .message-action:hover {
@@ -1261,11 +1250,4 @@ button:hover {
 .message-edit-input:focus {
     outline: none;
     border-color: rgba(255, 255, 255, 0.2);
-}
-
-.edited-badge {
-    color: #B6B8C8;
-    font-size: 12px;
-    margin-left: 4px;
-    font-style: italic;
 } 
