@@ -315,6 +315,7 @@ async function loadUsers() {
         const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
         const currentUserData = currentUserDoc.data();
         const hiddenConversations = currentUserData?.hiddenConversations || [];
+        const pinnedConversations = currentUserData?.pinnedConversations || [];
 
         // Get all messages where current user is a participant
         const messagesQuery = query(
@@ -334,18 +335,31 @@ async function loadUsers() {
             });
         });
 
-        // Get all users except current user and hidden conversations
-        const usersSnapshot = await getDocs(collection(db, 'users'));
-        const users = [];
-        
-        usersSnapshot.forEach(doc => {
-            if (doc.id !== currentUser.uid && !hiddenConversations.includes(doc.id)) {
-                const user = {
-                    id: doc.id,
-                    ...doc.data()
-                };
-                users.push(user);
+        // Get user details for each DM'd user
+        const usersPromises = Array.from(dmUserIds).map(async (userId) => {
+            // Skip hidden conversations
+            if (hiddenConversations.includes(userId)) {
+                return null;
             }
+            
+            const userDoc = await getDoc(doc(db, 'users', userId));
+            const userData = userDoc.data();
+            return {
+                id: userId,
+                username: userData.username,
+                profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
+                verified: userData.verified,
+                isPinned: pinnedConversations.includes(userId)
+            };
+        });
+
+        const users = (await Promise.all(usersPromises)).filter(user => user !== null);
+
+        // Sort users: pinned first, then alphabetically
+        users.sort((a, b) => {
+            if (a.isPinned && !b.isPinned) return -1;
+            if (!a.isPinned && b.isPinned) return 1;
+            return a.username.localeCompare(b.username);
         });
 
         // Display users
