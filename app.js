@@ -1377,17 +1377,6 @@ function createMessageElement(message, isSent) {
     messageElement.dataset.messageId = message.id;
     messageElement.dataset.timestamp = message.timestamp?.toDate().getTime() || Date.now();
 
-    const content = document.createElement('div');
-    content.className = 'content';
-    content.textContent = message.content;
-    if (message.edited) {
-        const editedBadge = document.createElement('span');
-        editedBadge.className = 'edited-badge';
-        editedBadge.textContent = ' (edited)';
-        content.appendChild(editedBadge);
-    }
-    messageElement.appendChild(content);
-
     if (isSent) {
         const actions = document.createElement('div');
         actions.className = 'message-actions';
@@ -1427,6 +1416,17 @@ function createMessageElement(message, isSent) {
             editAction.style.display = 'none';
         }
     }
+
+    const content = document.createElement('div');
+    content.className = 'content';
+    content.textContent = message.content;
+    if (message.edited) {
+        const editedBadge = document.createElement('span');
+        editedBadge.className = 'edited-badge';
+        editedBadge.textContent = ' (edited)';
+        content.appendChild(editedBadge);
+    }
+    messageElement.appendChild(content);
 
     return messageElement;
 }
