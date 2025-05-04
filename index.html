@@ -22,11 +22,11 @@
                     <h2>Login</h2>
                     <div class="form-group">
                         <label for="login-email">Email</label>
-                        <input type="email" id="login-email" placeholder="Enter your email" required autocomplete="off">
+                        <input type="email" id="login-email" placeholder="Enter your email" required>
                     </div>
                     <div class="form-group before-button">
                         <label for="login-password">Password</label>
-                        <input type="password" id="login-password" placeholder="Enter your password" required autocomplete="off">
+                        <input type="password" id="login-password" placeholder="Enter your password" required>
                     </div>
                     <div class="button-wrapper">
                         <button id="login-button">Login</button>
@@ -41,15 +41,15 @@
                     </div>
                     <div class="form-group">
                         <label for="signup-username">Name</label>
-                        <input type="text" id="signup-username" placeholder="Enter your name" required autocomplete="off">
+                        <input type="text" id="signup-username" placeholder="Enter your name" required>
                     </div>
                     <div class="form-group">
                         <label for="signup-email">Email</label>
-                        <input type="email" id="signup-email" placeholder="Enter your email" required autocomplete="off">
+                        <input type="email" id="signup-email" placeholder="Enter your email" required>
                     </div>
                     <div class="form-group before-button">
                         <label for="signup-password">Password</label>
-                        <input type="password" id="signup-password" placeholder="Enter your password" required autocomplete="off">
+                        <input type="password" id="signup-password" placeholder="Enter your password" required>
                     </div>
                     <div class="button-wrapper">
                         <button id="signup-button">Sign Up</button>
@@ -104,62 +104,11 @@
                 <span class="material-symbols-outlined close-modal">close</span>
             </div>
             <div class="modal-body">
-                <div class="selected-users"></div>
                 <div class="search-container">
-                    <input type="text" id="compose-search" placeholder="Search users..." autocomplete="off">
+                    <span class="material-symbols-outlined search-icon">search</span>
+                    <input type="text" id="compose-search" placeholder="Search users...">
                 </div>
                 <div id="compose-results" class="compose-results"></div>
-                <button class="start-chat-button">Create DM</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Group Chat Settings Modal -->
-    <div id="group-chat-settings-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Group Chat Settings</h2>
-                <span class="material-symbols-outlined close-modal">close</span>
-            </div>
-            <div class="modal-body">
-                <div class="group-preview">
-                    <div class="group-preview-emoji" id="group-preview-emoji">🗑️</div>
-                    <span class="group-preview-name" id="group-preview-name">New Group</span>
-                </div>
-                <div class="group-settings-section">
-                    <label>Group Name</label>
-                    <input type="text" id="group-name" placeholder="Enter group name">
-                </div>
-                <div class="group-settings-section">
-                    <label>Group Emoji</label>
-                    <div class="emoji-picker">
-                        <input type="text" id="group-emoji" placeholder="Select an emoji" value="🗑️">
-                        <div class="emoji-grid" id="emoji-grid"></div>
-                    </div>
-                </div>
-                <div class="group-settings-section">
-                    <label>Profile Background Color</label>
-                    <div class="color-picker">
-                        <div class="color-grid" id="color-grid">
-                            <div class="color-item" style="--color: #1F49C7"></div>
-                            <div class="color-item" style="--color: #E85658"></div>
-                            <div class="color-item" style="--color: #4CAF50"></div>
-                            <div class="color-item" style="--color: #FFC107"></div>
-                            <div class="color-item" style="--color: #9C27B0"></div>
-                            <div class="color-item" style="--color: #FF5722"></div>
-                            <div class="color-item" style="--color: #00BCD4"></div>
-                            <div class="color-item" style="--color: #795548"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="group-settings-section">
-                    <label>Group Members</label>
-                    <div id="group-members-list"></div>
-                    <button id="add-member" class="add-member-button">Add Member</button>
-                </div>
-                <div class="group-settings-section">
-                    <button id="save-group-settings" class="save-button">Create Group</button>
-                </div>
             </div>
         </div>
     </div>
