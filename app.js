@@ -640,6 +640,20 @@ async function loadMessages() {
                     messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
                     messageElement.dataset.messageId = doc.id;
                     
+                    // Create content div
+                    const contentDiv = document.createElement('div');
+                    contentDiv.className = 'content';
+                    contentDiv.textContent = message.content;
+                    
+                    // Add reaction indicator if exists
+                    if (message.reaction && message.reactorId) {
+                        const isReactor = message.reactorId === currentUser.uid;
+                        const reactionIndicator = document.createElement('div');
+                        reactionIndicator.className = `reaction-indicator ${isReactor ? 'reactor' : 'reactee'}`;
+                        reactionIndicator.textContent = message.reaction;
+                        messageElement.appendChild(reactionIndicator);
+                    }
+                    
                     // Add reaction icon
                     const reactionIcon = document.createElement('span');
                     reactionIcon.className = 'material-symbols-outlined reaction-icon';
@@ -664,20 +678,6 @@ async function loadMessages() {
                         };
                         emojiList.appendChild(emojiOption);
                     });
-                    
-                    // Create content div
-                    const contentDiv = document.createElement('div');
-                    contentDiv.className = 'content';
-                    contentDiv.textContent = message.content;
-                    
-                    // Add reaction indicator if exists
-                    if (message.reaction && message.reactorId) {
-                        const isReactor = message.reactorId === currentUser.uid;
-                        const reactionIndicator = document.createElement('div');
-                        reactionIndicator.className = `reaction-indicator ${isReactor ? 'reactor' : 'reactee'}`;
-                        reactionIndicator.textContent = message.reaction;
-                        messageElement.appendChild(reactionIndicator);
-                    }
                     
                     // Add all elements to message
                     messageElement.appendChild(contentDiv);
