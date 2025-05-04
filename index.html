@@ -68,9 +68,13 @@
                         <span class="material-symbols-outlined compose-icon">edit_square</span>
                     </div>
                     <div class="search-container">
-                        <span class="material-symbols-outlined search-icon">search</span>
+                        <span class="search-icon">search</span>
                         <input type="text" id="search-user" placeholder="Search">
-                        <span class="material-symbols-outlined clear-search">close</span>
+                        <span class="clear-search">×</span>
+                    </div>
+                    <div class="direct-messages-header">
+                        <span>Direct Messages</span>
+                        <span class="add-group-icon material-symbols-outlined">add</span>
                     </div>
                     <div id="users-container" class="users-list"></div>
                     <div class="profile-section">
@@ -157,6 +161,23 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Create Group Modal -->
+    <div id="create-group-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Create New DM</h2>
+                <span class="close-modal">×</span>
+            </div>
+            <div class="selected-users">
+                <!-- Selected users will be added here -->
+            </div>
+            <div class="user-list">
+                <!-- User list will be populated here -->
+            </div>
+            <button class="create-button" disabled>Create Group</button>
         </div>
     </div>
 </body>
