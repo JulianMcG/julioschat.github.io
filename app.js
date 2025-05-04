@@ -21,7 +21,8 @@ import {
     serverTimestamp,
     arrayUnion,
     arrayRemove,
-    updateDoc
+    updateDoc,
+    writeBatch
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
@@ -415,6 +416,45 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Start chat button event listener
+    document.querySelector('.start-chat-button').addEventListener('click', async () => {
+        if (selectedUsers.size === 0) {
+            alert('Please select at least one user');
+            return;
+        }
+
+        try {
+            // Create group chat document
+            const groupChatRef = await addDoc(collection(db, 'groupChats'), {
+                name: Array.from(selectedUsers).map(userId => {
+                    const userDoc = getDoc(doc(db, 'users', userId));
+                    return userDoc.data().username;
+                }).join(', '),
+                emoji: '🗑️',
+                backgroundColor: '#1F49C7',
+                members: Array.from(selectedUsers),
+                createdAt: serverTimestamp()
+            });
+
+            // Add group chat to each member's groupChats array
+            const batch = writeBatch(db);
+            for (const userId of selectedUsers) {
+                const userRef = doc(db, 'users', userId);
+                batch.update(userRef, {
+                    groupChats: arrayUnion(groupChatRef.id)
+                });
+            }
+            await batch.commit();
+
+            // Update UI
+            closeComposeModal();
+            loadChats();
+        } catch (error) {
+            console.error('Error creating group chat:', error);
+            alert('Error creating group chat. Please try again.');
+        }
+    });
 });
 
 async function signup() {
