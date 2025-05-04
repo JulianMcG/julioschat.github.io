@@ -632,6 +632,7 @@ async function loadMessages() {
 
         const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
             chatMessages.innerHTML = '';
+            let lastSentMessage = null;
             
             snapshot.forEach(doc => {
                 const message = doc.data();
@@ -645,12 +646,33 @@ async function loadMessages() {
                     
                     const messageElement = document.createElement('div');
                     messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
-                    messageElement.innerHTML = `
-                        <div class="content">${message.content}</div>
-                    `;
+                    
+                    // Add read status for sent messages
+                    if (message.senderId === currentUser.uid) {
+                        lastSentMessage = message;
+                        messageElement.innerHTML = `
+                            <div class="content">${message.content}</div>
+                            ${message.read ? '<div class="read-status">Seen</div>' : '<div class="read-status">Sent</div>'}
+                        `;
+                    } else {
+                        messageElement.innerHTML = `
+                            <div class="content">${message.content}</div>
+                        `;
+                        
+                        // Mark message as read if it's from the current chat user
+                        if (!message.read) {
+                            setDoc(doc(db, 'messages', doc.id), {
+                                read: true
+                            }, { merge: true });
+                        }
+                    }
+                    
                     chatMessages.appendChild(messageElement);
                 }
             });
+            
+            // Update unread indicator in sidebar
+            updateUnreadIndicator();
             
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }, (error) => {
@@ -661,6 +683,35 @@ async function loadMessages() {
     } catch (error) {
         console.error('Error loading messages:', error);
     }
+}
+
+// Function to update unread indicator in sidebar
+function updateUnreadIndicator() {
+    const userItems = document.querySelectorAll('.user-item');
+    userItems.forEach(async (item) => {
+        const userId = item.dataset.uid;
+        if (userId === currentChatUser.id) {
+            // Remove unread indicator for current chat
+            item.classList.remove('unread');
+            return;
+        }
+
+        // Check for unread messages from this user
+        const messagesQuery = query(
+            collection(db, 'messages'),
+            where('participants', 'array-contains', currentUser.uid),
+            where('participants', 'array-contains', userId),
+            where('senderId', '==', userId),
+            where('read', '==', false)
+        );
+
+        const snapshot = await getDocs(messagesQuery);
+        if (!snapshot.empty) {
+            item.classList.add('unread');
+        } else {
+            item.classList.remove('unread');
+        }
+    });
 }
 
 // Check Firebase connection
@@ -814,49 +865,19 @@ window.addEventListener('click', (event) => {
 
 // Send message
 async function sendMessage(content) {
-    if (!currentUser || !currentChatUser) {
-        console.log('No current user or chat user');
-        return;
-    }
-    
-    if (!content) {
-        return;
-    }
+    if (!currentUser || !currentChatUser || !content.trim()) return;
 
     try {
-        // Get receiver's blocked users list
-        const receiverDoc = await getDoc(doc(db, 'users', currentChatUser.id));
-        const receiverData = receiverDoc.data();
-        const receiverBlockedUsers = receiverData?.blockedUsers || [];
-
-        if (receiverBlockedUsers.includes(currentUser.uid)) {
-            alert('You cannot send messages to this user as they have blocked you.');
-            return;
-        }
-
-        console.log('Attempting to send message with data:', {
-            content,
-            senderId: currentUser.uid,
-            receiverId: currentChatUser.id,
-            participants: [currentUser.uid, currentChatUser.id]
-        });
-
-        // Create message data
         const messageData = {
-            content: content,
+            content: content.trim(),
             senderId: currentUser.uid,
-            receiverId: currentChatUser.id,
             participants: [currentUser.uid, currentChatUser.id],
-            timestamp: serverTimestamp()
+            timestamp: serverTimestamp(),
+            read: false // Add read status
         };
 
-        // Add message to Firestore
-        const docRef = await addDoc(collection(db, 'messages'), messageData);
-        console.log('Message sent successfully with ID:', docRef.id);
-        
-        // Scroll to bottom
-        const chatMessages = document.getElementById('chat-messages');
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+        await addDoc(collection(db, 'messages'), messageData);
+        document.getElementById('message-input').value = '';
     } catch (error) {
         console.error('Error sending message:', error);
     }
