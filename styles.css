@@ -572,8 +572,8 @@ body {
 }
 
 .message.received .reaction-icon {
-    left: -30px;
-    right: auto;
+    right: -30px;
+    left: auto;
 }
 
 .emoji-list {
@@ -594,7 +594,7 @@ body {
 }
 
 .message.received .emoji-list {
-    left: -30px;
+    right: -30px;
     top: 50%;
     transform: translateY(-50%);
 }
@@ -624,18 +624,15 @@ body {
     font-size: 12px;
     border: 4px solid #13161F;
     z-index: 1;
-}
-
-.message.sent .reaction-indicator {
     top: -20px;
     right: 0;
 }
 
 .message.received .reaction-indicator {
-    top: -20px;
-    left: 0;
-    border-radius: 50px 50px 50px 5px;
     background-color: #1C1F28;
+    border-radius: 50px 50px 50px 5px;
+    left: 0;
+    right: auto;
 }
 
 /* Profile Section */
