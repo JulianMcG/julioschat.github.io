@@ -559,6 +559,11 @@ async function loadMessages() {
     chatMessages.innerHTML = '';
 
     try {
+        // Get current user's blocked users list
+        const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        const currentUserData = currentUserDoc.data();
+        const blockedUsers = currentUserData?.blockedUsers || [];
+
         const messagesQuery = query(
             collection(db, 'messages'),
             where('participants', 'array-contains', currentUser.uid),
@@ -575,8 +580,12 @@ async function loadMessages() {
             snapshot.forEach(doc => {
                 const message = doc.data();
                 
+                // Only show messages if:
+                // 1. The message is between current user and current chat user
+                // 2. The sender is not blocked
                 if (message.participants.includes(currentChatUser.id) && 
-                    message.participants.includes(currentUser.uid)) {
+                    message.participants.includes(currentUser.uid) &&
+                    !blockedUsers.includes(message.senderId)) {
                     
                     const messageElement = document.createElement('div');
                     messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
@@ -744,6 +753,16 @@ async function sendMessage() {
     }
 
     try {
+        // Check if the receiver has blocked the sender
+        const receiverDoc = await getDoc(doc(db, 'users', currentChatUser.id));
+        const receiverData = receiverDoc.data();
+        const blockedUsers = receiverData?.blockedUsers || [];
+
+        if (blockedUsers.includes(currentUser.uid)) {
+            alert('You cannot send messages to this user as they have blocked you.');
+            return;
+        }
+
         console.log('Attempting to send message with data:', {
             content,
             senderId: currentUser.uid,
