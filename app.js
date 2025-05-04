@@ -676,9 +676,12 @@ function showEmojiList(messageElement, messageId) {
     
     // Position the emoji list
     const messageRect = messageElement.getBoundingClientRect();
-    emojiList.style.position = 'fixed';
-    emojiList.style.top = `${messageRect.top - 50}px`;
-    emojiList.style.left = `${messageRect.left}px`;
+    const chatMessages = document.getElementById('chat-messages');
+    const chatMessagesRect = chatMessages.getBoundingClientRect();
+    
+    emojiList.style.position = 'absolute';
+    emojiList.style.top = `${messageRect.top - chatMessagesRect.top - 50}px`;
+    emojiList.style.left = `${messageRect.left - chatMessagesRect.left}px`;
     emojiList.style.zIndex = '1000';
     emojiList.style.backgroundColor = '#13161F';
     emojiList.style.padding = '10px';
@@ -687,8 +690,8 @@ function showEmojiList(messageElement, messageId) {
     emojiList.style.gap = '8px';
     emojiList.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
     
-    // Add to document
-    document.body.appendChild(emojiList);
+    // Add to chat messages container instead of body
+    chatMessages.appendChild(emojiList);
     
     // Close on click outside
     const closeOnClickOutside = (e) => {
