@@ -1324,9 +1324,9 @@ button:hover {
 }
 
 .color-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
     padding: 10px;
     background-color: #13161F;
     border-radius: 8px;
@@ -1334,18 +1334,51 @@ button:hover {
 }
 
 .color-item {
-    width: 100%;
-    aspect-ratio: 1;
-    border-radius: 4px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
     cursor: pointer;
-    transition: transform 0.2s;
-}
-
-.color-item:hover {
-    transform: scale(1.1);
+    border: 2px solid transparent;
 }
 
 .color-item.selected {
     border: 2px solid #ECEBF7;
     box-shadow: 0 0 0 2px #1F49C7;
+}
+
+/* Group Chat Preview */
+.group-preview {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    background-color: #13161F;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.group-preview-emoji {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+}
+
+.group-preview-name {
+    font-size: 16px;
+    color: #ECEBF7;
+}
+
+#group-chat-settings-modal .modal-content {
+    max-height: 90vh;
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+#group-chat-settings-modal .modal-content::-webkit-scrollbar {
+    display: none;
 } 
