@@ -801,6 +801,12 @@ body {
     min-width: 200px;
     padding: 8px;
     font-size: 14px;
+    outline: none;
+}
+
+#compose-modal .search-container input:focus {
+    outline: none;
+    box-shadow: none;
 }
 
 #compose-modal .selected-users {
