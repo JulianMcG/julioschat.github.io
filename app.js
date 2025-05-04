@@ -26,6 +26,8 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstati
 
 let currentUser = null;
 let currentChatUser = null;
+let typingTimeout = null;
+let isTyping = false;
 const storage = getStorage();
 
 // Profile Picture Upload
@@ -593,6 +595,12 @@ async function startChat(userId, username) {
         }
     }
 
+    // Set up typing listener
+    if (window.currentTypingUnsubscribe) {
+        window.currentTypingUnsubscribe();
+    }
+    window.currentTypingUnsubscribe = setupTypingListener();
+
     // Load messages
     loadMessages();
 }
@@ -687,8 +695,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (content) {
                     messageInput.value = ''; // Clear input immediately
                     sendMessage(content); // Pass content to sendMessage
+                    updateTypingStatus(false);
                 }
             }
+        });
+
+        // Add typing status listeners
+        messageInput.addEventListener('input', () => {
+            if (!isTyping) {
+                isTyping = true;
+                updateTypingStatus(true);
+            }
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => {
+                isTyping = false;
+                updateTypingStatus(false);
+            }, 1000);
         });
     }
 
@@ -1275,3 +1297,52 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+// Update typing status in Firestore
+async function updateTypingStatus(typing) {
+    if (!currentUser || !currentChatUser) return;
+    
+    try {
+        await setDoc(doc(db, 'typing', `${currentUser.uid}_${currentChatUser.id}`), {
+            isTyping: typing,
+            timestamp: serverTimestamp()
+        }, { merge: true });
+    } catch (error) {
+        console.error('Error updating typing status:', error);
+    }
+}
+
+// Listen for typing status changes
+function setupTypingListener() {
+    if (!currentUser || !currentChatUser) return;
+    
+    const typingRef = doc(db, 'typing', `${currentChatUser.id}_${currentUser.uid}`);
+    const unsubscribe = onSnapshot(typingRef, (doc) => {
+        const data = doc.data();
+        const chatMessages = document.getElementById('chat-messages');
+        const existingIndicator = document.getElementById('typing-indicator');
+        
+        if (data?.isTyping) {
+            if (!existingIndicator) {
+                const typingIndicator = document.createElement('div');
+                typingIndicator.id = 'typing-indicator';
+                typingIndicator.className = 'typing-indicator';
+                typingIndicator.innerHTML = `
+                    <lord-icon
+                        src="https://cdn.lordicon.com/jpgpblwn.json"
+                        trigger="loop"
+                        colors="primary:#b6b8c8"
+                        style="width:24px;height:24px">
+                    </lord-icon>
+                    <span>${currentChatUser.username} is typing...</span>
+                `;
+                chatMessages.appendChild(typingIndicator);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        } else if (existingIndicator) {
+            existingIndicator.remove();
+        }
+    });
+    
+    return unsubscribe;
+}
