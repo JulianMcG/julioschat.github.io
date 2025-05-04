@@ -539,11 +539,52 @@ async function startChat(userId, username) {
     messageInput.classList.add('visible');
     document.querySelector('.chat-header svg').style.display = 'block';
 
-    // Update message input placeholder
-    const messageInputField = document.getElementById('message-input');
-    if (messageInputField) {
+    // Check if user is blocked
+    const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
+    const currentUserData = currentUserDoc.data();
+    const blockedUsers = currentUserData?.blockedUsers || [];
+
+    if (blockedUsers.includes(userId)) {
+        // User is blocked, show blocked state
+        messageInput.classList.add('blocked');
+        const messageInputField = document.getElementById('message-input');
+        messageInputField.placeholder = 'You cannot send messages to a user you have blocked.';
+        messageInputField.disabled = true;
+
+        // Add unblock button if it doesn't exist
+        if (!messageInput.querySelector('.unblock-button')) {
+            const unblockButton = document.createElement('button');
+            unblockButton.className = 'unblock-button';
+            unblockButton.textContent = 'Unblock';
+            unblockButton.onclick = async () => {
+                try {
+                    await setDoc(doc(db, 'users', currentUser.uid), {
+                        blockedUsers: arrayRemove(userId)
+                    }, { merge: true });
+                    
+                    // Remove blocked state
+                    messageInput.classList.remove('blocked');
+                    messageInputField.placeholder = `Message ${username}`;
+                    messageInputField.disabled = false;
+                    unblockButton.remove();
+                } catch (error) {
+                    console.error('Error unblocking user:', error);
+                }
+            };
+            messageInput.appendChild(unblockButton);
+        }
+    } else {
+        // User is not blocked, show normal state
+        messageInput.classList.remove('blocked');
+        const messageInputField = document.getElementById('message-input');
         messageInputField.placeholder = `Message ${username}`;
-        messageInputField.focus();
+        messageInputField.disabled = false;
+        
+        // Remove unblock button if it exists
+        const unblockButton = messageInput.querySelector('.unblock-button');
+        if (unblockButton) {
+            unblockButton.remove();
+        }
     }
 
     // Load messages
@@ -761,8 +802,7 @@ async function sendMessage() {
 
         // Check if the current user has blocked the receiver
         if (blockedUsers.includes(currentChatUser.id)) {
-            alert('You cannot send messages to this user as you have blocked them.');
-            return;
+            return; // Don't show alert as the UI already indicates the blocked state
         }
 
         // Get receiver's data to check if they've blocked the sender
