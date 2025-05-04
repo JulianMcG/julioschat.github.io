@@ -113,6 +113,37 @@
         </div>
     </div>
 
+    <!-- Group Chat Settings Modal -->
+    <div id="group-chat-settings-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Group Chat Settings</h2>
+                <span class="material-symbols-outlined close-modal">close</span>
+            </div>
+            <div class="modal-body">
+                <div class="group-settings-section">
+                    <label>Group Name</label>
+                    <input type="text" id="group-name" placeholder="Enter group name">
+                </div>
+                <div class="group-settings-section">
+                    <label>Group Emoji</label>
+                    <div class="emoji-picker">
+                        <input type="text" id="group-emoji" placeholder="Select an emoji">
+                        <div class="emoji-grid" id="emoji-grid"></div>
+                    </div>
+                </div>
+                <div class="group-settings-section">
+                    <label>Group Members</label>
+                    <div id="group-members-list"></div>
+                    <button id="add-member" class="add-member-button">Add Member</button>
+                </div>
+                <div class="group-settings-section">
+                    <button id="save-group-settings" class="save-button">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Settings Modal -->
     <div id="settings-modal" class="modal">
         <div class="modal-content">
