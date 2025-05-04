@@ -1209,20 +1209,36 @@ button:hover {
 }
 
 #create-group-modal .modal-content {
-    background-color: #0c0e16;
+    background-color: #10121B;
     border-radius: 15px;
     width: 400px;
     max-width: 90%;
     margin: 10% auto;
     padding: 20px;
+    position: relative;
 }
 
 #create-group-modal .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #1C1F28;
 }
 
 #create-group-modal .modal-header h2 {
     font-size: 20px;
+    color: #ECEBF7;
+}
+
+#create-group-modal .close-modal {
+    color: #B6B8C8;
+    cursor: pointer;
+    font-size: 24px;
+}
+
+#create-group-modal .close-modal:hover {
     color: #ECEBF7;
 }
 
@@ -1232,6 +1248,9 @@ button:hover {
     gap: 8px;
     margin-bottom: 20px;
     min-height: 40px;
+    padding: 10px;
+    background-color: #13161F;
+    border-radius: 8px;
 }
 
 #create-group-modal .selected-user {
@@ -1250,10 +1269,17 @@ button:hover {
     font-size: 18px;
 }
 
+#create-group-modal .remove-user:hover {
+    color: #ECEBF7;
+}
+
 #create-group-modal .user-list {
     max-height: 300px;
     overflow-y: auto;
     margin-bottom: 20px;
+    background-color: #13161F;
+    border-radius: 8px;
+    padding: 10px;
 }
 
 #create-group-modal .user-item {
@@ -1282,11 +1308,13 @@ button:hover {
     display: flex;
     align-items: center;
     justify-content: center;
+    color: transparent;
 }
 
 #create-group-modal .user-item.selected .checkbox {
     background-color: #1F49C7;
     border-color: #1F49C7;
+    color: #ECEBF7;
 }
 
 #create-group-modal .create-button {
