@@ -455,6 +455,9 @@ body {
     background-color: #1C1F28;
     border-radius: 15px;
     margin: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .message-input input {
@@ -472,6 +475,15 @@ body {
 
 .message-input input::placeholder {
     color: #B6B8C8;
+}
+
+.message-input.blocked {
+    background-color: #1C1F28;
+}
+
+.message-input.blocked input {
+    color: #ECEBF7;
+    opacity: 0.5;
 }
 
 .message-bubble {
@@ -1142,4 +1154,27 @@ body {
 /* Remove button hover effects sitewide */
 button:hover {
     transform: none !important;
+}
+
+.unblock-button {
+    background-color: #494C56;
+    color: #ECEBF7;
+    border: 3px solid rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    padding: 14px;
+    transition: transform 0.1s ease;
+    box-shadow: 0 5px 0 #31333A;
+    white-space: nowrap;
+}
+
+.unblock-button:hover {
+    transform: translateY(-2px);
+}
+
+.unblock-button:active {
+    transform: translateY(5px);
+    box-shadow: 0 0 0 #31333A;
 } 
