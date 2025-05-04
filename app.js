@@ -534,9 +534,10 @@ async function startChat(userId, username) {
     const verifiedBadge = isVerified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : '';
     document.getElementById('active-chat-username').innerHTML = `${username}${verifiedBadge}`;
 
-    // Show message input
+    // Show message input and user options icon
     const messageInput = document.querySelector('.message-input');
     messageInput.classList.add('visible');
+    document.querySelector('.chat-header svg').style.display = 'block';
 
     // Update message input placeholder
     const messageInputField = document.getElementById('message-input');
@@ -753,12 +754,24 @@ async function sendMessage() {
     }
 
     try {
-        // Check if the receiver has blocked the sender
+        // Get current user's data to check blocked users
+        const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        const currentUserData = currentUserDoc.data();
+        const blockedUsers = currentUserData?.blockedUsers || [];
+
+        // Check if the current user has blocked the receiver
+        if (blockedUsers.includes(currentChatUser.id)) {
+            alert('You cannot send messages to this user as you have blocked them.');
+            return;
+        }
+
+        // Get receiver's data to check if they've blocked the sender
         const receiverDoc = await getDoc(doc(db, 'users', currentChatUser.id));
         const receiverData = receiverDoc.data();
-        const blockedUsers = receiverData?.blockedUsers || [];
+        const receiverBlockedUsers = receiverData?.blockedUsers || [];
 
-        if (blockedUsers.includes(currentUser.uid)) {
+        // Check if the receiver has blocked the current user
+        if (receiverBlockedUsers.includes(currentUser.uid)) {
             alert('You cannot send messages to this user as they have blocked you.');
             return;
         }
