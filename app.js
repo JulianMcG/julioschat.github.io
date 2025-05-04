@@ -20,7 +20,9 @@ import {
     addDoc,
     serverTimestamp,
     arrayUnion,
-    arrayRemove
+    arrayRemove,
+    deleteDoc,
+    updateDoc
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
@@ -643,11 +645,7 @@ async function loadMessages() {
                     message.participants.includes(currentUser.uid) &&
                     !blockedUsers.includes(message.senderId)) {
                     
-                    const messageElement = document.createElement('div');
-                    messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
-                    messageElement.innerHTML = `
-                        <div class="content">${message.content}</div>
-                    `;
+                    const messageElement = createMessageElement(message, message.senderId === currentUser.uid);
                     chatMessages.appendChild(messageElement);
                 }
             });
@@ -1371,4 +1369,109 @@ function setupTypingListener() {
     });
     
     return unsubscribe;
+}
+
+function createMessageElement(message, isSent) {
+    const messageElement = document.createElement('div');
+    messageElement.className = `message ${isSent ? 'sent' : 'received'}`;
+    messageElement.dataset.messageId = message.id;
+    messageElement.dataset.timestamp = message.timestamp?.toDate().getTime() || Date.now();
+
+    const content = document.createElement('div');
+    content.className = 'content';
+    content.textContent = message.content;
+    if (message.edited) {
+        const editedBadge = document.createElement('span');
+        editedBadge.className = 'edited-badge';
+        editedBadge.textContent = ' (edited)';
+        content.appendChild(editedBadge);
+    }
+    messageElement.appendChild(content);
+
+    if (isSent) {
+        const actions = document.createElement('div');
+        actions.className = 'message-actions';
+
+        const deleteAction = document.createElement('span');
+        deleteAction.className = 'material-symbols-outlined message-action delete-action';
+        deleteAction.textContent = 'delete';
+        deleteAction.onclick = (e) => {
+            e.stopPropagation();
+            if (confirm('Are you sure you want to delete this message?')) {
+                deleteMessage(message.id);
+            }
+        };
+
+        const editAction = document.createElement('span');
+        editAction.className = 'material-symbols-outlined message-action edit-action';
+        editAction.textContent = 'edit';
+        editAction.onclick = (e) => {
+            e.stopPropagation();
+            editMessage(messageElement, message);
+        };
+
+        actions.appendChild(deleteAction);
+        actions.appendChild(editAction);
+        messageElement.appendChild(actions);
+
+        // Check if message is editable/deletable
+        const messageTime = message.timestamp?.toDate().getTime() || Date.now();
+        const currentTime = Date.now();
+        const tenMinutes = 10 * 60 * 1000;
+        const fifteenMinutes = 15 * 60 * 1000;
+
+        if (currentTime - messageTime > tenMinutes) {
+            deleteAction.style.display = 'none';
+        }
+        if (currentTime - messageTime > fifteenMinutes) {
+            editAction.style.display = 'none';
+        }
+    }
+
+    return messageElement;
+}
+
+async function deleteMessage(messageId) {
+    try {
+        await deleteDoc(doc(db, 'messages', messageId));
+    } catch (error) {
+        console.error('Error deleting message:', error);
+        alert('Failed to delete message. Please try again.');
+    }
+}
+
+function editMessage(messageElement, message) {
+    const content = messageElement.querySelector('.content');
+    const originalContent = content.textContent;
+    
+    const editInput = document.createElement('input');
+    editInput.type = 'text';
+    editInput.className = 'message-edit-input';
+    editInput.value = originalContent;
+    
+    content.replaceWith(editInput);
+    editInput.focus();
+    
+    const handleEdit = async () => {
+        const newContent = editInput.value.trim();
+        if (newContent && newContent !== originalContent) {
+            try {
+                await updateDoc(doc(db, 'messages', message.id), {
+                    content: newContent,
+                    edited: true
+                });
+            } catch (error) {
+                console.error('Error editing message:', error);
+                alert('Failed to edit message. Please try again.');
+            }
+        }
+        editInput.replaceWith(content);
+    };
+    
+    editInput.addEventListener('blur', handleEdit);
+    editInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            handleEdit();
+        }
+    });
 }
