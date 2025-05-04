@@ -665,6 +665,11 @@ async function loadMessages() {
                         emojiList.appendChild(emojiOption);
                     });
                     
+                    // Create content div
+                    const contentDiv = document.createElement('div');
+                    contentDiv.className = 'content';
+                    contentDiv.textContent = message.content;
+                    
                     // Add reaction indicator if exists
                     if (message.reaction && message.reactorId) {
                         const isReactor = message.reactorId === currentUser.uid;
@@ -674,10 +679,8 @@ async function loadMessages() {
                         messageElement.appendChild(reactionIndicator);
                     }
                     
-                    messageElement.innerHTML = `
-                        <div class="content">${message.content}</div>
-                    `;
-                    
+                    // Add all elements to message
+                    messageElement.appendChild(contentDiv);
                     messageElement.appendChild(reactionIcon);
                     messageElement.appendChild(emojiList);
                     chatMessages.appendChild(messageElement);
