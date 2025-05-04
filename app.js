@@ -317,7 +317,7 @@ async function loadUsers() {
         const hiddenConversations = currentUserData?.hiddenConversations || [];
         const pinnedConversations = currentUserData?.pinnedConversations || [];
 
-        // Get all messages where current user is a participant
+        // Get all messages where current user is a participant (either sender or receiver)
         const messagesQuery = query(
             collection(db, 'messages'),
             where('participants', 'array-contains', currentUser.uid)
@@ -328,62 +328,27 @@ async function loadUsers() {
         const dmUserIds = new Set();
         messagesSnapshot.forEach(doc => {
             const message = doc.data();
-            if (message.participants) {
-                message.participants.forEach(id => {
-                    if (id !== currentUser.uid) {
-                        dmUserIds.add(id);
-                    }
-                });
-            }
-        });
-
-        // Get all messages where current user is the receiver
-        const receivedMessagesQuery = query(
-            collection(db, 'messages'),
-            where('receiverId', '==', currentUser.uid)
-        );
-        const receivedMessagesSnapshot = await getDocs(receivedMessagesQuery);
-        
-        // Add senders of received messages to the set
-        receivedMessagesSnapshot.forEach(doc => {
-            const message = doc.data();
-            if (message.senderId && message.senderId !== currentUser.uid) {
-                dmUserIds.add(message.senderId);
-            }
-        });
-
-        // If no messages found, get all users except current user
-        if (dmUserIds.size === 0) {
-            const allUsersQuery = query(collection(db, 'users'));
-            const allUsersSnapshot = await getDocs(allUsersQuery);
-            allUsersSnapshot.forEach(doc => {
-                if (doc.id !== currentUser.uid) {
-                    dmUserIds.add(doc.id);
+            message.participants.forEach(id => {
+                if (id !== currentUser.uid) {
+                    dmUserIds.add(id);
                 }
             });
-        }
+        });
 
         // Get user details for each DM'd user
         const usersPromises = Array.from(dmUserIds).map(async (userId) => {
-            try {
-                const userDoc = await getDoc(doc(db, 'users', userId));
-                if (!userDoc.exists()) return null;
-                
-                const userData = userDoc.data();
-                return {
-                    id: userId,
-                    username: userData.username,
-                    profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
-                    verified: userData.verified,
-                    isPinned: pinnedConversations.includes(userId)
-                };
-            } catch (error) {
-                console.error(`Error fetching user ${userId}:`, error);
-                return null;
-            }
+            const userDoc = await getDoc(doc(db, 'users', userId));
+            const userData = userDoc.data();
+            return {
+                id: userId,
+                username: userData.username,
+                profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
+                verified: userData.verified,
+                isPinned: pinnedConversations.includes(userId)
+            };
         });
 
-        const users = (await Promise.all(usersPromises)).filter(user => user !== null);
+        const users = await Promise.all(usersPromises);
 
         // Sort users: pinned first, then alphabetically
         users.sort((a, b) => {
@@ -394,38 +359,38 @@ async function loadUsers() {
 
         // Display users
         users.forEach(user => {
-            if (hiddenConversations.includes(user.id)) return; // Skip hidden conversations
-            
-            const userElement = createUserElement(user);
-            userElement.dataset.uid = user.id;
-            
-            if (user.isPinned) {
-                userElement.classList.add('pinned');
-                usersContainer.insertBefore(userElement, usersContainer.firstChild);
-            } else {
-                usersContainer.appendChild(userElement);
-            }
-            
-            // Add click handler for the user item
-            userElement.onclick = (e) => {
-                if (!e.target.classList.contains('action-icon')) {
-                    startChat(user.id, user.username);
+            if (!hiddenConversations.includes(user.id)) {
+                const userElement = createUserElement(user);
+                userElement.dataset.uid = user.id;
+                
+                if (user.isPinned) {
+                    userElement.classList.add('pinned');
+                    usersContainer.insertBefore(userElement, usersContainer.firstChild);
+                } else {
+                    usersContainer.appendChild(userElement);
                 }
-            };
+                
+                // Add click handler for the user item
+                userElement.onclick = (e) => {
+                    if (!e.target.classList.contains('action-icon')) {
+                        startChat(user.id, user.username);
+                    }
+                };
 
-            // Add click handler for close icon
-            const closeIcon = userElement.querySelector('.close-icon');
-            closeIcon.onclick = async (e) => {
-                e.stopPropagation();
-                userElement.remove();
-                try {
-                    await setDoc(doc(db, 'users', currentUser.uid), {
-                        hiddenConversations: arrayUnion(user.id)
-                    }, { merge: true });
-                } catch (error) {
-                    console.error('Error hiding conversation:', error);
-                }
-            };
+                // Add click handler for close icon
+                const closeIcon = userElement.querySelector('.close-icon');
+                closeIcon.onclick = async (e) => {
+                    e.stopPropagation();
+                    userElement.remove();
+                    try {
+                        await setDoc(doc(db, 'users', currentUser.uid), {
+                            hiddenConversations: arrayUnion(user.id)
+                        }, { merge: true });
+                    } catch (error) {
+                        console.error('Error hiding conversation:', error);
+                    }
+                };
+            }
         });
     } catch (error) {
         console.error('Error loading users:', error);
