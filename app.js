@@ -1302,13 +1302,24 @@ document.addEventListener('DOMContentLoaded', () => {
 async function updateTypingStatus(typing) {
     if (!currentUser || !currentChatUser) return;
     
+    console.log('Updating typing status:', {
+        typing,
+        currentUser: currentUser.uid,
+        currentChatUser: currentChatUser.id
+    });
+    
     try {
-        await setDoc(doc(db, 'typing', `${currentUser.uid}_${currentChatUser.id}`), {
+        const docRef = doc(db, 'typing', `${currentUser.uid}_${currentChatUser.id}`);
+        console.log('Document reference:', docRef.path);
+        
+        await setDoc(docRef, {
             isTyping: typing,
             userId: currentUser.uid,
             otherUserId: currentChatUser.id,
             timestamp: serverTimestamp()
         }, { merge: true });
+        
+        console.log('Typing status updated successfully');
     } catch (error) {
         console.error('Error updating typing status:', error);
     }
@@ -1318,13 +1329,23 @@ async function updateTypingStatus(typing) {
 function setupTypingListener() {
     if (!currentUser || !currentChatUser) return;
     
+    console.log('Setting up typing listener:', {
+        currentUser: currentUser.uid,
+        currentChatUser: currentChatUser.id
+    });
+    
     const typingRef = doc(db, 'typing', `${currentChatUser.id}_${currentUser.uid}`);
+    console.log('Listening to document:', typingRef.path);
+    
     const unsubscribe = onSnapshot(typingRef, (doc) => {
+        console.log('Typing status changed:', doc.data());
+        
         const data = doc.data();
         const chatMessages = document.getElementById('chat-messages');
         const existingIndicator = document.getElementById('typing-indicator');
         
         if (data?.isTyping) {
+            console.log('User is typing, adding indicator');
             if (!existingIndicator) {
                 const typingIndicator = document.createElement('div');
                 typingIndicator.id = 'typing-indicator';
@@ -1342,8 +1363,11 @@ function setupTypingListener() {
                 chatMessages.scrollTop = chatMessages.scrollHeight;
             }
         } else if (existingIndicator) {
+            console.log('User stopped typing, removing indicator');
             existingIndicator.remove();
         }
+    }, (error) => {
+        console.error('Error in typing listener:', error);
     });
     
     return unsubscribe;
