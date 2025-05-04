@@ -420,27 +420,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 const otherUser = selectedUsers[0];
                 const chatId = [currentUser.uid, otherUser.id].sort().join('_');
                 
-                // Create chat document if it doesn't exist
+                // Create chat document
                 const chatRef = doc(db, 'chats', chatId);
-                const chatDoc = await getDoc(chatRef);
+                await setDoc(chatRef, {
+                    type: 'direct',
+                    participants: [currentUser.uid, otherUser.id],
+                    createdAt: serverTimestamp()
+                });
                 
-                if (!chatDoc.exists()) {
-                    await setDoc(chatRef, {
-                        type: 'direct',
-                        participants: [currentUser.uid, otherUser.id],
-                        createdAt: serverTimestamp()
-                    });
-                    
-                    // Add chat to both users' chats array
-                    const batch = writeBatch(db);
-                    batch.update(doc(db, 'users', currentUser.uid), {
-                        chats: arrayUnion(chatId)
-                    });
-                    batch.update(doc(db, 'users', otherUser.id), {
-                        chats: arrayUnion(chatId)
-                    });
-                    await batch.commit();
-                }
+                // Add chat to both users' chats array
+                const batch = writeBatch(db);
+                batch.update(doc(db, 'users', currentUser.uid), {
+                    chats: arrayUnion(chatId)
+                });
+                batch.update(doc(db, 'users', otherUser.id), {
+                    chats: arrayUnion(chatId)
+                });
+                await batch.commit();
                 
                 // Update UI
                 closeComposeModal();
