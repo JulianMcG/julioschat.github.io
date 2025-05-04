@@ -296,6 +296,27 @@ body {
     position: relative;
 }
 
+.direct-messages-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    color: #B6B8C8;
+    font-size: 14px;
+    padding: 0 10px;
+}
+
+.add-group-icon {
+    color: #B6B8C8;
+    cursor: pointer;
+    font-size: 24px;
+    transition: color 0.3s;
+}
+
+.add-group-icon:hover {
+    color: #ECEBF7;
+}
+
 .search-icon {
     color: #B6B8C8;
     margin-right: 8px;
@@ -486,33 +507,6 @@ body {
     opacity: 1;
 }
 
-.message-bubble {
-    max-width: 70%;
-    padding: 10px 15px;
-    margin: 5px 0;
-    border-radius: 5px;
-    position: relative;
-}
-
-.message-bubble.sent {
-    background-color: #1F49C7;
-    align-self: flex-end;
-}
-
-.message-bubble.received {
-    background-color: #1C1F28;
-    align-self: flex-start;
-}
-
-.message-bubble.consecutive {
-    border-radius: 15px;
-    margin-top: 2px;
-}
-
-.message-bubble.consecutive:last-child {
-    border-radius: 5px;
-}
-
 .message {
     margin-bottom: 8px;
     padding: 12px 20px;
@@ -552,6 +546,41 @@ body {
     word-wrap: break-word;
     max-width: 100%;
     padding: 4px 0;
+}
+
+.message.group {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    max-width: 85%;
+}
+
+.message.group .message-content {
+    flex: 1;
+}
+
+.message.group .sender-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.message.group .sender-name {
+    font-size: 12px;
+    color: #B6B8C8;
+    margin-bottom: 4px;
+    display: none;
+}
+
+.message.group:not(.consecutive) .sender-name {
+    display: block;
+}
+
+.message.group .profile-picture {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
 }
 
 /* Profile Section */
@@ -1177,4 +1206,114 @@ button:hover {
 
 .unblock-button:active {
     background-color: #3d3f46;
+}
+
+#create-group-modal .modal-content {
+    background-color: #0c0e16;
+    border-radius: 15px;
+    width: 400px;
+    max-width: 90%;
+    margin: 10% auto;
+    padding: 20px;
+}
+
+#create-group-modal .modal-header {
+    margin-bottom: 20px;
+}
+
+#create-group-modal .modal-header h2 {
+    font-size: 20px;
+    color: #ECEBF7;
+}
+
+#create-group-modal .selected-users {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 20px;
+    min-height: 40px;
+}
+
+#create-group-modal .selected-user {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background-color: #1C1F28;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+}
+
+#create-group-modal .remove-user {
+    color: #B6B8C8;
+    cursor: pointer;
+    font-size: 18px;
+}
+
+#create-group-modal .user-list {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+}
+
+#create-group-modal .user-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background-color 0.3s;
+}
+
+#create-group-modal .user-item:hover {
+    background-color: #1C1F28;
+}
+
+#create-group-modal .user-item.selected {
+    background-color: #1C1F28;
+}
+
+#create-group-modal .user-item .checkbox {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #1C1F28;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#create-group-modal .user-item.selected .checkbox {
+    background-color: #1F49C7;
+    border-color: #1F49C7;
+}
+
+#create-group-modal .create-button {
+    width: 100%;
+    padding: 14px;
+    background-color: #1F49C7;
+    color: #ECEBF7;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: transform 0.1s ease;
+    box-shadow: 0 5px 0 #13296D;
+}
+
+#create-group-modal .create-button:hover {
+    transform: translateY(-2px);
+}
+
+#create-group-modal .create-button:active {
+    transform: translateY(5px);
+    box-shadow: 0 0 0 #13296D;
+}
+
+#create-group-modal .create-button:disabled {
+    background-color: #494C56;
+    cursor: not-allowed;
+    box-shadow: 0 5px 0 #31333A;
 } 
