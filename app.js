@@ -754,7 +754,6 @@ async function loadMessages() {
                     // Add reaction icon with proper event handling
                     const reactionIcon = document.createElement('span');
                     reactionIcon.className = 'material-symbols-outlined reaction-icon';
-                    reactionIcon.textContent = 'sentiment_satisfied';
                     reactionIcon.style.cursor = 'pointer';
                     reactionIcon.style.opacity = '0';
                     reactionIcon.style.transition = 'opacity 0.2s';
