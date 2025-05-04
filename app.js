@@ -328,11 +328,13 @@ async function loadUsers() {
         const dmUserIds = new Set();
         messagesSnapshot.forEach(doc => {
             const message = doc.data();
-            message.participants.forEach(id => {
-                if (id !== currentUser.uid) {
-                    dmUserIds.add(id);
-                }
-            });
+            if (message.participants) {
+                message.participants.forEach(id => {
+                    if (id !== currentUser.uid) {
+                        dmUserIds.add(id);
+                    }
+                });
+            }
         });
 
         // Get all messages where current user is the receiver
@@ -345,25 +347,43 @@ async function loadUsers() {
         // Add senders of received messages to the set
         receivedMessagesSnapshot.forEach(doc => {
             const message = doc.data();
-            if (message.senderId !== currentUser.uid) {
+            if (message.senderId && message.senderId !== currentUser.uid) {
                 dmUserIds.add(message.senderId);
             }
         });
 
+        // If no messages found, get all users except current user
+        if (dmUserIds.size === 0) {
+            const allUsersQuery = query(collection(db, 'users'));
+            const allUsersSnapshot = await getDocs(allUsersQuery);
+            allUsersSnapshot.forEach(doc => {
+                if (doc.id !== currentUser.uid) {
+                    dmUserIds.add(doc.id);
+                }
+            });
+        }
+
         // Get user details for each DM'd user
         const usersPromises = Array.from(dmUserIds).map(async (userId) => {
-            const userDoc = await getDoc(doc(db, 'users', userId));
-            const userData = userDoc.data();
-            return {
-                id: userId,
-                username: userData.username,
-                profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
-                verified: userData.verified,
-                isPinned: pinnedConversations.includes(userId)
-            };
+            try {
+                const userDoc = await getDoc(doc(db, 'users', userId));
+                if (!userDoc.exists()) return null;
+                
+                const userData = userDoc.data();
+                return {
+                    id: userId,
+                    username: userData.username,
+                    profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
+                    verified: userData.verified,
+                    isPinned: pinnedConversations.includes(userId)
+                };
+            } catch (error) {
+                console.error(`Error fetching user ${userId}:`, error);
+                return null;
+            }
         });
 
-        const users = await Promise.all(usersPromises);
+        const users = (await Promise.all(usersPromises)).filter(user => user !== null);
 
         // Sort users: pinned first, then alphabetically
         users.sort((a, b) => {
