@@ -711,24 +711,27 @@ function showEmojiList(messageElement, messageId) {
 async function addReaction(messageId, emoji) {
     try {
         const messageRef = doc(db, 'messages', messageId);
+        
+        // First get the current state
         const messageDoc = await getDoc(messageRef);
-        const currentReaction = messageDoc.data()?.reaction;
-        const currentReactor = messageDoc.data()?.reactorId;
-
+        const currentData = messageDoc.data();
+        
         // If the current user already reacted with this emoji, remove the reaction
-        if (currentReaction === emoji && currentReactor === currentUser.uid) {
-            await updateDoc(messageRef, {
+        if (currentData?.reaction === emoji && currentData?.reactorId === currentUser.uid) {
+            await setDoc(messageRef, {
+                ...currentData,
                 reaction: null,
                 reactorId: null,
                 reactionTimestamp: null
-            });
+            }, { merge: true });
         } else {
             // Otherwise, set the new reaction
-            await updateDoc(messageRef, {
+            await setDoc(messageRef, {
+                ...currentData,
                 reaction: emoji,
                 reactorId: currentUser.uid,
                 reactionTimestamp: serverTimestamp()
-            });
+            }, { merge: true });
         }
     } catch (error) {
         console.error('Error adding reaction:', error);
