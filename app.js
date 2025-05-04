@@ -834,6 +834,81 @@ async function sendMessage(content) {
         const docRef = await addDoc(collection(db, 'messages'), messageData);
         console.log('Message sent successfully with ID:', docRef.id);
         
+        // Update the sidebar to show the user if they're not already there
+        const existingUser = document.querySelector(`.user-item[data-uid="${currentChatUser.id}"]`);
+        if (!existingUser) {
+            // Get user's profile picture and verification status
+            const userDoc = await getDoc(doc(db, 'users', currentChatUser.id));
+            const userData = userDoc.data();
+            const profilePicture = userData?.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
+            const isVerified = userData?.verified || false;
+
+            // Create new user element
+            const userElement = document.createElement('div');
+            userElement.className = 'user-item';
+            userElement.dataset.uid = currentChatUser.id;
+            userElement.innerHTML = `
+                <img src="${profilePicture}" alt="${currentChatUser.username}" class="profile-picture">
+                <span class="username">${currentChatUser.username}${isVerified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
+                <div class="user-actions">
+                    <span class="material-symbols-outlined action-icon pin-icon">keep</span>
+                    <span class="material-symbols-outlined action-icon close-icon">close</span>
+                </div>
+            `;
+
+            // Add click handler for the user item
+            userElement.onclick = (e) => {
+                if (!e.target.classList.contains('action-icon')) {
+                    startChat(currentChatUser.id, currentChatUser.username);
+                }
+            };
+
+            // Add click handler for close icon
+            const closeIcon = userElement.querySelector('.close-icon');
+            closeIcon.onclick = async (e) => {
+                e.stopPropagation();
+                userElement.remove();
+                try {
+                    await setDoc(doc(db, 'users', currentUser.uid), {
+                        hiddenConversations: arrayUnion(currentChatUser.id)
+                    }, { merge: true });
+                } catch (error) {
+                    console.error('Error hiding conversation:', error);
+                }
+            };
+
+            // Add click handler for pin icon
+            const pinIcon = userElement.querySelector('.pin-icon');
+            pinIcon.onclick = async (e) => {
+                e.stopPropagation();
+                const isPinned = userElement.classList.contains('pinned');
+                userElement.classList.toggle('pinned');
+                
+                if (!isPinned) {
+                    const usersContainer = document.getElementById('users-container');
+                    usersContainer.insertBefore(userElement, usersContainer.firstChild);
+                }
+                
+                try {
+                    if (!isPinned) {
+                        await setDoc(doc(db, 'users', currentUser.uid), {
+                            pinnedConversations: arrayUnion(currentChatUser.id)
+                        }, { merge: true });
+                    } else {
+                        await setDoc(doc(db, 'users', currentUser.uid), {
+                            pinnedConversations: arrayRemove(currentChatUser.id)
+                        }, { merge: true });
+                    }
+                } catch (error) {
+                    console.error('Error pinning conversation:', error);
+                }
+            };
+
+            // Add to sidebar
+            const usersContainer = document.getElementById('users-container');
+            usersContainer.appendChild(userElement);
+        }
+        
         // Scroll to bottom
         const chatMessages = document.getElementById('chat-messages');
         chatMessages.scrollTop = chatMessages.scrollHeight;
