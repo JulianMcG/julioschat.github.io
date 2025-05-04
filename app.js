@@ -707,9 +707,21 @@ function showEmojiList(messageElement, messageId) {
 
 async function addReaction(messageId, emoji) {
     try {
-        await updateDoc(doc(db, 'messages', messageId), {
-            reaction: emoji
-        });
+        const messageRef = doc(db, 'messages', messageId);
+        const messageDoc = await getDoc(messageRef);
+        const currentReaction = messageDoc.data()?.reaction;
+
+        if (currentReaction === emoji) {
+            // If clicking the same emoji, remove the reaction
+            await updateDoc(messageRef, {
+                reaction: null
+            });
+        } else {
+            // Otherwise, update with new reaction
+            await updateDoc(messageRef, {
+                reaction: emoji
+            });
+        }
     } catch (error) {
         console.error('Error adding reaction:', error);
     }
