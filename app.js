@@ -1077,3 +1077,137 @@ function updateChatHeader(user) {
         <span class="username">${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
     `;
 }
+
+// User Options Modal
+let currentSelectedUser = null;
+
+// Open user options modal
+function openUserOptionsModal(userId, username) {
+    currentSelectedUser = { id: userId, username };
+    const modal = document.getElementById('user-options-modal');
+    const aliasInput = document.getElementById('user-alias');
+    const blockButton = document.getElementById('block-user');
+    const unblockButton = document.getElementById('unblock-user');
+    
+    // Check if user is blocked
+    getDoc(doc(db, 'users', currentUser.uid)).then(userDoc => {
+        const userData = userDoc.data();
+        const blockedUsers = userData?.blockedUsers || [];
+        const userAliases = userData?.userAliases || {};
+        
+        // Set alias input value if exists
+        aliasInput.value = userAliases[userId] || '';
+        
+        // Show appropriate block/unblock button
+        if (blockedUsers.includes(userId)) {
+            blockButton.style.display = 'none';
+            unblockButton.style.display = 'block';
+        } else {
+            blockButton.style.display = 'block';
+            unblockButton.style.display = 'none';
+        }
+    });
+    
+    modal.style.display = 'block';
+}
+
+// Close user options modal
+function closeUserOptionsModal() {
+    const modal = document.getElementById('user-options-modal');
+    modal.style.display = 'none';
+    currentSelectedUser = null;
+}
+
+// Save user alias
+async function saveUserAlias() {
+    if (!currentSelectedUser) return;
+    
+    const aliasInput = document.getElementById('user-alias');
+    const alias = aliasInput.value.trim();
+    
+    try {
+        await setDoc(doc(db, 'users', currentUser.uid), {
+            userAliases: {
+                [currentSelectedUser.id]: alias
+            }
+        }, { merge: true });
+        
+        // Update username display if this is the current chat
+        if (currentChatUser && currentChatUser.id === currentSelectedUser.id) {
+            document.getElementById('active-chat-username').textContent = alias || currentSelectedUser.username;
+        }
+        
+        closeUserOptionsModal();
+    } catch (error) {
+        console.error('Error saving user alias:', error);
+    }
+}
+
+// Block user
+async function blockUser() {
+    if (!currentSelectedUser) return;
+    
+    try {
+        await setDoc(doc(db, 'users', currentUser.uid), {
+            blockedUsers: arrayUnion(currentSelectedUser.id)
+        }, { merge: true });
+        
+        // Close the chat if it's with the blocked user
+        if (currentChatUser && currentChatUser.id === currentSelectedUser.id) {
+            currentChatUser = null;
+            document.getElementById('active-chat-username').textContent = 'Select a chat';
+            document.getElementById('message-input').placeholder = 'Type a message...';
+            document.querySelector('.message-input').classList.remove('visible');
+        }
+        
+        closeUserOptionsModal();
+    } catch (error) {
+        console.error('Error blocking user:', error);
+    }
+}
+
+// Unblock user
+async function unblockUser() {
+    if (!currentSelectedUser) return;
+    
+    try {
+        await setDoc(doc(db, 'users', currentUser.uid), {
+            blockedUsers: arrayRemove(currentSelectedUser.id)
+        }, { merge: true });
+        
+        closeUserOptionsModal();
+    } catch (error) {
+        console.error('Error unblocking user:', error);
+    }
+}
+
+// Event Listeners
+document.addEventListener('DOMContentLoaded', () => {
+    // ... existing event listeners ...
+    
+    // User options modal event listeners
+    const userOptionsModal = document.getElementById('user-options-modal');
+    const closeUserOptionsBtn = userOptionsModal.querySelector('.close-modal');
+    const saveAliasBtn = document.getElementById('save-alias');
+    const blockUserBtn = document.getElementById('block-user');
+    const unblockUserBtn = document.getElementById('unblock-user');
+    
+    closeUserOptionsBtn.addEventListener('click', closeUserOptionsModal);
+    saveAliasBtn.addEventListener('click', saveUserAlias);
+    blockUserBtn.addEventListener('click', blockUser);
+    unblockUserBtn.addEventListener('click', unblockUser);
+    
+    // Add click handler for the user options icon
+    document.querySelector('.sidebar-header svg').addEventListener('click', () => {
+        if (currentChatUser) {
+            openUserOptionsModal(currentChatUser.id, currentChatUser.username);
+        }
+    });
+    
+    // Close modal when clicking outside
+    window.addEventListener('click', (e) => {
+        if (e.target === userOptionsModal) {
+            closeUserOptionsModal();
+        }
+    });
+});
