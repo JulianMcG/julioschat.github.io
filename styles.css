@@ -721,6 +721,8 @@ body {
     height: 24px;
     cursor: pointer;
     margin-left: auto;
+    fill: #B6B8C8;
+    display: none;
 }
 
 .chat-header img {
