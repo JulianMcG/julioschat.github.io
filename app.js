@@ -598,6 +598,105 @@ async function startChat(userId, username) {
     loadMessages();
 }
 
+// Reaction system
+function createReactionElement(messageId, emoji, isReactor) {
+    const reactionElement = document.createElement('div');
+    reactionElement.className = `reaction-indicator ${isReactor ? 'reactor' : 'reactee'}`;
+    reactionElement.textContent = emoji;
+    reactionElement.dataset.messageId = messageId;
+    return reactionElement;
+}
+
+function updateMessageReaction(messageElement, messageData) {
+    // Remove any existing reaction
+    const existingReaction = messageElement.querySelector('.reaction-indicator');
+    if (existingReaction) {
+        existingReaction.remove();
+    }
+
+    // Add new reaction if it exists
+    if (messageData.reaction && messageData.reactorId) {
+        const isReactor = messageData.reactorId === currentUser.uid;
+        const reactionElement = createReactionElement(messageElement.dataset.messageId, messageData.reaction, isReactor);
+        messageElement.insertBefore(reactionElement, messageElement.firstChild);
+    }
+}
+
+async function addReaction(messageId, emoji) {
+    try {
+        const messageRef = doc(db, 'messages', messageId);
+        const messageDoc = await getDoc(messageRef);
+        const currentData = messageDoc.data();
+        
+        // If the current user already reacted with this emoji, remove the reaction
+        if (currentData?.reaction === emoji && currentData?.reactorId === currentUser.uid) {
+            await setDoc(messageRef, {
+                ...currentData,
+                reaction: null,
+                reactorId: null,
+                reactionTimestamp: null
+            }, { merge: true });
+        } else {
+            // Add or update the reaction
+            await setDoc(messageRef, {
+                ...currentData,
+                reaction: emoji,
+                reactorId: currentUser.uid,
+                reactionTimestamp: serverTimestamp()
+            }, { merge: true });
+        }
+    } catch (error) {
+        console.error('Error adding reaction:', error);
+    }
+}
+
+function showEmojiList(messageElement, messageId) {
+    const emojiList = document.createElement('div');
+    emojiList.className = 'emoji-list';
+    emojiList.dataset.messageId = messageId;
+    
+    const emojis = ['❤️', '👍', '👎', '😂', '‼️', '❓', '🔥'];
+    emojis.forEach(emoji => {
+        const emojiOption = document.createElement('span');
+        emojiOption.className = 'emoji-option';
+        emojiOption.textContent = emoji;
+        emojiOption.onclick = (e) => {
+            e.stopPropagation();
+            addReaction(messageId, emoji);
+            emojiList.remove();
+        };
+        emojiList.appendChild(emojiOption);
+    });
+    
+    // Position the emoji list
+    const messageRect = messageElement.getBoundingClientRect();
+    emojiList.style.position = 'absolute';
+    emojiList.style.top = `${messageRect.top - 40}px`;
+    emojiList.style.left = `${messageRect.left}px`;
+    
+    // Add to document
+    document.body.appendChild(emojiList);
+    
+    // Close other emoji lists
+    document.querySelectorAll('.emoji-list').forEach(list => {
+        if (list !== emojiList) {
+            list.remove();
+        }
+    });
+    
+    // Close on click outside
+    const closeOnClickOutside = (e) => {
+        if (!emojiList.contains(e.target) && !messageElement.contains(e.target)) {
+            emojiList.remove();
+            document.removeEventListener('click', closeOnClickOutside);
+        }
+    };
+    
+    setTimeout(() => {
+        document.addEventListener('click', closeOnClickOutside);
+    }, 0);
+}
+
 async function loadMessages() {
     if (!currentUser || !currentChatUser) {
         console.log('No current user or chat user');
@@ -624,12 +723,6 @@ async function loadMessages() {
         }
 
         const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
-            const existingMessages = new Map();
-            // Store existing messages before clearing
-            document.querySelectorAll('.message').forEach(msg => {
-                existingMessages.set(msg.dataset.messageId, msg);
-            });
-            
             chatMessages.innerHTML = '';
             
             snapshot.forEach(doc => {
@@ -642,33 +735,14 @@ async function loadMessages() {
                     message.participants.includes(currentUser.uid) &&
                     !blockedUsers.includes(message.senderId)) {
                     
-                    let messageElement;
-                    // Try to reuse existing message element if it exists
-                    if (existingMessages.has(doc.id)) {
-                        messageElement = existingMessages.get(doc.id);
-                        // Clear existing children
-                        while (messageElement.firstChild) {
-                            messageElement.removeChild(messageElement.firstChild);
-                        }
-                    } else {
-                        messageElement = document.createElement('div');
-                        messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
-                        messageElement.dataset.messageId = doc.id;
-                    }
+                    const messageElement = document.createElement('div');
+                    messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
+                    messageElement.dataset.messageId = doc.id;
                     
                     // Create content div
                     const contentDiv = document.createElement('div');
                     contentDiv.className = 'content';
                     contentDiv.textContent = message.content;
-                    
-                    // Add reaction indicator if exists
-                    if (message.reaction && message.reactorId) {
-                        const isReactor = message.reactorId === currentUser.uid;
-                        const reactionIndicator = document.createElement('div');
-                        reactionIndicator.className = `reaction-indicator ${isReactor ? 'reactor' : 'reactee'}`;
-                        reactionIndicator.textContent = message.reaction;
-                        messageElement.appendChild(reactionIndicator);
-                    }
                     
                     // Add reaction icon
                     const reactionIcon = document.createElement('span');
@@ -679,30 +753,18 @@ async function loadMessages() {
                         showEmojiList(messageElement, doc.id);
                     };
                     
-                    // Add emoji list
-                    const emojiList = document.createElement('div');
-                    emojiList.className = 'emoji-list';
-                    const emojis = ['❤️', '👍', '👎', '😂', '‼️', '❓', '🔥'];
-                    emojis.forEach(emoji => {
-                        const emojiOption = document.createElement('span');
-                        emojiOption.className = 'emoji-option';
-                        emojiOption.textContent = emoji;
-                        emojiOption.onclick = (e) => {
-                            e.stopPropagation();
-                            addReaction(doc.id, emoji);
-                            emojiList.classList.remove('show');
-                        };
-                        emojiList.appendChild(emojiOption);
-                    });
-                    
                     // Add all elements to message
                     messageElement.appendChild(contentDiv);
                     messageElement.appendChild(reactionIcon);
-                    messageElement.appendChild(emojiList);
                     
-                    if (!existingMessages.has(doc.id)) {
-                        chatMessages.appendChild(messageElement);
+                    // Add reaction if it exists
+                    if (message.reaction && message.reactorId) {
+                        const isReactor = message.reactorId === currentUser.uid;
+                        const reactionElement = createReactionElement(doc.id, message.reaction, isReactor);
+                        messageElement.insertBefore(reactionElement, messageElement.firstChild);
                     }
+                    
+                    chatMessages.appendChild(messageElement);
                 }
             });
             
@@ -716,60 +778,6 @@ async function loadMessages() {
         console.error('Error loading messages:', error);
     }
 }
-
-function showEmojiList(messageElement, messageId) {
-    const emojiList = messageElement.querySelector('.emoji-list');
-    emojiList.classList.toggle('show');
-    
-    // Close other emoji lists
-    document.querySelectorAll('.emoji-list.show').forEach(list => {
-        if (list !== emojiList) {
-            list.classList.remove('show');
-        }
-    });
-}
-
-async function addReaction(messageId, emoji) {
-    try {
-        const messageRef = doc(db, 'messages', messageId);
-        
-        // First get the current state
-        const messageDoc = await getDoc(messageRef);
-        const currentData = messageDoc.data();
-        
-        // If the current user already reacted with this emoji, remove the reaction
-        if (currentData?.reaction === emoji && currentData?.reactorId === currentUser.uid) {
-            await setDoc(messageRef, {
-                ...currentData,
-                reaction: null,
-                reactorId: null,
-                reactionTimestamp: null
-            }, { merge: true });
-        } else {
-            // Create the new data object
-            const newData = {
-                ...currentData,
-                reaction: emoji,
-                reactorId: currentUser.uid,
-                reactionTimestamp: serverTimestamp()
-            };
-            
-            // Update Firestore
-            await setDoc(messageRef, newData, { merge: true });
-        }
-    } catch (error) {
-        console.error('Error adding reaction:', error);
-    }
-}
-
-// Close emoji lists when clicking outside
-document.addEventListener('click', (e) => {
-    if (!e.target.closest('.emoji-list') && !e.target.closest('.reaction-icon')) {
-        document.querySelectorAll('.emoji-list.show').forEach(list => {
-            list.classList.remove('show');
-        });
-    }
-});
 
 // Check Firebase connection
 function checkFirebaseConnection() {
