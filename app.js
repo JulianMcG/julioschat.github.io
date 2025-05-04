@@ -624,6 +624,12 @@ async function loadMessages() {
         }
 
         const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
+            const existingMessages = new Map();
+            // Store existing messages before clearing
+            document.querySelectorAll('.message').forEach(msg => {
+                existingMessages.set(msg.dataset.messageId, msg);
+            });
+            
             chatMessages.innerHTML = '';
             
             snapshot.forEach(doc => {
@@ -636,9 +642,19 @@ async function loadMessages() {
                     message.participants.includes(currentUser.uid) &&
                     !blockedUsers.includes(message.senderId)) {
                     
-                    const messageElement = document.createElement('div');
-                    messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
-                    messageElement.dataset.messageId = doc.id;
+                    let messageElement;
+                    // Try to reuse existing message element if it exists
+                    if (existingMessages.has(doc.id)) {
+                        messageElement = existingMessages.get(doc.id);
+                        // Clear existing children
+                        while (messageElement.firstChild) {
+                            messageElement.removeChild(messageElement.firstChild);
+                        }
+                    } else {
+                        messageElement = document.createElement('div');
+                        messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
+                        messageElement.dataset.messageId = doc.id;
+                    }
                     
                     // Create content div
                     const contentDiv = document.createElement('div');
@@ -683,7 +699,10 @@ async function loadMessages() {
                     messageElement.appendChild(contentDiv);
                     messageElement.appendChild(reactionIcon);
                     messageElement.appendChild(emojiList);
-                    chatMessages.appendChild(messageElement);
+                    
+                    if (!existingMessages.has(doc.id)) {
+                        chatMessages.appendChild(messageElement);
+                    }
                 }
             });
             
