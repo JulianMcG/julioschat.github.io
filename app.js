@@ -544,10 +544,11 @@ async function startChat(userId, username) {
     const currentUserData = currentUserDoc.data();
     const blockedUsers = currentUserData?.blockedUsers || [];
 
+    // Update message input state immediately
+    const messageInputField = document.getElementById('message-input');
     if (blockedUsers.includes(userId)) {
         // User is blocked, show blocked state
         messageInput.classList.add('blocked');
-        const messageInputField = document.getElementById('message-input');
         messageInputField.placeholder = 'You cannot send messages to a user you have blocked.';
         messageInputField.disabled = true;
 
@@ -558,17 +559,23 @@ async function startChat(userId, username) {
             unblockButton.textContent = 'Unblock';
             unblockButton.onclick = async () => {
                 try {
-                    await setDoc(doc(db, 'users', currentUser.uid), {
-                        blockedUsers: arrayRemove(userId)
-                    }, { merge: true });
-                    
-                    // Remove blocked state
+                    // Update UI immediately
                     messageInput.classList.remove('blocked');
                     messageInputField.placeholder = `Message ${username}`;
                     messageInputField.disabled = false;
                     unblockButton.remove();
+                    
+                    // Update Firestore
+                    await setDoc(doc(db, 'users', currentUser.uid), {
+                        blockedUsers: arrayRemove(userId)
+                    }, { merge: true });
                 } catch (error) {
                     console.error('Error unblocking user:', error);
+                    // Revert UI changes if Firestore update fails
+                    messageInput.classList.add('blocked');
+                    messageInputField.placeholder = 'You cannot send messages to a user you have blocked.';
+                    messageInputField.disabled = true;
+                    messageInput.appendChild(unblockButton);
                 }
             };
             messageInput.appendChild(unblockButton);
@@ -576,7 +583,6 @@ async function startChat(userId, username) {
     } else {
         // User is not blocked, show normal state
         messageInput.classList.remove('blocked');
-        const messageInputField = document.getElementById('message-input');
         messageInputField.placeholder = `Message ${username}`;
         messageInputField.disabled = false;
         
