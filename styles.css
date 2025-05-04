@@ -444,6 +444,7 @@ body {
     flex-direction: column;
     scrollbar-width: none;
     -ms-overflow-style: none;
+    position: relative;
 }
 
 .chat-messages::-webkit-scrollbar {
@@ -564,6 +565,7 @@ body {
     cursor: pointer;
     opacity: 0;
     font-size: 20px;
+    transition: opacity 0.2s;
 }
 
 .message:hover .reaction-icon {
@@ -580,9 +582,9 @@ body {
     background-color: #13161F;
     border-radius: 15px;
     padding: 10px;
-    display: none;
+    display: flex;
     gap: 8px;
-    z-index: 100;
+    z-index: 1000;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
