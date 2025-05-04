@@ -20,8 +20,7 @@ import {
     addDoc,
     serverTimestamp,
     arrayUnion,
-    arrayRemove,
-    updateDoc
+    arrayRemove
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
@@ -598,115 +597,6 @@ async function startChat(userId, username) {
     loadMessages();
 }
 
-// Reaction system
-function createReactionElement(messageId, emoji, isReactor) {
-    const reactionElement = document.createElement('div');
-    reactionElement.className = `reaction-indicator ${isReactor ? 'reactor' : 'reactee'}`;
-    reactionElement.textContent = emoji;
-    reactionElement.dataset.messageId = messageId;
-    return reactionElement;
-}
-
-function updateMessageReaction(messageElement, messageData) {
-    // Remove any existing reaction
-    const existingReaction = messageElement.querySelector('.reaction-indicator');
-    if (existingReaction) {
-        existingReaction.remove();
-    }
-
-    // Add new reaction if it exists
-    if (messageData.reaction && messageData.reactorId) {
-        const isReactor = messageData.reactorId === currentUser.uid;
-        const reactionElement = createReactionElement(messageElement.dataset.messageId, messageData.reaction, isReactor);
-        messageElement.insertBefore(reactionElement, messageElement.firstChild);
-    }
-}
-
-async function addReaction(messageId, emoji) {
-    try {
-        const messageRef = doc(db, 'messages', messageId);
-        const messageDoc = await getDoc(messageRef);
-        const currentData = messageDoc.data();
-        
-        // If the current user already reacted with this emoji, remove the reaction
-        if (currentData?.reaction === emoji && currentData?.reactorId === currentUser.uid) {
-            await setDoc(messageRef, {
-                ...currentData,
-                reaction: null,
-                reactorId: null,
-                reactionTimestamp: null
-            }, { merge: true });
-        } else {
-            // Add or update the reaction
-            await setDoc(messageRef, {
-                ...currentData,
-                reaction: emoji,
-                reactorId: currentUser.uid,
-                reactionTimestamp: serverTimestamp()
-            }, { merge: true });
-        }
-    } catch (error) {
-        console.error('Error adding reaction:', error);
-    }
-}
-
-function showEmojiList(messageElement, messageId) {
-    console.log('Showing emoji list for message:', messageId);
-    
-    // Remove any existing emoji lists first
-    document.querySelectorAll('.emoji-list').forEach(list => list.remove());
-    
-    const emojiList = document.createElement('div');
-    emojiList.className = 'emoji-list';
-    emojiList.dataset.messageId = messageId;
-    
-    const emojis = ['❤️', '👍', '👎', '😂', '‼️', '❓', '🔥'];
-    emojis.forEach(emoji => {
-        const emojiOption = document.createElement('span');
-        emojiOption.className = 'emoji-option';
-        emojiOption.textContent = emoji;
-        emojiOption.onclick = (e) => {
-            e.stopPropagation();
-            console.log('Selected emoji:', emoji);
-            addReaction(messageId, emoji);
-            emojiList.remove();
-        };
-        emojiList.appendChild(emojiOption);
-    });
-    
-    // Position the emoji list
-    const messageRect = messageElement.getBoundingClientRect();
-    const chatMessages = document.getElementById('chat-messages');
-    const chatMessagesRect = chatMessages.getBoundingClientRect();
-    
-    emojiList.style.position = 'absolute';
-    emojiList.style.top = `${messageRect.top - chatMessagesRect.top - 50}px`;
-    emojiList.style.left = `${messageRect.left - chatMessagesRect.left}px`;
-    emojiList.style.zIndex = '1000';
-    emojiList.style.backgroundColor = '#13161F';
-    emojiList.style.padding = '10px';
-    emojiList.style.borderRadius = '15px';
-    emojiList.style.display = 'flex';
-    emojiList.style.gap = '8px';
-    emojiList.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
-    
-    // Add to chat messages container instead of body
-    chatMessages.appendChild(emojiList);
-    
-    // Close on click outside
-    const closeOnClickOutside = (e) => {
-        if (!emojiList.contains(e.target) && !messageElement.contains(e.target)) {
-            emojiList.remove();
-            document.removeEventListener('click', closeOnClickOutside);
-        }
-    };
-    
-    // Add click event listener after a short delay to prevent immediate closing
-    setTimeout(() => {
-        document.addEventListener('click', closeOnClickOutside);
-    }, 100);
-}
-
 async function loadMessages() {
     if (!currentUser || !currentChatUser) {
         console.log('No current user or chat user');
@@ -738,53 +628,18 @@ async function loadMessages() {
             snapshot.forEach(doc => {
                 const message = doc.data();
                 
+                // Only show messages if:
+                // 1. The message is between current user and current chat user
+                // 2. The sender is not blocked
                 if (message.participants.includes(currentChatUser.id) && 
                     message.participants.includes(currentUser.uid) &&
                     !blockedUsers.includes(message.senderId)) {
                     
                     const messageElement = document.createElement('div');
                     messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
-                    messageElement.dataset.messageId = doc.id;
-                    
-                    // Create content div
-                    const contentDiv = document.createElement('div');
-                    contentDiv.className = 'content';
-                    contentDiv.textContent = message.content;
-                    
-                    // Add reaction icon with proper event handling
-                    const reactionIcon = document.createElement('span');
-                    reactionIcon.className = 'material-symbols-outlined reaction-icon';
-                    reactionIcon.textContent = 'sentiment_satisfied';
-                    reactionIcon.style.cursor = 'pointer';
-                    reactionIcon.style.opacity = '0';
-                    reactionIcon.style.transition = 'opacity 0.2s';
-                    
-                    // Show icon on hover
-                    messageElement.addEventListener('mouseenter', () => {
-                        reactionIcon.style.opacity = '1';
-                    });
-                    
-                    messageElement.addEventListener('mouseleave', () => {
-                        reactionIcon.style.opacity = '0';
-                    });
-                    
-                    reactionIcon.onclick = (e) => {
-                        e.stopPropagation();
-                        console.log('Reaction icon clicked for message:', doc.id);
-                        showEmojiList(messageElement, doc.id);
-                    };
-                    
-                    // Add all elements to message
-                    messageElement.appendChild(contentDiv);
-                    messageElement.appendChild(reactionIcon);
-                    
-                    // Add reaction if it exists
-                    if (message.reaction && message.reactorId) {
-                        const isReactor = message.reactorId === currentUser.uid;
-                        const reactionElement = createReactionElement(doc.id, message.reaction, isReactor);
-                        messageElement.insertBefore(reactionElement, messageElement.firstChild);
-                    }
-                    
+                    messageElement.innerHTML = `
+                        <div class="content">${message.content}</div>
+                    `;
                     chatMessages.appendChild(messageElement);
                 }
             });
