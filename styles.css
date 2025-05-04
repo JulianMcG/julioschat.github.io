@@ -548,10 +548,11 @@ body {
     margin-left: 20px;
     text-align: left;
     border-radius: 15px 15px 15px 5px;
-    padding: 8px 15px;
+    padding: 12px 20px;
     display: flex;
     align-items: center;
     gap: 8px;
+    height: 40px;
 }
 
 .typing-indicator lord-icon {
