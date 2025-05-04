@@ -1180,6 +1180,26 @@ button:hover {
 }
 
 /* Group Chat Settings Modal */
+#group-chat-settings-modal .modal-content {
+    background-color: #10121B;
+    border-radius: 15px;
+    width: 500px;
+    max-width: 90%;
+    max-height: 90vh;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 30px;
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+#group-chat-settings-modal .modal-content::-webkit-scrollbar {
+    display: none;
+}
+
 .group-settings-section {
     margin-bottom: 20px;
 }
@@ -1193,129 +1213,22 @@ button:hover {
 
 .group-settings-section input {
     width: 100%;
-    background-color: #13161F;
-    border: 1px solid #1C1F28;
-    border-radius: 8px;
-    padding: 10px;
+    padding: 16px 15px;
+    border: 1.5px solid #1C1F28;
+    border-radius: 15px;
+    font-size: 16px;
+    background-color: #10121B;
     color: #ECEBF7;
-    font-size: 14px;
+    transition: border-color 0.3s;
 }
 
-.emoji-picker {
-    position: relative;
+.group-settings-section input:focus {
+    outline: none;
+    border-color: #1F49C7;
 }
 
-.emoji-grid {
-    display: grid;
-    grid-template-columns: repeat(8, 1fr);
-    gap: 5px;
-    padding: 10px;
-    background-color: #13161F;
-    border-radius: 8px;
-    margin-top: 5px;
-    max-height: 200px;
-    overflow-y: auto;
-    display: none;
-}
-
-.emoji-grid.active {
-    display: grid;
-}
-
-.emoji-item {
-    font-size: 20px;
-    text-align: center;
-    cursor: pointer;
-    padding: 5px;
-    border-radius: 4px;
-}
-
-.emoji-item:hover {
-    background-color: #1C1F28;
-}
-
-#group-members-list {
-    background-color: #13161F;
-    border-radius: 8px;
-    padding: 10px;
-    margin-bottom: 10px;
-    max-height: 200px;
-    overflow-y: auto;
-}
-
-.group-member {
-    display: flex;
-    align-items: center;
-    padding: 8px;
-    border-radius: 4px;
-    margin-bottom: 5px;
-    background-color: #1C1F28;
-}
-
-.group-member:last-child {
-    margin-bottom: 0;
-}
-
-.group-member img {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    margin-right: 10px;
-}
-
-.group-member .username {
-    flex: 1;
-}
-
-.group-member .remove-member {
-    color: #E85658;
-    cursor: pointer;
-    font-size: 18px;
-}
-
-.add-member-button {
-    width: 100%;
-    padding: 10px;
-    background-color: #1F49C7;
-    color: #ECEBF7;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: background-color 0.3s;
-}
-
-.add-member-button:hover {
-    background-color: #1a3db0;
-}
-
-/* Group Chat Messages */
-.message.group {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-}
-
-.message.group .sender-info {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 5px;
-}
-
-.message.group .sender-info img {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-}
-
-.message.group .sender-info .sender-name {
-    font-size: 12px;
-    color: #B6B8C8;
-}
-
-.message.group .content {
-    flex: 1;
+.group-settings-section input::placeholder {
+    color: #1C1F28;
 }
 
 /* Color Picker Styles */
@@ -1327,10 +1240,10 @@ button:hover {
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
-    padding: 10px;
+    padding: 15px;
     background-color: #13161F;
-    border-radius: 8px;
-    margin-top: 5px;
+    border-radius: 15px;
+    margin-top: 10px;
 }
 
 .color-item {
@@ -1339,6 +1252,7 @@ button:hover {
     border-radius: 50%;
     cursor: pointer;
     border: 2px solid transparent;
+    background-color: var(--color);
 }
 
 .color-item.selected {
@@ -1351,10 +1265,10 @@ button:hover {
     display: flex;
     align-items: center;
     gap: 15px;
-    padding: 15px;
+    padding: 20px;
     background-color: #13161F;
-    border-radius: 8px;
-    margin-bottom: 20px;
+    border-radius: 15px;
+    margin-bottom: 30px;
 }
 
 .group-preview-emoji {
@@ -1365,6 +1279,7 @@ button:hover {
     align-items: center;
     justify-content: center;
     font-size: 24px;
+    background-color: var(--color, #1F49C7);
 }
 
 .group-preview-name {
@@ -1372,13 +1287,122 @@ button:hover {
     color: #ECEBF7;
 }
 
-#group-chat-settings-modal .modal-content {
-    max-height: 90vh;
+/* Group Members List */
+#group-members-list {
+    background-color: #13161F;
+    border-radius: 15px;
+    padding: 15px;
+    margin-bottom: 20px;
+    max-height: 200px;
     overflow-y: auto;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
 }
 
-#group-chat-settings-modal .modal-content::-webkit-scrollbar {
-    display: none;
+.group-member-item {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    background-color: #1C1F28;
+}
+
+.group-member-item:last-child {
+    margin-bottom: 0;
+}
+
+.group-member-item .user-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    margin-right: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #1F49C7;
+}
+
+.group-member-item .username {
+    flex: 1;
+    color: #ECEBF7;
+}
+
+.group-member-item .remove-member {
+    background-color: #E85658;
+    color: #ECEBF7;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.add-member-button {
+    width: 100%;
+    padding: 14px;
+    background-color: #494C56;
+    color: #ECEBF7;
+    border: 3px solid rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: transform 0.1s ease;
+    box-shadow: 0 5px 0 #31333A;
+    margin-bottom: 20px;
+}
+
+.add-member-button:hover {
+    transform: translateY(-2px);
+}
+
+.add-member-button:active {
+    transform: translateY(5px);
+    box-shadow: 0 0 0 #31333A;
+}
+
+#save-group-settings {
+    width: 100%;
+    padding: 14px;
+    background-color: #1F49C7;
+    color: #ECEBF7;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: transform 0.1s ease;
+    box-shadow: 0 5px 0 #13296D;
+}
+
+#save-group-settings:hover {
+    transform: translateY(-2px);
+}
+
+#save-group-settings:active {
+    transform: translateY(5px);
+    box-shadow: 0 0 0 #13296D;
+}
+
+/* Compose Modal Button */
+.start-chat-button {
+    width: 100%;
+    padding: 14px;
+    background-color: #1F49C7;
+    color: #ECEBF7;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: transform 0.1s ease;
+    box-shadow: 0 5px 0 #13296D;
+}
+
+.start-chat-button:hover {
+    transform: translateY(-2px);
+}
+
+.start-chat-button:active {
+    transform: translateY(5px);
+    box-shadow: 0 0 0 #13296D;
 } 
