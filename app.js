@@ -317,81 +317,96 @@ async function loadUsers() {
         const hiddenConversations = currentUserData?.hiddenConversations || [];
         const pinnedConversations = currentUserData?.pinnedConversations || [];
 
-        // Get all messages where current user is a participant (either sender or receiver)
+        // Set up real-time listener for messages
         const messagesQuery = query(
             collection(db, 'messages'),
             where('participants', 'array-contains', currentUser.uid)
         );
-        const messagesSnapshot = await getDocs(messagesQuery);
 
-        // Get unique user IDs from messages
-        const dmUserIds = new Set();
-        messagesSnapshot.forEach(doc => {
-            const message = doc.data();
-            message.participants.forEach(id => {
-                if (id !== currentUser.uid) {
-                    dmUserIds.add(id);
+        // Clear any existing message listener
+        if (window.currentMessageUnsubscribe) {
+            window.currentMessageUnsubscribe();
+        }
+
+        // Set up real-time listener for messages
+        const unsubscribe = onSnapshot(messagesQuery, async (snapshot) => {
+            // Get unique user IDs from messages
+            const dmUserIds = new Set();
+            snapshot.forEach(doc => {
+                const message = doc.data();
+                message.participants.forEach(id => {
+                    if (id !== currentUser.uid) {
+                        dmUserIds.add(id);
+                    }
+                });
+            });
+
+            // Get user details for each DM'd user
+            const usersPromises = Array.from(dmUserIds).map(async (userId) => {
+                const userDoc = await getDoc(doc(db, 'users', userId));
+                const userData = userDoc.data();
+                return {
+                    id: userId,
+                    username: userData.username,
+                    profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
+                    verified: userData.verified,
+                    isPinned: pinnedConversations.includes(userId)
+                };
+            });
+
+            const users = await Promise.all(usersPromises);
+
+            // Sort users: pinned first, then alphabetically
+            users.sort((a, b) => {
+                if (a.isPinned && !b.isPinned) return -1;
+                if (!a.isPinned && b.isPinned) return 1;
+                return a.username.localeCompare(b.username);
+            });
+
+            // Clear existing users
+            usersContainer.innerHTML = '';
+
+            // Display users
+            users.forEach(user => {
+                if (!hiddenConversations.includes(user.id)) {
+                    const userElement = createUserElement(user);
+                    userElement.dataset.uid = user.id;
+                    
+                    if (user.isPinned) {
+                        userElement.classList.add('pinned');
+                        usersContainer.insertBefore(userElement, usersContainer.firstChild);
+                    } else {
+                        usersContainer.appendChild(userElement);
+                    }
+                    
+                    // Add click handler for the user item
+                    userElement.onclick = (e) => {
+                        if (!e.target.classList.contains('action-icon')) {
+                            startChat(user.id, user.username);
+                        }
+                    };
+
+                    // Add click handler for close icon
+                    const closeIcon = userElement.querySelector('.close-icon');
+                    closeIcon.onclick = async (e) => {
+                        e.stopPropagation();
+                        userElement.remove();
+                        try {
+                            await setDoc(doc(db, 'users', currentUser.uid), {
+                                hiddenConversations: arrayUnion(user.id)
+                            }, { merge: true });
+                        } catch (error) {
+                            console.error('Error hiding conversation:', error);
+                        }
+                    };
                 }
             });
+        }, (error) => {
+            console.error('Error in message snapshot:', error);
         });
 
-        // Get user details for each DM'd user
-        const usersPromises = Array.from(dmUserIds).map(async (userId) => {
-            const userDoc = await getDoc(doc(db, 'users', userId));
-            const userData = userDoc.data();
-            return {
-                id: userId,
-                username: userData.username,
-                profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
-                verified: userData.verified,
-                isPinned: pinnedConversations.includes(userId)
-            };
-        });
-
-        const users = await Promise.all(usersPromises);
-
-        // Sort users: pinned first, then alphabetically
-        users.sort((a, b) => {
-            if (a.isPinned && !b.isPinned) return -1;
-            if (!a.isPinned && b.isPinned) return 1;
-            return a.username.localeCompare(b.username);
-        });
-
-        // Display users
-        users.forEach(user => {
-            if (!hiddenConversations.includes(user.id)) {
-                const userElement = createUserElement(user);
-                userElement.dataset.uid = user.id;
-                
-                if (user.isPinned) {
-                    userElement.classList.add('pinned');
-                    usersContainer.insertBefore(userElement, usersContainer.firstChild);
-                } else {
-                    usersContainer.appendChild(userElement);
-                }
-                
-                // Add click handler for the user item
-                userElement.onclick = (e) => {
-                    if (!e.target.classList.contains('action-icon')) {
-                        startChat(user.id, user.username);
-                    }
-                };
-
-                // Add click handler for close icon
-                const closeIcon = userElement.querySelector('.close-icon');
-                closeIcon.onclick = async (e) => {
-                    e.stopPropagation();
-                    userElement.remove();
-                    try {
-                        await setDoc(doc(db, 'users', currentUser.uid), {
-                            hiddenConversations: arrayUnion(user.id)
-                        }, { merge: true });
-                    } catch (error) {
-                        console.error('Error hiding conversation:', error);
-                    }
-                };
-            }
-        });
+        // Store unsubscribe function for cleanup
+        window.currentMessageUnsubscribe = unsubscribe;
     } catch (error) {
         console.error('Error loading users:', error);
     }
