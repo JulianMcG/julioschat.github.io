@@ -218,17 +218,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         userElement.innerHTML = `
                             <img src="${user.profilePicture}" alt="${user.username}" class="user-avatar">
                             <span>${user.username}</span>
-                            <span class="material-symbols-outlined select-user">${selectedUsers.has(user.id) ? 'check_box' : 'check_box_outline_blank'}</span>
+                            <span class="material-symbols-outlined select-user">${selectedUsers.some(u => u.id === user.id) ? 'check_box' : 'check_box_outline_blank'}</span>
                         `;
                         
                         userElement.onclick = (e) => {
                             if (!e.target.classList.contains('select-user')) {
-                                if (selectedUsers.has(user.id)) {
-                                    selectedUsers.delete(user.id);
+                                const isSelected = selectedUsers.some(u => u.id === user.id);
+                                if (isSelected) {
+                                    selectedUsers = selectedUsers.filter(u => u.id !== user.id);
                                     userElement.classList.remove('selected');
                                     userElement.querySelector('.select-user').textContent = 'check_box_outline_blank';
                                 } else {
-                                    selectedUsers.add(user.id);
+                                    selectedUsers.push(user);
                                     userElement.classList.add('selected');
                                     userElement.querySelector('.select-user').textContent = 'check_box';
                                 }
@@ -257,43 +258,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Function to update selected users display
-    async function updateSelectedUsers() {
-        const searchContainer = document.querySelector('#compose-modal .search-container');
-        const searchInput = document.getElementById('compose-search');
-        const selectedUsersContainer = document.createElement('div');
-        selectedUsersContainer.className = 'selected-users';
+    function updateSelectedUsers() {
+        const selectedUsersContainer = document.querySelector('#compose-modal .selected-users');
+        selectedUsersContainer.innerHTML = '';
         
-        for (const userId of selectedUsers) {
-            const userDoc = await getDoc(doc(db, 'users', userId));
-            const userData = userDoc.data();
-            
+        selectedUsers.forEach(user => {
             const userElement = document.createElement('div');
             userElement.className = 'selected-user';
             userElement.innerHTML = `
-                <span>${userData.username}</span>
+                <span>${user.username}</span>
                 <span class="material-symbols-outlined remove-user">close</span>
             `;
             
-            userElement.querySelector('.remove-user').onclick = () => {
-                selectedUsers.delete(userId);
+            userElement.querySelector('.remove-user').addEventListener('click', () => {
+                selectedUsers = selectedUsers.filter(u => u.id !== user.id);
                 updateSelectedUsers();
                 // Update the checkmark in the search results
-                const userItem = document.querySelector(`.compose-user-item[data-id="${userId}"]`);
+                const userItem = document.querySelector(`.compose-user-item[data-id="${user.id}"]`);
                 if (userItem) {
                     userItem.classList.remove('selected');
-                    userElement.querySelector('.select-user').textContent = 'check_box_outline_blank';
+                    userItem.querySelector('.select-user').textContent = 'check_box_outline_blank';
                 }
-            };
+            });
             
             selectedUsersContainer.appendChild(userElement);
-        }
-        
-        // Replace existing selected users with new ones
-        const existingSelectedUsers = searchContainer.querySelector('.selected-users');
-        if (existingSelectedUsers) {
-            existingSelectedUsers.remove();
-        }
-        searchContainer.insertBefore(selectedUsersContainer, searchInput);
+        });
     }
 
     // Message input event listener
@@ -459,7 +448,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 // Create group chat
                 const groupName = selectedUsers.map(user => user.username).join(', ');
-                const groupChatRef = doc(db, 'groupChats');
+                const groupChatRef = doc(collection(db, 'groupChats'));
                 const groupChatData = {
                     name: groupName,
                     emoji: '🗑️',
@@ -468,13 +457,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     createdAt: serverTimestamp()
                 };
                 
-                const groupChatDoc = await addDoc(groupChatRef, groupChatData);
+                await setDoc(groupChatRef, groupChatData);
                 
                 // Add group chat to each member's groupChats array
                 const batch = writeBatch(db);
                 selectedUsers.forEach(user => {
                     batch.update(doc(db, 'users', user.id), {
-                        groupChats: arrayUnion(groupChatDoc.id)
+                        groupChats: arrayUnion(groupChatRef.id)
                     });
                 });
                 await batch.commit();
@@ -1026,13 +1015,13 @@ function openComposeModal() {
 function closeComposeModal() {
     const modal = document.getElementById('compose-modal');
     modal.style.display = 'none';
-    selectedUsers.clear();
+    selectedUsers = [];
     document.getElementById('compose-search').value = '';
     document.getElementById('compose-results').innerHTML = '';
 }
 
 // Group Chat State
-let selectedUsers = new Set();
+let selectedUsers = [];
 let currentGroupChat = null;
 let selectedColor = '#1F49C7'; // Default color
 
