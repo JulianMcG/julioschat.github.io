@@ -213,7 +213,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Display suggestions
                     suggestions.forEach(user => {
                         const userElement = document.createElement('div');
-                        userElement.className = `compose-user-item ${selectedUsers.has(user.id) ? 'selected' : ''}`;
+                        userElement.className = `compose-user-item ${selectedUsers.some(u => u.id === user.id) ? 'selected' : ''}`;
+                        userElement.dataset.id = user.id;
                         userElement.innerHTML = `
                             <img src="${user.profilePicture}" alt="${user.username}" class="user-avatar">
                             <span>${user.username}</span>
