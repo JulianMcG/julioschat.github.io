@@ -617,7 +617,7 @@ body {
 
 .reaction-indicator {
     position: absolute;
-    padding: 4px 8px;
+    padding: 4px 12px;
     border-radius: 50px 50px 5px 50px;
     color: #ECEBF7;
     font-size: 12px;
@@ -625,18 +625,25 @@ body {
     z-index: 1;
     top: -20px;
     right: 0;
+    min-width: 30px;
+    text-align: center;
 }
 
 .reaction-indicator.reactor {
     background-color: #1F49C7;
+    right: 0;
+    left: auto;
+    border-radius: 50px 50px 5px 50px;
 }
 
 .reaction-indicator.reactee {
     background-color: #1C1F28;
+    left: 0;
+    right: auto;
+    border-radius: 50px 50px 50px 5px;
 }
 
 .message.received .reaction-indicator {
-    border-radius: 50px 50px 50px 5px;
     left: 0;
     right: auto;
 }
