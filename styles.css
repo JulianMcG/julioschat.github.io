@@ -1316,4 +1316,36 @@ button:hover {
 
 .message.group .content {
     flex: 1;
+}
+
+/* Color Picker Styles */
+.color-picker {
+    position: relative;
+}
+
+.color-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    padding: 10px;
+    background-color: #13161F;
+    border-radius: 8px;
+    margin-top: 5px;
+}
+
+.color-item {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.color-item:hover {
+    transform: scale(1.1);
+}
+
+.color-item.selected {
+    border: 2px solid #ECEBF7;
+    box-shadow: 0 0 0 2px #1F49C7;
 } 
