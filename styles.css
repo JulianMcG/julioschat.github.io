@@ -716,6 +716,13 @@ body {
     gap: 10px;
 }
 
+.chat-header svg {
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    margin-left: auto;
+}
+
 .chat-header img {
     width: 40px;
     height: 40px;
@@ -1020,12 +1027,13 @@ body {
 
 .option-group input {
     width: 100%;
-    padding: 12px;
-    background-color: #13161F;
-    border: 1px solid #1C1F28;
-    border-radius: 8px;
+    padding: 16px 15px;
+    border: 1.5px solid #1C1F28;
+    border-radius: 15px;
+    font-size: 16px;
+    background-color: #10121B;
     color: #ECEBF7;
-    font-size: 14px;
+    transition: border-color 0.3s;
 }
 
 .option-group input:focus {
@@ -1033,36 +1041,86 @@ body {
     border-color: #1F49C7;
 }
 
-.block-button {
+.option-group input::placeholder {
+    color: #1C1F28;
+}
+
+.option-group input:-webkit-autofill,
+.option-group input:-webkit-autofill:hover,
+.option-group input:-webkit-autofill:focus,
+.option-group input:-webkit-autofill:active {
+    -webkit-text-fill-color: #ECEBF7 !important;
+    -webkit-box-shadow: 0 0 0 30px #10121B inset !important;
+    transition: background-color 5000s ease-in-out 0s;
+}
+
+#save-alias {
+    width: 100%;
+    padding: 14px;
+    background-color: #494C56;
+    color: #ECEBF7;
+    border: 3px solid rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: transform 0.1s ease;
+    box-shadow: 0 5px 0 #31333A;
+}
+
+#save-alias:hover {
+    transform: translateY(-2px);
+}
+
+#save-alias:active {
+    transform: translateY(5px);
+    box-shadow: 0 0 0 #31333A;
+}
+
+#block-user {
+    width: 100%;
+    padding: 14px;
     background-color: #E85658;
     color: #ECEBF7;
-    border: none;
-    padding: 12px;
-    border-radius: 8px;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 600;
-    transition: background-color 0.3s;
+    transition: transform 0.1s ease;
+    box-shadow: 0 5px 0 #8A1315;
 }
 
-.block-button:hover {
-    background-color: #d14547;
+#block-user:hover {
+    transform: translateY(-2px);
 }
 
-.unblock-button {
+#block-user:active {
+    transform: translateY(5px);
+    box-shadow: 0 0 0 #8A1315;
+}
+
+#unblock-user {
+    width: 100%;
+    padding: 14px;
     background-color: #1F49C7;
     color: #ECEBF7;
-    border: none;
-    padding: 12px;
-    border-radius: 8px;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 600;
-    transition: background-color 0.3s;
+    transition: transform 0.1s ease;
+    box-shadow: 0 5px 0 #13296D;
 }
 
-.unblock-button:hover {
-    background-color: #1a3db0;
+#unblock-user:hover {
+    transform: translateY(-2px);
+}
+
+#unblock-user:active {
+    transform: translateY(5px);
+    box-shadow: 0 0 0 #13296D;
 }
 
 /* Add scrollbar hiding for all scrollable elements */
