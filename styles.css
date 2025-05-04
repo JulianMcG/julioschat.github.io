@@ -366,18 +366,6 @@ body {
     padding: 10px;
 }
 
-.user-item.unread::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 8px;
-    height: 8px;
-    background-color: #1F49C7;
-    border-radius: 50%;
-}
-
 .profile-picture {
     width: 40px;
     height: 40px;
@@ -622,14 +610,6 @@ body {
     word-wrap: break-word;
     max-width: 100%;
     padding: 4px 0;
-}
-
-.message .read-status {
-    font-size: 11px;
-    color: #B6B8C8;
-    text-align: right;
-    margin-top: 4px;
-    font-style: italic;
 }
 
 /* Profile Section */
