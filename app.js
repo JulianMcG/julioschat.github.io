@@ -707,172 +707,198 @@ let selectedUsers = new Set();
 let currentGroupChat = null;
 let selectedColor = '#1F49C7'; // Default color
 
-// Initialize color picker
+// Update the preview when group name or emoji changes
+document.getElementById('group-name').addEventListener('input', function() {
+    document.getElementById('group-preview-name').textContent = this.value || 'New Group';
+});
+
+document.getElementById('group-emoji').addEventListener('input', function() {
+    document.getElementById('group-preview-emoji').textContent = this.value || '🗑️';
+});
+
+// Update the preview when color changes
+function updateGroupPreviewColor(color) {
+    document.getElementById('group-preview-emoji').style.backgroundColor = color;
+}
+
+// Update the color picker initialization
 function initializeColorPicker() {
-    const colorGrid = document.getElementById('color-grid');
+    const colorGrid = document.querySelector('.color-grid');
     const colorItems = colorGrid.querySelectorAll('.color-item');
     
     colorItems.forEach(item => {
-        const color = item.dataset.color;
-        item.style.backgroundColor = color;
-        
-        item.onclick = () => {
+        item.addEventListener('click', () => {
             // Remove selected class from all items
             colorItems.forEach(i => i.classList.remove('selected'));
             // Add selected class to clicked item
             item.classList.add('selected');
             // Update selected color
-            selectedColor = color;
-        };
-        
-        // Select default color
-        if (color === selectedColor) {
-            item.classList.add('selected');
-        }
+            selectedColor = item.style.backgroundColor;
+            // Update preview
+            updateGroupPreviewColor(selectedColor);
+        });
     });
 }
 
-// Modify openGroupChatSettings to handle color
+// Update the openGroupChatSettings function
 function openGroupChatSettings() {
     const modal = document.getElementById('group-chat-settings-modal');
-    const groupMembersList = document.getElementById('group-members-list');
     const groupNameInput = document.getElementById('group-name');
     const groupEmojiInput = document.getElementById('group-emoji');
-    groupMembersList.innerHTML = '';
-
+    const groupMembersList = document.getElementById('group-members-list');
+    const saveButton = document.getElementById('save-group-settings');
+    
+    // Initialize color picker
+    initializeColorPicker();
+    
     if (currentGroupChat) {
         // Editing existing group chat
         groupNameInput.value = currentGroupChat.name;
         groupEmojiInput.value = currentGroupChat.emoji;
         selectedColor = currentGroupChat.backgroundColor || '#1F49C7';
+        
+        // Update preview
+        document.getElementById('group-preview-name').textContent = currentGroupChat.name;
+        document.getElementById('group-preview-emoji').textContent = currentGroupChat.emoji;
+        updateGroupPreviewColor(selectedColor);
+        
+        // Set selected color in color picker
+        const colorItems = document.querySelectorAll('.color-item');
+        colorItems.forEach(item => {
+            if (item.style.backgroundColor === selectedColor) {
+                item.classList.add('selected');
+            }
+        });
+        
+        // Populate members list
+        groupMembersList.innerHTML = '';
+        currentGroupChat.members.forEach(memberId => {
+            if (memberId !== currentUser.uid) {
+                const memberRef = doc(db, 'users', memberId);
+                getDoc(memberRef).then(doc => {
+                    if (doc.exists()) {
+                        const member = doc.data();
+                        const memberItem = document.createElement('div');
+                        memberItem.className = 'group-member-item';
+                        memberItem.innerHTML = `
+                            <div class="user-avatar">
+                                <span class="avatar-emoji">${member.emoji}</span>
+                            </div>
+                            <span class="username">${member.username}</span>
+                            <button class="remove-member">Remove</button>
+                        `;
+                        memberItem.querySelector('.remove-member').addEventListener('click', () => {
+                            memberItem.remove();
+                        });
+                        groupMembersList.appendChild(memberItem);
+                    }
+                });
+            }
+        });
     } else {
         // Creating new group chat
         groupNameInput.value = '';
         groupEmojiInput.value = '🗑️';
         selectedColor = '#1F49C7';
-    }
-
-    // Initialize color picker
-    initializeColorPicker();
-
-    // Add current user
-    const currentUserElement = document.createElement('div');
-    currentUserElement.className = 'group-member';
-    currentUserElement.innerHTML = `
-        <img src="${currentUser.photoURL || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${currentUser.displayName}">
-        <span class="username">${currentUser.displayName} (You)</span>
-    `;
-    groupMembersList.appendChild(currentUserElement);
-
-    // Add other members
-    const members = currentGroupChat ? currentGroupChat.members : Array.from(selectedUsers);
-    members.forEach(async (userId) => {
-        if (userId === currentUser.uid) return;
         
-        const userDoc = await getDoc(doc(db, 'users', userId));
-        const userData = userDoc.data();
-        const userElement = document.createElement('div');
-        userElement.className = 'group-member';
-        userElement.innerHTML = `
-            <img src="${userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${userData.username}">
-            <span class="username">${userData.username}</span>
-            <span class="material-symbols-outlined remove-member">close</span>
-        `;
+        // Update preview
+        document.getElementById('group-preview-name').textContent = 'New Group';
+        document.getElementById('group-preview-emoji').textContent = '🗑️';
+        updateGroupPreviewColor(selectedColor);
         
-        userElement.querySelector('.remove-member').onclick = async () => {
-            if (currentGroupChat) {
-                // Update group chat in Firestore
-                try {
-                    await updateDoc(doc(db, 'groupChats', currentGroupChat.id), {
-                        members: arrayRemove(userId)
-                    });
-                    
-                    // Update local state
-                    currentGroupChat.members = currentGroupChat.members.filter(id => id !== userId);
-                } catch (error) {
-                    console.error('Error removing member:', error);
-                    alert('Error removing member. Please try again.');
-                }
-            } else {
-                selectedUsers.delete(userId);
+        // Set selected color in color picker
+        const colorItems = document.querySelectorAll('.color-item');
+        colorItems.forEach(item => {
+            if (item.style.backgroundColor === selectedColor) {
+                item.classList.add('selected');
             }
-            userElement.remove();
-        };
+        });
         
-        groupMembersList.appendChild(userElement);
-    });
-
+        // Add current user and selected users to members list
+        groupMembersList.innerHTML = '';
+        selectedUsers.forEach(userId => {
+            const userRef = doc(db, 'users', userId);
+            getDoc(userRef).then(doc => {
+                if (doc.exists()) {
+                    const user = doc.data();
+                    const memberItem = document.createElement('div');
+                    memberItem.className = 'group-member-item';
+                    memberItem.innerHTML = `
+                        <div class="user-avatar">
+                            <span class="avatar-emoji">${user.emoji}</span>
+                        </div>
+                        <span class="username">${user.username}</span>
+                        <button class="remove-member">Remove</button>
+                    `;
+                    memberItem.querySelector('.remove-member').addEventListener('click', () => {
+                        memberItem.remove();
+                    });
+                    groupMembersList.appendChild(memberItem);
+                }
+            });
+        });
+    }
+    
     modal.style.display = 'block';
 }
 
-// Modify saveGroupChatSettings to include background color
-document.getElementById('save-group-settings').addEventListener('click', async () => {
+// Update the saveGroupChatSettings function
+async function saveGroupChatSettings() {
     const groupName = document.getElementById('group-name').value.trim();
     const groupEmoji = document.getElementById('group-emoji').value.trim();
-
+    const groupMembersList = document.getElementById('group-members-list');
+    const memberItems = groupMembersList.querySelectorAll('.group-member-item');
+    
     if (!groupName) {
         alert('Please enter a group name');
         return;
     }
-
+    
     if (!groupEmoji) {
-        alert('Please select a group emoji');
+        alert('Please select an emoji');
         return;
     }
-
+    
     try {
+        const members = [currentUser.uid];
+        memberItems.forEach(item => {
+            const username = item.querySelector('.username').textContent;
+            const userRef = doc(db, 'users', username);
+            members.push(userRef.id);
+        });
+        
         if (currentGroupChat) {
             // Update existing group chat
-            await updateDoc(doc(db, 'groupChats', currentGroupChat.id), {
+            const groupRef = doc(db, 'groupChats', currentGroupChat.id);
+            await updateDoc(groupRef, {
                 name: groupName,
                 emoji: groupEmoji,
-                backgroundColor: selectedColor
+                backgroundColor: selectedColor,
+                members: members
             });
-            
-            // Update local state
-            currentGroupChat.name = groupName;
-            currentGroupChat.emoji = groupEmoji;
-            currentGroupChat.backgroundColor = selectedColor;
         } else {
             // Create new group chat
-            const groupData = {
+            const groupRef = await addDoc(collection(db, 'groupChats'), {
                 name: groupName,
                 emoji: groupEmoji,
                 backgroundColor: selectedColor,
-                members: [currentUser.uid, ...Array.from(selectedUsers)],
+                members: members,
                 createdAt: serverTimestamp()
-            };
-
-            const groupRef = await addDoc(collection(db, 'groupChats'), groupData);
+            });
             
-            // Start the group chat
-            currentGroupChat = {
-                id: groupRef.id,
-                name: groupName,
-                emoji: groupEmoji,
-                backgroundColor: selectedColor,
-                members: groupData.members
-            };
+            // Add the group chat to the current user's groupChats array
+            const userRef = doc(db, 'users', currentUser.uid);
+            await updateDoc(userRef, {
+                groupChats: arrayUnion(groupRef.id)
+            });
         }
-
-        // Update UI
-        document.getElementById('active-chat-username').innerHTML = `
-            <span class="group-emoji" style="background-color: ${selectedColor}">${groupEmoji}</span>
-            ${groupName}
-        `;
-        document.querySelector('.chat-header svg').style.display = 'block';
-
-        closeGroupChatSettings();
-        loadMessages();
+        
+        document.getElementById('group-chat-settings-modal').style.display = 'none';
+        loadChats();
     } catch (error) {
         console.error('Error saving group chat:', error);
         alert('Error saving group chat. Please try again.');
     }
-});
-
-// Close Group Chat Settings
-function closeGroupChatSettings() {
-    document.getElementById('group-chat-settings-modal').style.display = 'none';
 }
 
 // User Options Modal
