@@ -1470,10 +1470,6 @@ input:checked + .slider:before {
 }
 
 .google-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
     width: 100%;
     padding: 14px;
     background-color: #494C56;
@@ -1485,6 +1481,11 @@ input:checked + .slider:before {
     font-weight: 500;
     transition: transform 0.1s ease;
     box-shadow: 0 5px 0 #31333A;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
 }
 
 .google-button:hover {
