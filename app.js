@@ -351,18 +351,30 @@ async function loadUsers() {
 
             // Get user details for each DM'd user
             const usersPromises = Array.from(dmUserIds).map(async (userId) => {
-                const userDoc = await getDoc(doc(db, 'users', userId));
-                const userData = userDoc.data();
-                if (!userData) return null; // Skip if user data doesn't exist
-                
-                return {
-                    id: userId,
-                    username: userData.username,
-                    profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
-                    verified: userData.verified || false,
-                    isPinned: pinnedConversations.includes(userId),
-                    lastMessageTime: userLastMessageTimes.get(userId) || new Date(0)
-                };
+                try {
+                    const userDoc = await getDoc(doc(db, 'users', userId));
+                    const userData = userDoc.data();
+                    
+                    if (!userData) {
+                        console.warn(`No user data found for ID: ${userId}`);
+                        return null;
+                    }
+
+                    const user = {
+                        id: userId,
+                        username: userData.username,
+                        profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
+                        verified: Boolean(userData.verified), // Ensure verified is a boolean
+                        isPinned: pinnedConversations.includes(userId),
+                        lastMessageTime: userLastMessageTimes.get(userId) || new Date(0)
+                    };
+
+                    console.log(`User loaded: ${user.username}, Verified: ${user.verified}`);
+                    return user;
+                } catch (error) {
+                    console.error(`Error loading user ${userId}:`, error);
+                    return null;
+                }
             });
 
             const users = (await Promise.all(usersPromises)).filter(user => user !== null);
@@ -423,8 +435,12 @@ async function loadUsers() {
 function createUserElement(user) {
     const userElement = document.createElement('div');
     userElement.className = 'user-item';
+    
+    // Debug verification status
+    console.log(`Creating element for ${user.username}, Verified: ${user.verified}`);
+    
     userElement.innerHTML = `
-        <img src="${user.profilePicture || 'default-avatar.png'}" alt="${user.username}" class="profile-picture">
+        <img src="${user.profilePicture}" alt="${user.username}" class="profile-picture">
         <span class="username">${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
         <div class="user-actions">
             <span class="material-symbols-outlined action-icon pin-icon">keep</span>
