@@ -322,17 +322,19 @@ async function loadUsers() {
         // Get all messages where current user is a participant
         const messagesQuery = query(
             collection(db, 'messages'),
-            where('participants', 'array-contains', currentUser.uid),
-            orderBy('timestamp', 'desc')
+            where('participants', 'array-contains', currentUser.uid)
         );
         const messagesSnapshot = await getDocs(messagesQuery);
 
         // Create a map to store the latest message timestamp for each user
         const userLastMessageTimes = new Map();
+        const dmUserIds = new Set();
+        
         messagesSnapshot.forEach(doc => {
             const message = doc.data();
             message.participants.forEach(id => {
                 if (id !== currentUser.uid) {
+                    dmUserIds.add(id);
                     const timestamp = message.timestamp?.toDate() || new Date(0);
                     if (!userLastMessageTimes.has(id) || timestamp > userLastMessageTimes.get(id)) {
                         userLastMessageTimes.set(id, timestamp);
@@ -342,7 +344,7 @@ async function loadUsers() {
         });
 
         // Get user details for each DM'd user
-        const usersPromises = Array.from(userLastMessageTimes.keys()).map(async (userId) => {
+        const usersPromises = Array.from(dmUserIds).map(async (userId) => {
             const userDoc = await getDoc(doc(db, 'users', userId));
             const userData = userDoc.data();
             return {
@@ -351,7 +353,7 @@ async function loadUsers() {
                 profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
                 verified: userData.verified,
                 isPinned: pinnedConversations.includes(userId),
-                lastMessageTime: userLastMessageTimes.get(userId)
+                lastMessageTime: userLastMessageTimes.get(userId) || new Date(0)
             };
         });
 
@@ -366,36 +368,38 @@ async function loadUsers() {
 
         // Display users
         users.forEach(user => {
-            const userElement = createUserElement(user);
-            userElement.dataset.uid = user.id;
-            
-            if (user.isPinned) {
-                userElement.classList.add('pinned');
-                usersContainer.insertBefore(userElement, usersContainer.firstChild);
-            } else {
-                usersContainer.appendChild(userElement);
-            }
-            
-            // Add click handler for the user item
-            userElement.onclick = (e) => {
-                if (!e.target.classList.contains('action-icon')) {
-                    startChat(user.id, user.username);
+            if (!hiddenConversations.includes(user.id)) {
+                const userElement = createUserElement(user);
+                userElement.dataset.uid = user.id;
+                
+                if (user.isPinned) {
+                    userElement.classList.add('pinned');
+                    usersContainer.insertBefore(userElement, usersContainer.firstChild);
+                } else {
+                    usersContainer.appendChild(userElement);
                 }
-            };
+                
+                // Add click handler for the user item
+                userElement.onclick = (e) => {
+                    if (!e.target.classList.contains('action-icon')) {
+                        startChat(user.id, user.username);
+                    }
+                };
 
-            // Add click handler for close icon
-            const closeIcon = userElement.querySelector('.close-icon');
-            closeIcon.onclick = async (e) => {
-                e.stopPropagation();
-                userElement.remove();
-                try {
-                    await setDoc(doc(db, 'users', currentUser.uid), {
-                        hiddenConversations: arrayUnion(user.id)
-                    }, { merge: true });
-                } catch (error) {
-                    console.error('Error hiding conversation:', error);
-                }
-            };
+                // Add click handler for close icon
+                const closeIcon = userElement.querySelector('.close-icon');
+                closeIcon.onclick = async (e) => {
+                    e.stopPropagation();
+                    userElement.remove();
+                    try {
+                        await setDoc(doc(db, 'users', currentUser.uid), {
+                            hiddenConversations: arrayUnion(user.id)
+                        }, { merge: true });
+                    } catch (error) {
+                        console.error('Error hiding conversation:', error);
+                    }
+                };
+            }
         });
     } catch (error) {
         console.error('Error loading users:', error);
