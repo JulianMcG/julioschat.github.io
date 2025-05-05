@@ -78,7 +78,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 1px;
+            gap: 2px;
             cursor: pointer;
         }
 
@@ -164,7 +164,7 @@
                     contactName.className = 'contact-name';
                     contactName.innerHTML = `
                         ${contactData.username}
-                        ${contactData.verified ? '<span class="verified-badge"><span class="material-symbols-outlined">verified</span></span>' : ''}
+                        ${contactData.verified ? '<span class="verified-badge"><span class="material-symbols-filled">verified</span></span>' : ''}
                     `;
                     contactName.onclick = () => window.open(`https://www.julios.games/chat?user=${userId}`, '_blank');
                     contactNames.insertBefore(contactName, emptyName);
