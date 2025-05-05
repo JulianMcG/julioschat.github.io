@@ -98,10 +98,7 @@ service cloud.firestore {
     }
     match /users/{user} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && (
-        request.auth.uid == user || 
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['verified'])
-      );
+      allow write: if request.auth != null;
     }
     match /typing/{typingId} {
       allow read: if request.auth != null && 
