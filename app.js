@@ -30,6 +30,10 @@ let typingTimeout = null;
 let isTyping = false;
 const storage = getStorage();
 
+// Notification Sound
+let notificationSound = new Audio('NotifSounds/Birdy.mp3');
+let isTabFocused = true;
+
 // Profile Picture Upload
 document.getElementById('profile-picture-preview').addEventListener('click', () => {
     document.getElementById('profile-picture-input').click();
@@ -657,6 +661,11 @@ async function loadMessages() {
                     message.participants.includes(currentUser.uid) &&
                     !blockedUsers.includes(message.senderId)) {
                     
+                    // Play notification sound if message is from other user
+                    if (message.senderId !== currentUser.uid) {
+                        playNotificationSound();
+                    }
+                    
                     const messageTime = message.timestamp.toDate();
                     
                     // Add timestamp or gap if needed
@@ -943,6 +952,7 @@ onAuthStateChanged(auth, (user) => {
         currentUser = user;
         updateCurrentUserProfile(user);
         showChatSection();
+        loadNotificationSoundPreference();
     } else {
         currentUser = null;
         showAuthSection();
@@ -1422,3 +1432,56 @@ function setupTypingListener() {
     
     return unsubscribe;
 }
+
+// Load user's notification sound preference
+async function loadNotificationSoundPreference() {
+    try {
+        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        const userData = userDoc.data();
+        const selectedSound = userData?.notificationSound || 'Birdy.mp3';
+        
+        // Update select element
+        const soundSelect = document.getElementById('notification-sound');
+        soundSelect.value = selectedSound;
+        
+        // Update audio source
+        notificationSound = new Audio(`NotifSounds/${selectedSound}`);
+    } catch (error) {
+        console.error('Error loading notification sound preference:', error);
+    }
+}
+
+// Save notification sound preference
+async function saveNotificationSoundPreference() {
+    const soundSelect = document.getElementById('notification-sound');
+    const selectedSound = soundSelect.value;
+    
+    try {
+        await setDoc(doc(db, 'users', currentUser.uid), {
+            notificationSound: selectedSound
+        }, { merge: true });
+        
+        // Update audio source
+        notificationSound = new Audio(`NotifSounds/${selectedSound}`);
+    } catch (error) {
+        console.error('Error saving notification sound preference:', error);
+    }
+}
+
+// Play notification sound
+function playNotificationSound() {
+    if (!isTabFocused) {
+        notificationSound.currentTime = 0;
+        notificationSound.play().catch(error => {
+            console.error('Error playing notification sound:', error);
+        });
+    }
+}
+
+// Tab focus detection
+document.addEventListener('visibilitychange', () => {
+    isTabFocused = document.visibilityState === 'visible';
+});
+
+// Add notification sound event listener
+document.getElementById('notification-sound').addEventListener('change', saveNotificationSoundPreference);
