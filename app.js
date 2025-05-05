@@ -633,6 +633,7 @@ async function loadMessages() {
         const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
             chatMessages.innerHTML = '';
             let lastMessageTime = null;
+            let lastMessageSenderId = null;
             
             snapshot.forEach(doc => {
                 const message = doc.data();
@@ -650,9 +651,10 @@ async function loadMessages() {
                     if (lastMessageTime) {
                         const timeDiff = messageTime - lastMessageTime;
                         const fiveMinutes = 5 * 60 * 1000; // 5 minutes in milliseconds
-                        const thirtyMinutes = 30 * 60 * 1000; // 30 minutes in milliseconds
+                        const twentyMinutes = 20 * 60 * 1000; // 20 minutes in milliseconds
+                        const threeMinutes = 3 * 60 * 1000; // 3 minutes in milliseconds
                         
-                        if (timeDiff > thirtyMinutes) {
+                        if (timeDiff > twentyMinutes) {
                             // Add date separator
                             const dateSeparator = document.createElement('div');
                             dateSeparator.className = 'date-separator';
@@ -680,6 +682,12 @@ async function loadMessages() {
                             const gap = document.createElement('div');
                             gap.className = 'message-gap';
                             chatMessages.appendChild(gap);
+                        } else if (timeDiff > threeMinutes && message.senderId === lastMessageSenderId) {
+                            // Add gap for same sender after 3 minutes
+                            const gap = document.createElement('div');
+                            gap.className = 'message-gap';
+                            gap.style.height = '15px';
+                            chatMessages.appendChild(gap);
                         }
                     }
                     
@@ -691,6 +699,7 @@ async function loadMessages() {
                     chatMessages.appendChild(messageElement);
                     
                     lastMessageTime = messageTime;
+                    lastMessageSenderId = message.senderId;
                 }
             });
             
