@@ -41,6 +41,12 @@
             color: #ff4444;
             margin-top: 20px;
         }
+
+        .loading {
+            text-align: center;
+            color: #B6B8C8;
+            margin-top: 20px;
+        }
     </style>
     <!-- Firebase SDK -->
     <script type="module" src="firebase-config.js"></script>
@@ -53,23 +59,26 @@
             query, 
             collection, 
             where, 
-            getDocs,
-            onAuthStateChanged
+            getDocs
         } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+        import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
         // Admin email
         const ADMIN_EMAIL = 'julianmcgurie2008@gmail.com';
 
+        // Show loading state initially
+        document.getElementById('loading').style.display = 'block';
+
         // Check authentication state
         onAuthStateChanged(auth, (user) => {
+            // Hide loading state
+            document.getElementById('loading').style.display = 'none';
+
             if (user && user.email === ADMIN_EMAIL) {
                 // User is authenticated and is the admin
-                document.getElementById('password-form').style.display = 'none';
                 document.getElementById('verify-form').style.display = 'block';
             } else {
                 // User is not authenticated or not the admin
-                document.getElementById('password-form').style.display = 'none';
-                document.getElementById('verify-form').style.display = 'none';
                 document.getElementById('access-denied').style.display = 'block';
             }
         });
@@ -136,9 +145,8 @@
 <body>
     <div class="container">
         <div class="section">
-            <div class="auth-form" id="password-form" style="display: none;">
-                <h2>Admin Access</h2>
-                <p id="error-message" class="error-message"></p>
+            <div id="loading" class="loading">
+                <h2>Loading...</h2>
             </div>
 
             <div class="auth-form" id="verify-form" style="display: none;">
