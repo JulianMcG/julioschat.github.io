@@ -20,7 +20,8 @@ import {
     addDoc,
     serverTimestamp,
     arrayUnion,
-    arrayRemove
+    arrayRemove,
+    updateDoc
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
@@ -632,7 +633,7 @@ async function loadMessages() {
 
         const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
             chatMessages.innerHTML = '';
-            let lastMessageTime = null;
+            let lastMessageTime = 0;
             
             snapshot.forEach(doc => {
                 const message = doc.data();
@@ -644,7 +645,12 @@ async function loadMessages() {
                     message.participants.includes(currentUser.uid) &&
                     !blockedUsers.includes(message.senderId)) {
                     
-                    const messageTime = message.timestamp.toDate();
+                    const messageTime = message.timestamp?.toDate() || new Date();
+                    
+                    // Update message as read if it's received
+                    if (message.receiverId === currentUser.uid && !message.read) {
+                        updateDoc(doc.ref, { read: true });
+                    }
                     
                     // Add timestamp or gap if needed
                     if (lastMessageTime) {
@@ -685,7 +691,18 @@ async function loadMessages() {
                     
                     const messageElement = document.createElement('div');
                     messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
-                    messageElement.innerHTML = `
+                    
+                    if (message.senderId === currentUser.uid) {
+                        const readReceipt = document.createElement('div');
+                        readReceipt.className = `read-receipt ${message.read ? 'double' : 'single'}`;
+                        readReceipt.innerHTML = `
+                            <span class="material-symbols-outlined">done</span>
+                            ${message.read ? '<span class="material-symbols-outlined">done</span>' : ''}
+                        `;
+                        messageElement.appendChild(readReceipt);
+                    }
+                    
+                    messageElement.innerHTML += `
                         <div class="content">${message.content}</div>
                     `;
                     chatMessages.appendChild(messageElement);
@@ -889,7 +906,8 @@ async function sendMessage(content) {
             senderId: currentUser.uid,
             receiverId: currentChatUser.id,
             participants: [currentUser.uid, currentChatUser.id],
-            timestamp: serverTimestamp()
+            timestamp: serverTimestamp(),
+            read: false
         };
 
         // Add message to Firestore
