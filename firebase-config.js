@@ -100,6 +100,16 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow write: if request.auth != null && request.auth.uid == user;
     }
+    match /groups/{group} {
+      allow read: if request.auth != null && 
+        request.auth.uid in resource.data.members;
+      allow create: if request.auth != null && 
+        request.auth.uid in request.resource.data.members;
+      allow update: if request.auth != null && 
+        request.auth.uid in resource.data.members;
+      allow delete: if request.auth != null && 
+        request.auth.uid == resource.data.creator;
+    }
     match /typing/{typingId} {
       allow read: if request.auth != null && 
         (request.auth.uid == resource.data.userId || 
