@@ -562,6 +562,31 @@ body {
     text-align: right;
     border-radius: 15px 15px 5px 15px;
     position: relative;
+    padding-right: 30px;
+}
+
+.read-receipt {
+    position: absolute;
+    right: -20px;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 12px;
+    color: #1F49C7;
+}
+
+.read-receipt .material-symbols-outlined {
+    font-size: 14px;
+    font-variation-settings: 'FILL' 1;
+}
+
+.read-receipt.single {
+    color: #B6B8C8;
+}
+
+.read-receipt.double {
+    color: #1F49C7;
 }
 
 .message-actions {
