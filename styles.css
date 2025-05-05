@@ -646,16 +646,17 @@ body {
 /* Text Formatting Styles */
 .message .content em {
     font-style: italic;
+    font-weight: 500;
 }
 
 .message .content strong {
-    font-weight: 900;
+    font-weight: 800;
 }
 
 .message .content em strong,
 .message .content strong em {
     font-style: italic;
-    font-weight: 900;
+    font-weight: 800;
 }
 
 .message .content u {
