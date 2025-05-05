@@ -1475,19 +1475,20 @@ input:checked + .slider:before {
     justify-content: center;
     gap: 10px;
     width: 100%;
-    padding: 12px;
+    padding: 14px;
     background-color: #494C56;
+    color: #ECEBF7;
     border: 3px solid rgba(255, 255, 255, 0.05);
     border-radius: 15px;
-    color: #ECEBF7;
-    font-size: 1rem;
     cursor: pointer;
-    transition: background-color 0.2s;
+    font-size: 16px;
+    font-weight: 500;
+    transition: transform 0.1s ease;
     box-shadow: 0 5px 0 #31333A;
 }
 
 .google-button:hover {
-    background-color: #5a5d68;
+    transform: translateY(-2px);
 }
 
 .google-button:active {
