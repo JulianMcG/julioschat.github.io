@@ -633,7 +633,6 @@ async function loadMessages() {
         const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
             chatMessages.innerHTML = '';
             let lastMessageTime = null;
-            let lastSentMessage = null;
             
             snapshot.forEach(doc => {
                 const message = doc.data();
@@ -691,22 +690,9 @@ async function loadMessages() {
                     `;
                     chatMessages.appendChild(messageElement);
                     
-                    // Track the last message sent by the current user
-                    if (message.senderId === currentUser.uid) {
-                        lastSentMessage = message;
-                    }
-                    
                     lastMessageTime = messageTime;
                 }
             });
-            
-            // Add read receipt for the last sent message
-            if (lastSentMessage) {
-                const readReceipt = document.createElement('div');
-                readReceipt.className = 'read-receipt';
-                readReceipt.textContent = lastSentMessage.read ? 'Seen' : 'Sent';
-                chatMessages.appendChild(readReceipt);
-            }
             
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }, (error) => {
@@ -718,47 +704,6 @@ async function loadMessages() {
         console.error('Error loading messages:', error);
     }
 }
-
-// Update message read status
-async function updateMessageReadStatus(messageId) {
-    try {
-        await setDoc(doc(db, 'messages', messageId), {
-            read: true
-        }, { merge: true });
-    } catch (error) {
-        console.error('Error updating message read status:', error);
-    }
-}
-
-// Add event listener for message visibility
-document.addEventListener('DOMContentLoaded', () => {
-    const chatMessages = document.getElementById('chat-messages');
-    if (chatMessages) {
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const messageElement = entry.target;
-                    const messageId = messageElement.dataset.messageId;
-                    if (messageId) {
-                        updateMessageReadStatus(messageId);
-                    }
-                }
-            });
-        }, { threshold: 0.5 });
-
-        // Observe all messages
-        const observeMessages = () => {
-            const messages = chatMessages.querySelectorAll('.message');
-            messages.forEach(message => {
-                observer.observe(message);
-            });
-        };
-
-        // Observe messages when they're added
-        const messageObserver = new MutationObserver(observeMessages);
-        messageObserver.observe(chatMessages, { childList: true });
-    }
-});
 
 // Check Firebase connection
 function checkFirebaseConnection() {
