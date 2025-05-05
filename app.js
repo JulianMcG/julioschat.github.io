@@ -353,17 +353,19 @@ async function loadUsers() {
             const usersPromises = Array.from(dmUserIds).map(async (userId) => {
                 const userDoc = await getDoc(doc(db, 'users', userId));
                 const userData = userDoc.data();
+                if (!userData) return null; // Skip if user data doesn't exist
+                
                 return {
                     id: userId,
                     username: userData.username,
                     profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
-                    verified: userData.verified,
+                    verified: userData.verified || false,
                     isPinned: pinnedConversations.includes(userId),
                     lastMessageTime: userLastMessageTimes.get(userId) || new Date(0)
                 };
             });
 
-            const users = await Promise.all(usersPromises);
+            const users = (await Promise.all(usersPromises)).filter(user => user !== null);
 
             // Sort users: pinned first, then by last message time
             users.sort((a, b) => {
