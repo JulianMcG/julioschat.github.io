@@ -33,6 +33,7 @@ const storage = getStorage();
 // Notification Sound
 let notificationSound = new Audio('NotifSounds/Birdy.mp3');
 let isTabFocused = true;
+let notificationsEnabled = true;
 
 // Profile Picture Upload
 document.getElementById('profile-picture-preview').addEventListener('click', () => {
@@ -1439,10 +1440,15 @@ async function loadNotificationSoundPreference() {
         const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
         const userData = userDoc.data();
         const selectedSound = userData?.notificationSound || 'Birdy.mp3';
+        const notificationsEnabled = userData?.notificationsEnabled ?? true;
         
         // Update select element
         const soundSelect = document.getElementById('notification-sound');
         soundSelect.value = selectedSound;
+        
+        // Update toggle
+        const notificationToggle = document.getElementById('notification-toggle');
+        notificationToggle.checked = notificationsEnabled;
         
         // Update audio source
         notificationSound = new Audio(`NotifSounds/${selectedSound}`);
@@ -1455,10 +1461,13 @@ async function loadNotificationSoundPreference() {
 async function saveNotificationSoundPreference() {
     const soundSelect = document.getElementById('notification-sound');
     const selectedSound = soundSelect.value;
+    const notificationToggle = document.getElementById('notification-toggle');
+    const notificationsEnabled = notificationToggle.checked;
     
     try {
         await setDoc(doc(db, 'users', currentUser.uid), {
-            notificationSound: selectedSound
+            notificationSound: selectedSound,
+            notificationsEnabled: notificationsEnabled
         }, { merge: true });
         
         // Update audio source
@@ -1470,12 +1479,22 @@ async function saveNotificationSoundPreference() {
 
 // Play notification sound
 function playNotificationSound() {
-    if (!isTabFocused) {
+    if (!isTabFocused && notificationsEnabled) {
         notificationSound.currentTime = 0;
         notificationSound.play().catch(error => {
             console.error('Error playing notification sound:', error);
         });
     }
+}
+
+// Preview notification sound
+function previewNotificationSound() {
+    const soundSelect = document.getElementById('notification-sound');
+    const selectedSound = soundSelect.value;
+    const previewSound = new Audio(`NotifSounds/${selectedSound}`);
+    previewSound.play().catch(error => {
+        console.error('Error playing preview sound:', error);
+    });
 }
 
 // Tab focus detection
@@ -1485,3 +1504,14 @@ document.addEventListener('visibilitychange', () => {
 
 // Add notification sound event listener
 document.getElementById('notification-sound').addEventListener('change', saveNotificationSoundPreference);
+
+// Add event listeners for notification settings
+document.addEventListener('DOMContentLoaded', () => {
+    const soundSelect = document.getElementById('notification-sound');
+    const previewButton = document.getElementById('preview-sound');
+    const notificationToggle = document.getElementById('notification-toggle');
+    
+    soundSelect.addEventListener('change', saveNotificationSoundPreference);
+    previewButton.addEventListener('click', previewNotificationSound);
+    notificationToggle.addEventListener('change', saveNotificationSoundPreference);
+});
