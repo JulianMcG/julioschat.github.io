@@ -5,7 +5,9 @@ import {
     signInWithEmailAndPassword, 
     signOut, 
     onAuthStateChanged,
-    updateProfile
+    updateProfile,
+    GoogleAuthProvider,
+    signInWithPopup
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { 
     collection, 
@@ -148,6 +150,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginLink = document.querySelector('#signup-form .auth-link');
     const loginButton = document.getElementById('login-button');
     const signupButton = document.getElementById('signup-button');
+    const googleLoginButton = document.getElementById('google-login-button');
+    const googleSignupButton = document.getElementById('google-signup-button');
 
     if (signupLink) {
         signupLink.addEventListener('click', (e) => {
@@ -169,6 +173,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (signupButton) {
         signupButton.addEventListener('click', signup);
+    }
+
+    if (googleLoginButton) {
+        googleLoginButton.addEventListener('click', signInWithGoogle);
+    }
+
+    if (googleSignupButton) {
+        googleSignupButton.addEventListener('click', signInWithGoogle);
     }
 });
 
@@ -1565,3 +1577,30 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedSound: soundSelect.value
     });
 });
+
+async function signInWithGoogle() {
+    try {
+        const provider = new GoogleAuthProvider();
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+
+        // Check if user document exists
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        
+        if (!userDoc.exists()) {
+            // Create new user document if it doesn't exist
+            await setDoc(doc(db, 'users', user.uid), {
+                username: user.displayName || user.email.split('@')[0],
+                email: user.email,
+                profilePicture: user.photoURL,
+                createdAt: serverTimestamp()
+            });
+        }
+
+        // Show chat section
+        showChatSection();
+    } catch (error) {
+        console.error('Google Sign-In error:', error);
+        alert(`Error signing in with Google: ${error.message}`);
+    }
+}
