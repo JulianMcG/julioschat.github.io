@@ -650,9 +650,7 @@ async function loadMessages() {
                     // Add timestamp or gap if needed
                     if (lastMessageTime) {
                         const timeDiff = messageTime - lastMessageTime;
-                        const fiveMinutes = 5 * 60 * 1000; // 5 minutes in milliseconds
                         const twentyMinutes = 20 * 60 * 1000; // 20 minutes in milliseconds
-                        const threeMinutes = 3 * 60 * 1000; // 3 minutes in milliseconds
                         
                         if (timeDiff > twentyMinutes) {
                             // Add date separator
@@ -677,17 +675,6 @@ async function loadMessages() {
                             
                             dateSeparator.textContent = dateText;
                             chatMessages.appendChild(dateSeparator);
-                        } else if (timeDiff > fiveMinutes) {
-                            // Add gap
-                            const gap = document.createElement('div');
-                            gap.className = 'message-gap';
-                            chatMessages.appendChild(gap);
-                        } else if (timeDiff > threeMinutes && message.senderId === lastMessageSenderId) {
-                            // Add gap for same sender after 3 minutes
-                            const gap = document.createElement('div');
-                            gap.className = 'message-gap';
-                            gap.style.height = '15px';
-                            chatMessages.appendChild(gap);
                         }
                     }
                     
