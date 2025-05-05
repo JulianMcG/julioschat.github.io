@@ -634,6 +634,7 @@ async function loadMessages() {
         const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
             chatMessages.innerHTML = '';
             let lastMessageTime = null;
+            let lastSentMessage = null;
             
             snapshot.forEach(doc => {
                 const message = doc.data();
@@ -696,6 +697,7 @@ async function loadMessages() {
                         readReceipt.className = 'read-receipt';
                         readReceipt.textContent = message.read ? 'Seen' : 'Sent';
                         messageElement.appendChild(readReceipt);
+                        lastSentMessage = messageElement;
                     }
 
                     chatMessages.appendChild(messageElement);
@@ -706,6 +708,17 @@ async function loadMessages() {
                     }
                     
                     lastMessageTime = messageTime;
+                }
+            });
+            
+            // Remove read receipt from all sent messages except the last one
+            const sentMessages = chatMessages.querySelectorAll('.message.sent');
+            sentMessages.forEach((msg, index) => {
+                if (index !== sentMessages.length - 1) {
+                    const receipt = msg.querySelector('.read-receipt');
+                    if (receipt) {
+                        receipt.remove();
+                    }
                 }
             });
             
@@ -909,12 +922,11 @@ async function sendMessage(content) {
             receiverId: currentChatUser.id,
             participants: [currentUser.uid, currentChatUser.id],
             timestamp: serverTimestamp(),
-            read: false // Add read status
+            read: false
         };
 
         // Add message to Firestore
-        const docRef = await addDoc(collection(db, 'messages'), messageData);
-        console.log('Message sent successfully with ID:', docRef.id);
+        await addDoc(collection(db, 'messages'), messageData);
         
         // Scroll to bottom
         const chatMessages = document.getElementById('chat-messages');
