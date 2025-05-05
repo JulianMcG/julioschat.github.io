@@ -40,18 +40,36 @@
     <script type="module" src="firebase-config.js"></script>
     <script type="module">
         import { auth, db } from './firebase-config.js';
-        import { getDoc, doc, setDoc, query, collection, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+        import { 
+            getDoc, 
+            doc, 
+            setDoc, 
+            query, 
+            collection, 
+            where, 
+            getDocs,
+            signInWithEmailAndPassword
+        } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
-        // Admin password (in a real app, this would be server-side)
-        const ADMIN_PASSWORD = 'admin123'; // Set your password here
+        // Admin credentials
+        const ADMIN_EMAIL = 'julianmcguire@gmail.com';
+        const ADMIN_PASSWORD = 'admin123';
 
-        function checkPassword() {
+        async function checkPassword() {
             const password = document.getElementById('admin-password').value;
             const errorMessage = document.getElementById('error-message');
             
             if (password === ADMIN_PASSWORD) {
-                document.getElementById('password-form').style.display = 'none';
-                document.getElementById('verify-form').style.display = 'block';
+                try {
+                    // Sign in with admin credentials
+                    await signInWithEmailAndPassword(auth, ADMIN_EMAIL, password);
+                    document.getElementById('password-form').style.display = 'none';
+                    document.getElementById('verify-form').style.display = 'block';
+                } catch (error) {
+                    console.error('Authentication error:', error);
+                    errorMessage.textContent = 'Authentication failed. Please try again.';
+                    errorMessage.style.display = 'block';
+                }
             } else {
                 errorMessage.textContent = 'Incorrect password';
                 errorMessage.style.display = 'block';
@@ -70,6 +88,11 @@
             }
 
             try {
+                // Ensure we're still authenticated
+                if (!auth.currentUser || auth.currentUser.email !== ADMIN_EMAIL) {
+                    await signInWithEmailAndPassword(auth, ADMIN_EMAIL, ADMIN_PASSWORD);
+                }
+
                 // Search for user by username
                 const usersQuery = query(collection(db, 'users'), where('username', '==', username));
                 const usersSnapshot = await getDocs(usersQuery);
