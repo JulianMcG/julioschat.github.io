@@ -8,6 +8,7 @@ import {
     onAuthStateChanged,
     signOut,
     GoogleAuthProvider,
+    OAuthProvider,
     signInWithPopup
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { 
@@ -70,6 +71,7 @@ export {
     onAuthStateChanged,
     signOut,
     GoogleAuthProvider,
+    OAuthProvider,
     signInWithPopup,
     collection,
     doc,
