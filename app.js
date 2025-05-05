@@ -34,6 +34,8 @@ const storage = getStorage();
 let notificationSound = new Audio('NotifSounds/Birdy.mp3');
 let isTabFocused = true;
 let notificationsEnabled = true;
+let lastSoundPlayTime = 0;
+const SOUND_COOLDOWN = 1000; // 1 second cooldown
 
 // Profile Picture Upload
 document.getElementById('profile-picture-preview').addEventListener('click', () => {
@@ -1452,6 +1454,7 @@ async function loadNotificationSoundPreference() {
         
         // Update audio source
         notificationSound = new Audio(`NotifSounds/${selectedSound}`);
+        notificationSound.volume = 0.3; // Set volume to 30%
     } catch (error) {
         console.error('Error loading notification sound preference:', error);
     }
@@ -1472,6 +1475,7 @@ async function saveNotificationSoundPreference() {
         
         // Update audio source and play preview
         notificationSound = new Audio(`NotifSounds/${selectedSound}`);
+        notificationSound.volume = 0.3; // Set volume to 30%
         notificationSound.play().catch(error => {
             console.error('Error playing notification sound:', error);
         });
@@ -1482,9 +1486,12 @@ async function saveNotificationSoundPreference() {
 
 // Play notification sound
 function playNotificationSound() {
-    if (!isTabFocused && notificationsEnabled) {
+    const now = Date.now();
+    if (!isTabFocused && notificationsEnabled && (now - lastSoundPlayTime) >= SOUND_COOLDOWN) {
+        lastSoundPlayTime = now;
         // Create a new audio instance to allow multiple sounds to play
         const sound = new Audio(notificationSound.src);
+        sound.volume = 0.3; // Set volume to 30%
         sound.play().catch(error => {
             console.error('Error playing notification sound:', error);
         });
