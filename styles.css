@@ -1492,4 +1492,54 @@ input:checked + .slider:before {
 .google-button img {
     width: 18px;
     height: 18px;
+}
+
+.apple-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 12px;
+    background-color: #000;
+    border: 1px solid #000;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.apple-button:hover {
+    background-color: #1a1a1a;
+}
+
+.apple-button img {
+    width: 18px;
+    height: 18px;
+}
+
+.microsoft-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 12px;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    color: #333;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.microsoft-button:hover {
+    background-color: #f5f5f5;
+}
+
+.microsoft-button img {
+    width: 18px;
+    height: 18px;
 } 
