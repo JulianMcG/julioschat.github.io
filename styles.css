@@ -125,7 +125,7 @@ body {
     border-radius: 15px;
     cursor: pointer;
     font-size: 16px;
-    font-weight: 600;
+    font-weight: 500;
     transition: transform 0.1s ease;
     box-shadow: 0 5px 0 #13296D;
 }
@@ -152,7 +152,7 @@ body {
     border-radius: 15px;
     cursor: pointer;
     font-size: 16px;
-    font-weight: 600;
+    font-weight: 500;
     position: relative;
     overflow: visible;
     margin-bottom: 10px;
@@ -787,7 +787,6 @@ body {
     border-radius: 8px;
     cursor: pointer;
     transition: background-color 0.3s;
-    font-weight: 600;
 }
 
 .upload-button:hover {
@@ -820,7 +819,6 @@ body {
     border-radius: 8px;
     cursor: pointer;
     transition: background-color 0.3s;
-    font-weight: 600;
 }
 
 .save-button:hover {
@@ -999,7 +997,7 @@ body {
     border-radius: 8px;
     cursor: pointer;
     font-size: 16px;
-    font-weight: 600;
+    font-weight: 500;
     transition: all 0.3s;
 }
 
@@ -1096,7 +1094,7 @@ body {
     border-radius: 15px;
     cursor: pointer;
     font-size: 16px;
-    font-weight: 600;
+    font-weight: 500;
     transition: transform 0.1s ease;
     box-shadow: 0 5px 0 #31333A;
     margin-bottom: 20px;
@@ -1119,7 +1117,7 @@ body {
     border-radius: 15px;
     cursor: pointer;
     font-size: 16px;
-    font-weight: 600;
+    font-weight: 500;
     transition: transform 0.1s ease;
     box-shadow: 0 5px 0 #8A1315;
 }
@@ -1198,7 +1196,7 @@ body {
     border-radius: 15px;
     cursor: pointer;
     font-size: 16px;
-    font-weight: 600;
+    font-weight: 500;
     transition: transform 0.1s ease;
     box-shadow: 0 5px 0 #31333A;
 }
@@ -1221,7 +1219,7 @@ body {
     border-radius: 15px;
     cursor: pointer;
     font-size: 16px;
-    font-weight: 600;
+    font-weight: 500;
     transition: transform 0.1s ease;
     box-shadow: 0 5px 0 #8A1315;
 }
@@ -1244,7 +1242,7 @@ body {
     border-radius: 15px;
     cursor: pointer;
     font-size: 16px;
-    font-weight: 600;
+    font-weight: 500;
     transition: transform 0.1s ease;
     box-shadow: 0 5px 0 #13296D;
 }
@@ -1284,7 +1282,7 @@ button:hover {
     border-radius: 8px;
     cursor: pointer;
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 500;
     padding: 8px 16px;
     white-space: nowrap;
     display: flex;
