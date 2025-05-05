@@ -1447,21 +1447,4 @@ input:checked + .slider:before {
     pointer-events: none;
     font-size: 18px;
     font-variation-settings: 'wght' 300;
-}
-
-.unread-indicator {
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 8px;
-    height: 8px;
-    background-color: #1F49C7;
-    border-radius: 50%;
-    margin-left: 5px;
-    display: none;
-}
-
-.user-item.unread .unread-indicator {
-    display: block;
 } 
