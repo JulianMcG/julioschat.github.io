@@ -20,8 +20,7 @@ import {
     addDoc,
     serverTimestamp,
     arrayUnion,
-    arrayRemove,
-    updateDoc
+    arrayRemove
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
@@ -634,7 +633,6 @@ async function loadMessages() {
         const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
             chatMessages.innerHTML = '';
             let lastMessageTime = null;
-            let lastSentMessage = null;
             
             snapshot.forEach(doc => {
                 const message = doc.data();
@@ -690,35 +688,9 @@ async function loadMessages() {
                     messageElement.innerHTML = `
                         <div class="content">${message.content}</div>
                     `;
-
-                    // Add read receipt for sent messages
-                    if (message.senderId === currentUser.uid) {
-                        const readReceipt = document.createElement('div');
-                        readReceipt.className = 'read-receipt';
-                        readReceipt.textContent = message.read ? 'Seen' : 'Sent';
-                        messageElement.appendChild(readReceipt);
-                        lastSentMessage = messageElement;
-                    }
-
                     chatMessages.appendChild(messageElement);
                     
-                    // Update read status if message is received
-                    if (message.senderId === currentChatUser.id && !message.read) {
-                        updateMessageReadStatus(doc.id);
-                    }
-                    
                     lastMessageTime = messageTime;
-                }
-            });
-            
-            // Remove read receipt from all sent messages except the last one
-            const sentMessages = chatMessages.querySelectorAll('.message.sent');
-            sentMessages.forEach((msg, index) => {
-                if (index !== sentMessages.length - 1) {
-                    const receipt = msg.querySelector('.read-receipt');
-                    if (receipt) {
-                        receipt.remove();
-                    }
                 }
             });
             
@@ -730,17 +702,6 @@ async function loadMessages() {
         window.currentMessageUnsubscribe = unsubscribe;
     } catch (error) {
         console.error('Error loading messages:', error);
-    }
-}
-
-// Function to update message read status
-async function updateMessageReadStatus(messageId) {
-    try {
-        await updateDoc(doc(db, 'messages', messageId), {
-            read: true
-        });
-    } catch (error) {
-        console.error('Error updating message read status:', error);
     }
 }
 
@@ -915,18 +876,25 @@ async function sendMessage(content) {
             return;
         }
 
+        console.log('Attempting to send message with data:', {
+            content,
+            senderId: currentUser.uid,
+            receiverId: currentChatUser.id,
+            participants: [currentUser.uid, currentChatUser.id]
+        });
+
         // Create message data
         const messageData = {
             content: content,
             senderId: currentUser.uid,
             receiverId: currentChatUser.id,
             participants: [currentUser.uid, currentChatUser.id],
-            timestamp: serverTimestamp(),
-            read: false
+            timestamp: serverTimestamp()
         };
 
         // Add message to Firestore
-        await addDoc(collection(db, 'messages'), messageData);
+        const docRef = await addDoc(collection(db, 'messages'), messageData);
+        console.log('Message sent successfully with ID:', docRef.id);
         
         // Scroll to bottom
         const chatMessages = document.getElementById('chat-messages');
