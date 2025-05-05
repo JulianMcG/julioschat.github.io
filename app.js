@@ -32,7 +32,7 @@ const storage = getStorage();
 
 // Notification Sound
 let notificationSound = new Audio('NotifSounds/Birdy.mp3');
-let isTabFocused = document.visibilityState === 'visible';
+let isTabFocused = true;
 let notificationsEnabled = true;
 let lastSoundPlayTime = 0;
 const SOUND_COOLDOWN = 1000; // 1 second cooldown
@@ -664,8 +664,8 @@ async function loadMessages() {
                     message.participants.includes(currentUser.uid) &&
                     !blockedUsers.includes(message.senderId)) {
                     
-                    // Play notification sound if message is from other user and tab is not focused
-                    if (message.senderId !== currentUser.uid && !isTabFocused) {
+                    // Play notification sound if message is from other user
+                    if (message.senderId !== currentUser.uid) {
                         playNotificationSound();
                     }
                     
@@ -1495,35 +1495,34 @@ function playNotificationSound() {
         sound.play().catch(error => {
             console.error('Error playing notification sound:', error);
         });
-        console.log('Playing notification sound:', {
-            isTabFocused,
-            notificationsEnabled,
-            timeSinceLastPlay: now - lastSoundPlayTime
-        });
     }
+}
+
+// Preview notification sound
+function previewNotificationSound() {
+    const soundSelect = document.getElementById('notification-sound');
+    const selectedSound = soundSelect.value;
+    const previewSound = new Audio(`NotifSounds/${selectedSound}`);
+    previewSound.play().catch(error => {
+        console.error('Error playing preview sound:', error);
+    });
 }
 
 // Tab focus detection
 document.addEventListener('visibilitychange', () => {
     isTabFocused = document.visibilityState === 'visible';
-    console.log('Tab focus changed:', {
-        isTabFocused,
-        visibilityState: document.visibilityState
-    });
 });
+
+// Add notification sound event listener
+document.getElementById('notification-sound').addEventListener('change', saveNotificationSoundPreference);
 
 // Add event listeners for notification settings
 document.addEventListener('DOMContentLoaded', () => {
     const soundSelect = document.getElementById('notification-sound');
+    const previewButton = document.getElementById('preview-sound');
     const notificationToggle = document.getElementById('notification-toggle');
     
     soundSelect.addEventListener('change', saveNotificationSoundPreference);
+    previewButton.addEventListener('click', previewNotificationSound);
     notificationToggle.addEventListener('change', saveNotificationSoundPreference);
-    
-    // Log initial state
-    console.log('Initial notification state:', {
-        isTabFocused,
-        notificationsEnabled,
-        selectedSound: soundSelect.value
-    });
 });
