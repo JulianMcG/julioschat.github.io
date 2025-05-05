@@ -29,6 +29,7 @@ let currentChatUser = null;
 let typingTimeout = null;
 let isTyping = false;
 const storage = getStorage();
+let currentUsersUnsubscribe = null;
 
 // Profile Picture Upload
 document.getElementById('profile-picture-preview').addEventListener('click', () => {
@@ -324,82 +325,93 @@ async function loadUsers() {
             collection(db, 'messages'),
             where('participants', 'array-contains', currentUser.uid)
         );
-        const messagesSnapshot = await getDocs(messagesQuery);
 
-        // Create a map to store the latest message timestamp for each user
-        const userLastMessageTimes = new Map();
-        const dmUserIds = new Set();
-        
-        messagesSnapshot.forEach(doc => {
-            const message = doc.data();
-            message.participants.forEach(id => {
-                if (id !== currentUser.uid) {
-                    dmUserIds.add(id);
-                    const timestamp = message.timestamp?.toDate() || new Date(0);
-                    if (!userLastMessageTimes.has(id) || timestamp > userLastMessageTimes.get(id)) {
-                        userLastMessageTimes.set(id, timestamp);
+        // Set up real-time listener for messages
+        if (currentUsersUnsubscribe) {
+            currentUsersUnsubscribe();
+        }
+
+        currentUsersUnsubscribe = onSnapshot(messagesQuery, async (snapshot) => {
+            // Create a map to store the latest message timestamp for each user
+            const userLastMessageTimes = new Map();
+            const dmUserIds = new Set();
+            
+            snapshot.forEach(doc => {
+                const message = doc.data();
+                message.participants.forEach(id => {
+                    if (id !== currentUser.uid) {
+                        dmUserIds.add(id);
+                        const timestamp = message.timestamp?.toDate() || new Date(0);
+                        if (!userLastMessageTimes.has(id) || timestamp > userLastMessageTimes.get(id)) {
+                            userLastMessageTimes.set(id, timestamp);
+                        }
                     }
+                });
+            });
+
+            // Get user details for each DM'd user
+            const usersPromises = Array.from(dmUserIds).map(async (userId) => {
+                const userDoc = await getDoc(doc(db, 'users', userId));
+                const userData = userDoc.data();
+                return {
+                    id: userId,
+                    username: userData.username,
+                    profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
+                    verified: userData.verified,
+                    isPinned: pinnedConversations.includes(userId),
+                    lastMessageTime: userLastMessageTimes.get(userId) || new Date(0)
+                };
+            });
+
+            const users = await Promise.all(usersPromises);
+
+            // Sort users: pinned first, then by last message time
+            users.sort((a, b) => {
+                if (a.isPinned && !b.isPinned) return -1;
+                if (!a.isPinned && b.isPinned) return 1;
+                return b.lastMessageTime - a.lastMessageTime;
+            });
+
+            // Clear existing users
+            usersContainer.innerHTML = '';
+
+            // Display users
+            users.forEach(user => {
+                if (!hiddenConversations.includes(user.id)) {
+                    const userElement = createUserElement(user);
+                    userElement.dataset.uid = user.id;
+                    
+                    if (user.isPinned) {
+                        userElement.classList.add('pinned');
+                        usersContainer.insertBefore(userElement, usersContainer.firstChild);
+                    } else {
+                        usersContainer.appendChild(userElement);
+                    }
+                    
+                    // Add click handler for the user item
+                    userElement.onclick = (e) => {
+                        if (!e.target.classList.contains('action-icon')) {
+                            startChat(user.id, user.username);
+                        }
+                    };
+
+                    // Add click handler for close icon
+                    const closeIcon = userElement.querySelector('.close-icon');
+                    closeIcon.onclick = async (e) => {
+                        e.stopPropagation();
+                        userElement.remove();
+                        try {
+                            await setDoc(doc(db, 'users', currentUser.uid), {
+                                hiddenConversations: arrayUnion(user.id)
+                            }, { merge: true });
+                        } catch (error) {
+                            console.error('Error hiding conversation:', error);
+                        }
+                    };
                 }
             });
-        });
-
-        // Get user details for each DM'd user
-        const usersPromises = Array.from(dmUserIds).map(async (userId) => {
-            const userDoc = await getDoc(doc(db, 'users', userId));
-            const userData = userDoc.data();
-            return {
-                id: userId,
-                username: userData.username,
-                profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
-                verified: userData.verified,
-                isPinned: pinnedConversations.includes(userId),
-                lastMessageTime: userLastMessageTimes.get(userId) || new Date(0)
-            };
-        });
-
-        const users = await Promise.all(usersPromises);
-
-        // Sort users: pinned first, then by last message time
-        users.sort((a, b) => {
-            if (a.isPinned && !b.isPinned) return -1;
-            if (!a.isPinned && b.isPinned) return 1;
-            return b.lastMessageTime - a.lastMessageTime;
-        });
-
-        // Display users
-        users.forEach(user => {
-            if (!hiddenConversations.includes(user.id)) {
-                const userElement = createUserElement(user);
-                userElement.dataset.uid = user.id;
-                
-                if (user.isPinned) {
-                    userElement.classList.add('pinned');
-                    usersContainer.insertBefore(userElement, usersContainer.firstChild);
-                } else {
-                    usersContainer.appendChild(userElement);
-                }
-                
-                // Add click handler for the user item
-                userElement.onclick = (e) => {
-                    if (!e.target.classList.contains('action-icon')) {
-                        startChat(user.id, user.username);
-                    }
-                };
-
-                // Add click handler for close icon
-                const closeIcon = userElement.querySelector('.close-icon');
-                closeIcon.onclick = async (e) => {
-                    e.stopPropagation();
-                    userElement.remove();
-                    try {
-                        await setDoc(doc(db, 'users', currentUser.uid), {
-                            hiddenConversations: arrayUnion(user.id)
-                        }, { merge: true });
-                    } catch (error) {
-                        console.error('Error hiding conversation:', error);
-                    }
-                };
-            }
+        }, (error) => {
+            console.error('Error in users listener:', error);
         });
     } catch (error) {
         console.error('Error loading users:', error);
@@ -1430,3 +1442,10 @@ function setupTypingListener() {
     
     return unsubscribe;
 }
+
+// Add cleanup for the listener when the page is unloaded
+window.addEventListener('beforeunload', () => {
+    if (currentUsersUnsubscribe) {
+        currentUsersUnsubscribe();
+    }
+});
