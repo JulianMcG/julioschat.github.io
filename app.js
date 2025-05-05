@@ -32,7 +32,7 @@ const storage = getStorage();
 
 // Notification Sound
 let notificationSound = new Audio('NotifSounds/Birdy.mp3');
-let isTabFocused = true;
+let isTabFocused = document.visibilityState === 'visible';
 let notificationsEnabled = true;
 let lastSoundPlayTime = 0;
 const SOUND_COOLDOWN = 1000; // 1 second cooldown
@@ -172,6 +172,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+// Check if username exists
+async function isUsernameTaken(username) {
+    try {
+        const usersQuery = query(collection(db, 'users'), where('username', '==', username));
+        const usersSnapshot = await getDocs(usersQuery);
+        return !usersSnapshot.empty;
+    } catch (error) {
+        console.error('Error checking username:', error);
+        return true; // Return true on error to be safe
+    }
+}
+
 async function signup() {
     const username = document.getElementById('signup-username').value.trim();
     const email = document.getElementById('signup-email').value.trim();
@@ -202,6 +214,13 @@ async function signup() {
 
     try {
         signupButton.classList.add('loading');
+        
+        // Check if username is taken
+        const usernameTaken = await isUsernameTaken(username);
+        if (usernameTaken) {
+            showError(document.getElementById('signup-username'), 'Username is already taken');
+            return;
+        }
         
         // Create user with email and password
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -664,8 +683,8 @@ async function loadMessages() {
                     message.participants.includes(currentUser.uid) &&
                     !blockedUsers.includes(message.senderId)) {
                     
-                    // Play notification sound if message is from other user
-                    if (message.senderId !== currentUser.uid) {
+                    // Play notification sound if message is from other user and tab is not focused
+                    if (message.senderId !== currentUser.uid && !isTabFocused) {
                         playNotificationSound();
                     }
                     
@@ -1065,6 +1084,21 @@ document.querySelector('.save-button').addEventListener('click', async () => {
     }
 
     try {
+        // Check if username is taken (and not by current user)
+        const usernameTaken = await isUsernameTaken(newUsername);
+        if (usernameTaken) {
+            // Get the user with this username
+            const usersQuery = query(collection(db, 'users'), where('username', '==', newUsername));
+            const usersSnapshot = await getDocs(usersQuery);
+            const userDoc = usersSnapshot.docs[0];
+            
+            // If the username is taken by someone else
+            if (userDoc.id !== currentUser.uid) {
+                alert('Username is already taken');
+                return;
+            }
+        }
+
         // Update Firebase Auth profile
         await updateProfile(currentUser, {
             displayName: newUsername,
@@ -1495,34 +1529,35 @@ function playNotificationSound() {
         sound.play().catch(error => {
             console.error('Error playing notification sound:', error);
         });
+        console.log('Playing notification sound:', {
+            isTabFocused,
+            notificationsEnabled,
+            timeSinceLastPlay: now - lastSoundPlayTime
+        });
     }
-}
-
-// Preview notification sound
-function previewNotificationSound() {
-    const soundSelect = document.getElementById('notification-sound');
-    const selectedSound = soundSelect.value;
-    const previewSound = new Audio(`NotifSounds/${selectedSound}`);
-    previewSound.play().catch(error => {
-        console.error('Error playing preview sound:', error);
-    });
 }
 
 // Tab focus detection
 document.addEventListener('visibilitychange', () => {
     isTabFocused = document.visibilityState === 'visible';
+    console.log('Tab focus changed:', {
+        isTabFocused,
+        visibilityState: document.visibilityState
+    });
 });
-
-// Add notification sound event listener
-document.getElementById('notification-sound').addEventListener('change', saveNotificationSoundPreference);
 
 // Add event listeners for notification settings
 document.addEventListener('DOMContentLoaded', () => {
     const soundSelect = document.getElementById('notification-sound');
-    const previewButton = document.getElementById('preview-sound');
     const notificationToggle = document.getElementById('notification-toggle');
     
     soundSelect.addEventListener('change', saveNotificationSoundPreference);
-    previewButton.addEventListener('click', previewNotificationSound);
     notificationToggle.addEventListener('change', saveNotificationSoundPreference);
+    
+    // Log initial state
+    console.log('Initial notification state:', {
+        isTabFocused,
+        notificationsEnabled,
+        selectedSound: soundSelect.value
+    });
 });
