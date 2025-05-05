@@ -340,8 +340,11 @@ async function loadUsers() {
             });
         });
 
-        // Get user details for each DM'd user
-        const usersPromises = Array.from(userLastMessageTimes.keys()).map(async (userId) => {
+        // Get user details for each DM'd user and pinned user
+        const usersPromises = new Set([
+            ...Array.from(userLastMessageTimes.keys()),
+            ...pinnedConversations
+        ]).map(async (userId) => {
             const userDoc = await getDoc(doc(db, 'users', userId));
             const userData = userDoc.data();
             return {
@@ -350,7 +353,7 @@ async function loadUsers() {
                 profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
                 verified: userData.verified,
                 isPinned: pinnedConversations.includes(userId),
-                lastMessageTime: userLastMessageTimes.get(userId)
+                lastMessageTime: userLastMessageTimes.get(userId) || new Date(0) // Use epoch time if no messages
             };
         });
 
