@@ -423,7 +423,7 @@ function createUserElement(user) {
     userElement.className = 'user-item';
     userElement.innerHTML = `
         <img src="${user.profilePicture || 'default-avatar.png'}" alt="${user.username}" class="profile-picture">
-        <span class="username">${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
+        <span class="username">${user.username}${user.verified ? '<span class="material-symbols-filled verified-badge">verified</span>' : ''}</span>
         <div class="user-actions">
             <span class="material-symbols-outlined action-icon pin-icon">keep</span>
             <span class="material-symbols-outlined action-icon close-icon">close</span>
@@ -478,7 +478,7 @@ async function startChat(userId, username) {
         userElement.dataset.uid = userId;
         userElement.innerHTML = `
             <img src="${profilePicture}" alt="${username}" class="profile-picture">
-            <span class="username">${username}${isVerified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
+            <span class="username">${username}${isVerified ? '<span class="material-symbols-filled verified-badge">verified</span>' : ''}</span>
             <div class="user-actions">
                 <span class="material-symbols-outlined action-icon pin-icon">keep</span>
                 <span class="material-symbols-outlined action-icon close-icon">close</span>
@@ -554,7 +554,7 @@ async function startChat(userId, username) {
     const isVerified = userData?.verified || false;
 
     // Update chat header with verified badge if user is verified
-    const verifiedBadge = isVerified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : '';
+    const verifiedBadge = isVerified ? '<span class="material-symbols-filled verified-badge">verified</span>' : '';
     document.getElementById('active-chat-username').innerHTML = `${username}${verifiedBadge}`;
 
     // Show message input and user options icon
@@ -941,7 +941,7 @@ function updateCurrentUserProfile(user) {
             const isVerified = userData?.verified || false;
             
             // Update username with verified badge if user is verified
-            const verifiedBadge = isVerified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : '';
+            const verifiedBadge = isVerified ? '<span class="material-symbols-filled verified-badge">verified</span>' : '';
             document.getElementById('current-username').innerHTML = `${user.displayName || 'Username'}${verifiedBadge}`;
             document.getElementById('current-user-avatar').src = user.photoURL || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
 
@@ -1230,7 +1230,7 @@ function updateChatHeader(user) {
     
     chatHeader.innerHTML = `
         <img src="${user.photoURL || 'default-avatar.png'}" alt="${user.username}" class="profile-picture">
-        <span class="username">${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
+        <span class="username">${user.username}${user.verified ? '<span class="material-symbols-filled verified-badge">verified</span>' : ''}</span>
     `;
 }
 
