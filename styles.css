@@ -1417,13 +1417,6 @@ input:checked + .slider:before {
     padding-left: 0;
 }
 
-.sound-preview label {
-    color: #B6B8C8;
-    font-size: 14px;
-    margin-right: 10px;
-    width: 50px;
-}
-
 .select-wrapper {
     position: relative;
     flex: 1;
@@ -1432,7 +1425,7 @@ input:checked + .slider:before {
 .sound-select {
     width: 100%;
     padding: 16px 15px;
-    padding-right: 40px;
+    padding-right: 35px;
     border: 1.5px solid #1C1F28;
     border-radius: 15px;
     font-size: 16px;
@@ -1452,4 +1445,6 @@ input:checked + .slider:before {
     transform: translateY(-50%);
     color: #B6B8C8;
     pointer-events: none;
+    font-size: 18px;
+    font-variation-settings: 'wght' 300;
 } 
