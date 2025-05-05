@@ -6,7 +6,9 @@ import {
     createUserWithEmailAndPassword,
     updateProfile,
     onAuthStateChanged,
-    signOut
+    signOut,
+    GoogleAuthProvider,
+    signInWithPopup
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { 
     getFirestore,
@@ -67,6 +69,8 @@ export {
     updateProfile,
     onAuthStateChanged,
     signOut,
+    GoogleAuthProvider,
+    signInWithPopup,
     collection,
     doc,
     setDoc,
