@@ -650,13 +650,13 @@ body {
 }
 
 .message .content strong {
-    font-weight: 800;
+    font-weight: 700;
 }
 
 .message .content em strong,
 .message .content strong em {
     font-style: italic;
-    font-weight: 800;
+    font-weight: 700;
 }
 
 .message .content u {
