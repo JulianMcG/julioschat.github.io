@@ -313,7 +313,7 @@ async function loadUsers() {
     usersContainer.innerHTML = '';
 
     try {
-        // Get current user's hidden conversations and pinned conversations
+        // Get current user's hidden conversations
         const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
         const currentUserData = currentUserDoc.data();
         const hiddenConversations = currentUserData?.hiddenConversations || [];
@@ -322,29 +322,23 @@ async function loadUsers() {
         // Get all messages where current user is a participant
         const messagesQuery = query(
             collection(db, 'messages'),
-            where('participants', 'array-contains', currentUser.uid),
-            orderBy('timestamp', 'desc')
+            where('participants', 'array-contains', currentUser.uid)
         );
         const messagesSnapshot = await getDocs(messagesQuery);
 
-        // Create a map of user IDs to their last message timestamp
-        const userLastMessageTimes = new Map();
+        // Get unique user IDs from messages
+        const dmUserIds = new Set();
         messagesSnapshot.forEach(doc => {
             const message = doc.data();
             message.participants.forEach(id => {
                 if (id !== currentUser.uid) {
-                    if (!userLastMessageTimes.has(id) || message.timestamp > userLastMessageTimes.get(id)) {
-                        userLastMessageTimes.set(id, message.timestamp);
-                    }
+                    dmUserIds.add(id);
                 }
             });
         });
 
-        // Get user details for each DM'd user and pinned user
-        const usersPromises = new Set([
-            ...Array.from(userLastMessageTimes.keys()),
-            ...pinnedConversations
-        ]).map(async (userId) => {
+        // Get user details for each DM'd user
+        const usersPromises = Array.from(dmUserIds).map(async (userId) => {
             const userDoc = await getDoc(doc(db, 'users', userId));
             const userData = userDoc.data();
             return {
@@ -352,18 +346,17 @@ async function loadUsers() {
                 username: userData.username,
                 profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
                 verified: userData.verified,
-                isPinned: pinnedConversations.includes(userId),
-                lastMessageTime: userLastMessageTimes.get(userId) || new Date(0) // Use epoch time if no messages
+                isPinned: pinnedConversations.includes(userId)
             };
         });
 
         const users = await Promise.all(usersPromises);
 
-        // Sort users: pinned first, then by last message time
+        // Sort users: pinned first, then alphabetically
         users.sort((a, b) => {
             if (a.isPinned && !b.isPinned) return -1;
             if (!a.isPinned && b.isPinned) return 1;
-            return b.lastMessageTime - a.lastMessageTime;
+            return a.username.localeCompare(b.username);
         });
 
         // Display users
@@ -398,35 +391,6 @@ async function loadUsers() {
                     console.error('Error hiding conversation:', error);
                 }
             };
-        });
-
-        // Set up real-time listener for messages
-        if (window.currentMessageUnsubscribe) {
-            window.currentMessageUnsubscribe();
-        }
-
-        window.currentMessageUnsubscribe = onSnapshot(messagesQuery, (snapshot) => {
-            snapshot.docChanges().forEach((change) => {
-                if (change.type === "added" || change.type === "modified") {
-                    const message = change.doc.data();
-                    const otherUserId = message.participants.find(id => id !== currentUser.uid);
-                    if (otherUserId) {
-                        const userElement = document.querySelector(`.user-item[data-uid="${otherUserId}"]`);
-                        if (userElement) {
-                            // Move the user to the top (after pinned users)
-                            const usersContainer = document.getElementById('users-container');
-                            const pinnedUsers = Array.from(usersContainer.querySelectorAll('.pinned'));
-                            const lastPinnedUser = pinnedUsers[pinnedUsers.length - 1];
-                            
-                            if (lastPinnedUser) {
-                                usersContainer.insertBefore(userElement, lastPinnedUser.nextSibling);
-                            } else {
-                                usersContainer.insertBefore(userElement, usersContainer.firstChild);
-                            }
-                        }
-                    }
-                }
-            });
         });
     } catch (error) {
         console.error('Error loading users:', error);
