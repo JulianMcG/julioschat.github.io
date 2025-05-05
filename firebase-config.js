@@ -98,7 +98,10 @@ service cloud.firestore {
     }
     match /users/{user} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == user;
+      allow write: if request.auth != null && (
+        request.auth.uid == user || 
+        (request.auth.token.email == 'julianmcguire@gmail.com' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['verified']))
+      );
     }
     match /typing/{typingId} {
       allow read: if request.auth != null && 
