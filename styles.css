@@ -1099,6 +1099,7 @@ body {
 #settings-modal .sound-select {
     width: 100%;
     padding: 16px 15px;
+    padding-right: 40px;
     border: 1.5px solid #1C1F28;
     border-radius: 15px;
     font-size: 16px;
@@ -1106,6 +1107,9 @@ body {
     color: #ECEBF7;
     transition: border-color 0.3s;
     cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
 }
 
 #settings-modal .sound-select:focus {
@@ -1410,10 +1414,42 @@ input:checked + .slider:before {
     display: flex;
     align-items: center;
     gap: 10px;
+    padding-left: 0;
 }
 
 .sound-preview label {
     color: #B6B8C8;
     font-size: 14px;
     margin-right: 10px;
+    width: 50px;
+}
+
+.select-wrapper {
+    position: relative;
+    flex: 1;
+}
+
+.sound-select {
+    width: 100%;
+    padding: 16px 15px;
+    padding-right: 40px;
+    border: 1.5px solid #1C1F28;
+    border-radius: 15px;
+    font-size: 16px;
+    background-color: #10121B;
+    color: #ECEBF7;
+    transition: border-color 0.3s;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+}
+
+.dropdown-icon {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #B6B8C8;
+    pointer-events: none;
 } 
