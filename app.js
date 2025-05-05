@@ -32,13 +32,10 @@ const storage = getStorage();
 
 // Notification Sound
 let notificationSound = new Audio('NotifSounds/Birdy.mp3');
-let isTabFocused = true;
+let isTabFocused = document.visibilityState === 'visible';
 let notificationsEnabled = true;
 let lastSoundPlayTime = 0;
 const SOUND_COOLDOWN = 1000; // 1 second cooldown
-
-// Track unread messages
-let unreadMessages = new Set();
 
 // Profile Picture Upload
 document.getElementById('profile-picture-preview').addEventListener('click', () => {
@@ -411,12 +408,7 @@ async function loadUsers() {
 function createUserElement(user) {
     const userElement = document.createElement('div');
     userElement.className = 'user-item';
-    userElement.dataset.uid = user.id;
-    if (unreadMessages.has(user.id)) {
-        userElement.classList.add('unread');
-    }
     userElement.innerHTML = `
-        <div class="unread-indicator"></div>
         <img src="${user.profilePicture || 'default-avatar.png'}" alt="${user.username}" class="profile-picture">
         <span class="username">${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
         <div class="user-actions">
@@ -457,9 +449,6 @@ function createUserElement(user) {
 
 async function startChat(userId, username) {
     currentChatUser = { id: userId, username: username };
-    
-    // Mark messages as read when opening chat
-    markMessagesAsRead(userId);
     
     // Check if user is already in sidebar
     const existingUser = document.querySelector(`.user-item[data-uid="${userId}"]`);
@@ -678,7 +667,6 @@ async function loadMessages() {
                     // Play notification sound if message is from other user
                     if (message.senderId !== currentUser.uid) {
                         playNotificationSound();
-                        markMessagesAsUnread(message.senderId);
                     }
                     
                     const messageTime = message.timestamp.toDate();
@@ -1510,51 +1498,16 @@ function playNotificationSound() {
     }
 }
 
-// Preview notification sound
-function previewNotificationSound() {
-    const soundSelect = document.getElementById('notification-sound');
-    const selectedSound = soundSelect.value;
-    const previewSound = new Audio(`NotifSounds/${selectedSound}`);
-    previewSound.play().catch(error => {
-        console.error('Error playing preview sound:', error);
-    });
-}
-
 // Tab focus detection
 document.addEventListener('visibilitychange', () => {
     isTabFocused = document.visibilityState === 'visible';
 });
 
-// Add notification sound event listener
-document.getElementById('notification-sound').addEventListener('change', saveNotificationSoundPreference);
-
 // Add event listeners for notification settings
 document.addEventListener('DOMContentLoaded', () => {
     const soundSelect = document.getElementById('notification-sound');
-    const previewButton = document.getElementById('preview-sound');
     const notificationToggle = document.getElementById('notification-toggle');
     
     soundSelect.addEventListener('change', saveNotificationSoundPreference);
-    previewButton.addEventListener('click', previewNotificationSound);
     notificationToggle.addEventListener('change', saveNotificationSoundPreference);
 });
-
-// Function to mark messages as read
-function markMessagesAsRead(userId) {
-    unreadMessages.delete(userId);
-    const userItem = document.querySelector(`.user-item[data-uid="${userId}"]`);
-    if (userItem) {
-        userItem.classList.remove('unread');
-    }
-}
-
-// Function to mark messages as unread
-function markMessagesAsUnread(userId) {
-    if (userId !== currentChatUser?.id) {
-        unreadMessages.add(userId);
-        const userItem = document.querySelector(`.user-item[data-uid="${userId}"]`);
-        if (userItem) {
-            userItem.classList.add('unread');
-        }
-    }
-}
