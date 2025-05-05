@@ -125,7 +125,7 @@ body {
     border-radius: 15px;
     cursor: pointer;
     font-size: 16px;
-    font-weight: 500;
+    font-weight: 600;
     transition: transform 0.1s ease;
     box-shadow: 0 5px 0 #13296D;
 }
@@ -152,7 +152,7 @@ body {
     border-radius: 15px;
     cursor: pointer;
     font-size: 16px;
-    font-weight: 500;
+    font-weight: 600;
     position: relative;
     overflow: visible;
     margin-bottom: 10px;
@@ -258,6 +258,8 @@ body {
     display: flex;
     flex-direction: column;
     position: relative;
+    height: 100vh;
+    overflow: hidden;
 }
 
 .sidebar-header {
@@ -341,6 +343,7 @@ body {
     margin-bottom: 20px;
     scrollbar-width: none;
     -ms-overflow-style: none;
+    padding-bottom: 80px;
 }
 
 .users-list::-webkit-scrollbar {
@@ -678,6 +681,7 @@ body {
     align-items: center;
     justify-content: space-between;
     background-color: #0c0e16;
+    z-index: 1;
 }
 
 .profile-section::before {
@@ -783,7 +787,6 @@ body {
     border-radius: 8px;
     cursor: pointer;
     transition: background-color 0.3s;
-    font-weight: 500;
 }
 
 .upload-button:hover {
@@ -816,7 +819,6 @@ body {
     border-radius: 8px;
     cursor: pointer;
     transition: background-color 0.3s;
-    font-weight: 500;
 }
 
 .save-button:hover {
@@ -995,7 +997,7 @@ body {
     border-radius: 8px;
     cursor: pointer;
     font-size: 16px;
-    font-weight: 500;
+    font-weight: 600;
     transition: all 0.3s;
 }
 
@@ -1194,7 +1196,7 @@ body {
     border-radius: 15px;
     cursor: pointer;
     font-size: 16px;
-    font-weight: 500;
+    font-weight: 600;
     transition: transform 0.1s ease;
     box-shadow: 0 5px 0 #31333A;
 }
@@ -1217,7 +1219,7 @@ body {
     border-radius: 15px;
     cursor: pointer;
     font-size: 16px;
-    font-weight: 500;
+    font-weight: 600;
     transition: transform 0.1s ease;
     box-shadow: 0 5px 0 #8A1315;
 }
