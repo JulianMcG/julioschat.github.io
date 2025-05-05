@@ -466,6 +466,9 @@ async function startChat(userId, username) {
             batch.update(doc.ref, { read: true });
         });
         await batch.commit();
+        
+        // Reload users to update unread counts
+        await loadUsers();
     } catch (error) {
         console.error('Error marking messages as read:', error);
     }
