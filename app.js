@@ -608,8 +608,12 @@ async function startChat(userId, username) {
 
 async function loadMessages() {
     if (!currentUser || !currentChatUser) {
+        console.log('No current user or chat user');
         return;
     }
+
+    const chatMessages = document.getElementById('chat-messages');
+    chatMessages.innerHTML = '';
 
     try {
         // Get current user's blocked users list
@@ -629,8 +633,8 @@ async function loadMessages() {
 
         const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
             chatMessages.innerHTML = '';
-            let lastMessageTime = 0;
-
+            let lastMessageTime = null;
+            
             snapshot.forEach(doc => {
                 const message = doc.data();
                 
@@ -641,17 +645,9 @@ async function loadMessages() {
                     message.participants.includes(currentUser.uid) &&
                     !blockedUsers.includes(message.senderId)) {
                     
-                    const messageTime = message.timestamp?.toDate() || new Date();
-
-                    // Update message as read if it's received and not already read
-                    if (message.receiverId === currentUser.uid && !message.read) {
-                        updateDoc(doc.ref, { 
-                            read: true,
-                            readAt: serverTimestamp()
-                        });
-                    }
-
-                    // Add date separator if needed
+                    const messageTime = message.timestamp.toDate();
+                    
+                    // Add timestamp or gap if needed
                     if (lastMessageTime) {
                         const timeDiff = messageTime - lastMessageTime;
                         const fiveMinutes = 5 * 60 * 1000; // 5 minutes in milliseconds
@@ -690,21 +686,24 @@ async function loadMessages() {
                     
                     const messageElement = document.createElement('div');
                     messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
-                    
-                    if (message.senderId === currentUser.uid) {
-                        const readReceipt = document.createElement('div');
-                        readReceipt.className = `read-receipt ${message.read ? 'seen' : 'sent'}`;
-                        readReceipt.innerHTML = `
-                            <span class="material-symbols-outlined">done</span>
-                            <span>${message.read ? 'Seen' : 'Sent'}</span>
-                        `;
-                        messageElement.appendChild(readReceipt);
-                    }
-                    
-                    messageElement.innerHTML += `
+                    messageElement.innerHTML = `
                         <div class="content">${message.content}</div>
                     `;
+
+                    // Add read receipt for sent messages
+                    if (message.senderId === currentUser.uid) {
+                        const readReceipt = document.createElement('div');
+                        readReceipt.className = 'read-receipt';
+                        readReceipt.textContent = message.read ? 'Seen' : 'Sent';
+                        messageElement.appendChild(readReceipt);
+                    }
+
                     chatMessages.appendChild(messageElement);
+                    
+                    // Update read status if message is received
+                    if (message.senderId === currentChatUser.id && !message.read) {
+                        updateMessageReadStatus(doc.id);
+                    }
                     
                     lastMessageTime = messageTime;
                 }
@@ -718,6 +717,17 @@ async function loadMessages() {
         window.currentMessageUnsubscribe = unsubscribe;
     } catch (error) {
         console.error('Error loading messages:', error);
+    }
+}
+
+// Function to update message read status
+async function updateMessageReadStatus(messageId) {
+    try {
+        await updateDoc(doc(db, 'messages', messageId), {
+            read: true
+        });
+    } catch (error) {
+        console.error('Error updating message read status:', error);
     }
 }
 
@@ -892,13 +902,6 @@ async function sendMessage(content) {
             return;
         }
 
-        console.log('Attempting to send message with data:', {
-            content,
-            senderId: currentUser.uid,
-            receiverId: currentChatUser.id,
-            participants: [currentUser.uid, currentChatUser.id]
-        });
-
         // Create message data
         const messageData = {
             content: content,
@@ -906,7 +909,7 @@ async function sendMessage(content) {
             receiverId: currentChatUser.id,
             participants: [currentUser.uid, currentChatUser.id],
             timestamp: serverTimestamp(),
-            read: false
+            read: false // Add read status
         };
 
         // Add message to Firestore
