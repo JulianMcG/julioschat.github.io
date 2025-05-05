@@ -29,6 +29,7 @@ let currentChatUser = null;
 let typingTimeout = null;
 let isTyping = false;
 const storage = getStorage();
+let selectedUsers = new Set();
 
 // Profile Picture Upload
 document.getElementById('profile-picture-preview').addEventListener('click', () => {
@@ -319,73 +320,81 @@ async function loadUsers() {
         const hiddenConversations = currentUserData?.hiddenConversations || [];
         const pinnedConversations = currentUserData?.pinnedConversations || [];
 
-        // Get all messages where current user is a participant
-        const messagesQuery = query(
-            collection(db, 'messages'),
+        // Get all chats where current user is a participant
+        const chatsQuery = query(
+            collection(db, 'chats'),
             where('participants', 'array-contains', currentUser.uid)
         );
-        const messagesSnapshot = await getDocs(messagesQuery);
+        const chatsSnapshot = await getDocs(chatsQuery);
 
-        // Get unique user IDs from messages
-        const dmUserIds = new Set();
-        messagesSnapshot.forEach(doc => {
-            const message = doc.data();
-            message.participants.forEach(id => {
-                if (id !== currentUser.uid) {
-                    dmUserIds.add(id);
+        const chatPromises = [];
+        chatsSnapshot.forEach(doc => {
+            const chat = doc.data();
+            if (!hiddenConversations.includes(doc.id)) {
+                if (chat.isGroup) {
+                    // For group chats, just use the chat data
+                    chatPromises.push(Promise.resolve({
+                        id: doc.id,
+                        name: chat.name,
+                        isGroup: true,
+                        participants: chat.participants,
+                        isPinned: pinnedConversations.includes(doc.id)
+                    }));
+                } else {
+                    // For DMs, get the other user's details
+                    const otherUserId = chat.participants.find(id => id !== currentUser.uid);
+                    chatPromises.push(
+                        getDoc(doc(db, 'users', otherUserId)).then(userDoc => {
+                            const userData = userDoc.data();
+                            return {
+                                id: doc.id,
+                                name: userData.username,
+                                profilePicture: userData.profilePicture,
+                                verified: userData.verified,
+                                isPinned: pinnedConversations.includes(doc.id)
+                            };
+                        })
+                    );
                 }
-            });
+            }
         });
 
-        // Get user details for each DM'd user
-        const usersPromises = Array.from(dmUserIds).map(async (userId) => {
-            const userDoc = await getDoc(doc(db, 'users', userId));
-            const userData = userDoc.data();
-            return {
-                id: userId,
-                username: userData.username,
-                profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
-                verified: userData.verified,
-                isPinned: pinnedConversations.includes(userId)
-            };
-        });
+        const chats = await Promise.all(chatPromises);
 
-        const users = await Promise.all(usersPromises);
-
-        // Sort users: pinned first, then alphabetically
-        users.sort((a, b) => {
+        // Sort chats: pinned first, then alphabetically
+        chats.sort((a, b) => {
             if (a.isPinned && !b.isPinned) return -1;
             if (!a.isPinned && b.isPinned) return 1;
-            return a.username.localeCompare(b.username);
+            return a.name.localeCompare(b.name);
         });
 
-        // Display users
-        users.forEach(user => {
-            const userElement = createUserElement(user);
-            userElement.dataset.uid = user.id;
+        // Display chats
+        chats.forEach(chat => {
+            const chatElement = createChatElement(chat);
+            chatElement.dataset.id = chat.id;
             
-            if (user.isPinned) {
-                userElement.classList.add('pinned');
-                usersContainer.insertBefore(userElement, usersContainer.firstChild);
+            if (chat.isPinned) {
+                chatElement.classList.add('pinned');
+                usersContainer.insertBefore(chatElement, usersContainer.firstChild);
             } else {
-                usersContainer.appendChild(userElement);
+                usersContainer.appendChild(chatElement);
             }
             
-            // Add click handler for the user item
-            userElement.onclick = (e) => {
+            // Add click handler for the chat item
+            chatElement.onclick = (e) => {
                 if (!e.target.classList.contains('action-icon')) {
-                    startChat(user.id, user.username);
+                    startChat(chat.id, chat.name);
                 }
             };
 
             // Add click handler for close icon
-            const closeIcon = userElement.querySelector('.close-icon');
+            const closeIcon = chatElement.querySelector('.close-icon');
             closeIcon.onclick = async (e) => {
                 e.stopPropagation();
-                userElement.remove();
+                chatElement.remove();
                 try {
                     await setDoc(doc(db, 'users', currentUser.uid), {
-                        hiddenConversations: arrayUnion(user.id)
+                        hiddenConversations: arrayUnion(chat.id)
                     }, { merge: true });
                 } catch (error) {
                     console.error('Error hiding conversation:', error);
@@ -393,16 +402,16 @@ async function loadUsers() {
             };
         });
     } catch (error) {
-        console.error('Error loading users:', error);
+        console.error('Error loading chats:', error);
     }
 }
 
-function createUserElement(user) {
-    const userElement = document.createElement('div');
-    userElement.className = 'user-item';
-    userElement.innerHTML = `
-        <img src="${user.profilePicture || 'default-avatar.png'}" alt="${user.username}" class="profile-picture">
-        <span class="username">${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
+function createChatElement(chat) {
+    const chatElement = document.createElement('div');
+    chatElement.className = 'user-item';
+    chatElement.innerHTML = `
+        <img src="${chat.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${chat.name}" class="profile-picture">
+        <span class="username">${chat.name}${chat.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
         <div class="user-actions">
             <span class="material-symbols-outlined action-icon pin-icon">keep</span>
             <span class="material-symbols-outlined action-icon close-icon">close</span>
@@ -410,25 +419,25 @@ function createUserElement(user) {
     `;
     
     // Add click handler for pin icon
-    const pinIcon = userElement.querySelector('.pin-icon');
+    const pinIcon = chatElement.querySelector('.pin-icon');
     pinIcon.onclick = async (e) => {
         e.stopPropagation();
-        const isPinned = userElement.classList.contains('pinned');
-        userElement.classList.toggle('pinned');
+        const isPinned = chatElement.classList.contains('pinned');
+        chatElement.classList.toggle('pinned');
         
         if (!isPinned) {
             const usersContainer = document.getElementById('users-container');
-            usersContainer.insertBefore(userElement, usersContainer.firstChild);
+            usersContainer.insertBefore(chatElement, usersContainer.firstChild);
         }
         
         try {
             if (!isPinned) {
                 await setDoc(doc(db, 'users', currentUser.uid), {
-                    pinnedConversations: arrayUnion(user.id)
+                    pinnedConversations: arrayUnion(chat.id)
                 }, { merge: true });
             } else {
                 await setDoc(doc(db, 'users', currentUser.uid), {
-                    pinnedConversations: arrayRemove(user.id)
+                    pinnedConversations: arrayRemove(chat.id)
                 }, { merge: true });
             }
         } catch (error) {
@@ -436,49 +445,47 @@ function createUserElement(user) {
         }
     };
     
-    return userElement;
+    return chatElement;
 }
 
-async function startChat(userId, username) {
-    currentChatUser = { id: userId, username: username };
+async function startChat(chatId, chatName) {
+    currentChatUser = { id: chatId, name: chatName };
     
-    // Check if user is already in sidebar
-    const existingUser = document.querySelector(`.user-item[data-uid="${userId}"]`);
-    if (!existingUser) {
-        // Get user's profile picture and verification status
-        const userDoc = await getDoc(doc(db, 'users', userId));
-        const userData = userDoc.data();
-        const profilePicture = userData?.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
-        const isVerified = userData?.verified || false;
-
-        // Create new user element
-        const userElement = document.createElement('div');
-        userElement.className = 'user-item';
-        userElement.dataset.uid = userId;
-        userElement.innerHTML = `
-            <img src="${profilePicture}" alt="${username}" class="profile-picture">
-            <span class="username">${username}${isVerified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
+    // Check if chat is already in sidebar
+    const existingChat = document.querySelector(`.user-item[data-id="${chatId}"]`);
+    if (!existingChat) {
+        // Get chat details
+        const chatDoc = await getDoc(doc(db, 'chats', chatId));
+        const chatData = chatDoc.data();
+        
+        // Create new chat element
+        const chatElement = document.createElement('div');
+        chatElement.className = 'user-item';
+        chatElement.dataset.id = chatId;
+        chatElement.innerHTML = `
+            <img src="${chatData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${chatName}" class="profile-picture">
+            <span class="username">${chatName}${chatData.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
             <div class="user-actions">
                 <span class="material-symbols-outlined action-icon pin-icon">keep</span>
                 <span class="material-symbols-outlined action-icon close-icon">close</span>
             </div>
         `;
 
-        // Add click handler for the user item
-        userElement.onclick = (e) => {
+        // Add click handler for the chat item
+        chatElement.onclick = (e) => {
             if (!e.target.classList.contains('action-icon')) {
-                startChat(userId, username);
+                startChat(chatId, chatName);
             }
         };
 
         // Add click handler for close icon
-        const closeIcon = userElement.querySelector('.close-icon');
+        const closeIcon = chatElement.querySelector('.close-icon');
         closeIcon.onclick = async (e) => {
             e.stopPropagation();
-            userElement.remove();
+            chatElement.remove();
             try {
                 await setDoc(doc(db, 'users', currentUser.uid), {
-                    hiddenConversations: arrayUnion(userId)
+                    hiddenConversations: arrayUnion(chatId)
                 }, { merge: true });
             } catch (error) {
                 console.error('Error hiding conversation:', error);
@@ -486,25 +493,25 @@ async function startChat(userId, username) {
         };
 
         // Add click handler for pin icon
-        const pinIcon = userElement.querySelector('.pin-icon');
+        const pinIcon = chatElement.querySelector('.pin-icon');
         pinIcon.onclick = async (e) => {
             e.stopPropagation();
-            const isPinned = userElement.classList.contains('pinned');
-            userElement.classList.toggle('pinned');
+            const isPinned = chatElement.classList.contains('pinned');
+            chatElement.classList.toggle('pinned');
             
             if (!isPinned) {
                 const usersContainer = document.getElementById('users-container');
-                usersContainer.insertBefore(userElement, usersContainer.firstChild);
+                usersContainer.insertBefore(chatElement, usersContainer.firstChild);
             }
             
             try {
                 if (!isPinned) {
                     await setDoc(doc(db, 'users', currentUser.uid), {
-                        pinnedConversations: arrayUnion(userId)
+                        pinnedConversations: arrayUnion(chatId)
                     }, { merge: true });
                 } else {
                     await setDoc(doc(db, 'users', currentUser.uid), {
-                        pinnedConversations: arrayRemove(userId)
+                        pinnedConversations: arrayRemove(chatId)
                     }, { merge: true });
                 }
             } catch (error) {
@@ -514,27 +521,21 @@ async function startChat(userId, username) {
 
         // Add to sidebar
         const usersContainer = document.getElementById('users-container');
-        usersContainer.appendChild(userElement);
+        usersContainer.appendChild(chatElement);
     }
     
-    // Update active user in sidebar
-    const userItems = document.querySelectorAll('.user-item');
-    userItems.forEach(item => {
-        if (item.dataset.uid === userId) {
+    // Update active chat in sidebar
+    const chatItems = document.querySelectorAll('.user-item');
+    chatItems.forEach(item => {
+        if (item.dataset.id === chatId) {
             item.classList.add('active');
         } else {
             item.classList.remove('active');
         }
     });
 
-    // Get user's verification status
-    const userDoc = await getDoc(doc(db, 'users', userId));
-    const userData = userDoc.data();
-    const isVerified = userData?.verified || false;
-
-    // Update chat header with verified badge if user is verified
-    const verifiedBadge = isVerified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : '';
-    document.getElementById('active-chat-username').innerHTML = `${username}${verifiedBadge}`;
+    // Update chat header
+    document.getElementById('active-chat-username').textContent = chatName;
 
     // Show message input and user options icon
     const messageInput = document.querySelector('.message-input');
@@ -548,7 +549,7 @@ async function startChat(userId, username) {
 
     // Update message input state immediately
     const messageInputField = document.getElementById('message-input');
-    if (blockedUsers.includes(userId)) {
+    if (blockedUsers.includes(chatId)) {
         // User is blocked, show blocked state
         messageInput.classList.add('blocked');
         messageInputField.placeholder = 'You cannot send messages to a user you have blocked.';
@@ -563,13 +564,13 @@ async function startChat(userId, username) {
                 try {
                     // Update UI immediately
                     messageInput.classList.remove('blocked');
-                    messageInputField.placeholder = `Message ${username}`;
+                    messageInputField.placeholder = `Message ${chatName}`;
                     messageInputField.disabled = false;
                     unblockButton.remove();
                     
                     // Update Firestore
                     await setDoc(doc(db, 'users', currentUser.uid), {
-                        blockedUsers: arrayRemove(userId)
+                        blockedUsers: arrayRemove(chatId)
                     }, { merge: true });
                 } catch (error) {
                     console.error('Error unblocking user:', error);
@@ -585,7 +586,7 @@ async function startChat(userId, username) {
     } else {
         // User is not blocked, show normal state
         messageInput.classList.remove('blocked');
-        messageInputField.placeholder = `Message ${username}`;
+        messageInputField.placeholder = `Message ${chatName}`;
         messageInputField.disabled = false;
         
         // Remove unblock button if it exists
@@ -1094,24 +1095,6 @@ async function searchAllUsers(searchTerm) {
     composeResults.innerHTML = '';
 
     try {
-        // Get all messages where current user is a participant
-        const messagesQuery = query(
-            collection(db, 'messages'),
-            where('participants', 'array-contains', currentUser.uid)
-        );
-        const messagesSnapshot = await getDocs(messagesQuery);
-
-        // Get unique user IDs from messages
-        const dmUserIds = new Set();
-        messagesSnapshot.forEach(doc => {
-            const message = doc.data();
-            message.participants.forEach(id => {
-                if (id !== currentUser.uid) {
-                    dmUserIds.add(id);
-                }
-            });
-        });
-
         // Get all users except current user
         const usersSnapshot = await getDocs(collection(db, 'users'));
         const users = [];
@@ -1137,8 +1120,7 @@ async function searchAllUsers(searchTerm) {
                 <span>${user.username}</span>
             `;
             userElement.onclick = () => {
-                startChat(user.id, user.username);
-                closeComposeModal();
+                toggleUserSelection(user);
             };
             composeResults.appendChild(userElement);
         });
@@ -1152,6 +1134,196 @@ async function searchAllUsers(searchTerm) {
     } catch (error) {
         console.error('Error searching all users:', error);
     }
+}
+
+function toggleUserSelection(user) {
+    if (selectedUsers.has(user.id)) {
+        selectedUsers.delete(user.id);
+    } else {
+        if (selectedUsers.size >= 10) {
+            alert('You can only add up to 10 users to a group chat');
+            return;
+        }
+        selectedUsers.add(user.id);
+    }
+    updateSelectedUsersDisplay();
+    updateCreateButton();
+}
+
+function updateSelectedUsersDisplay() {
+    const selectedUsersContainer = document.getElementById('selected-users');
+    selectedUsersContainer.innerHTML = '';
+
+    selectedUsers.forEach(async (userId) => {
+        try {
+            const userDoc = await getDoc(doc(db, 'users', userId));
+            const userData = userDoc.data();
+            
+            const userElement = document.createElement('div');
+            userElement.className = 'selected-user';
+            userElement.innerHTML = `
+                <img src="${userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${userData.username}">
+                <span>${userData.username}</span>
+                <span class="material-symbols-outlined remove-user" data-user-id="${userId}">close</span>
+            `;
+            
+            const removeButton = userElement.querySelector('.remove-user');
+            removeButton.onclick = (e) => {
+                e.stopPropagation();
+                selectedUsers.delete(userId);
+                updateSelectedUsersDisplay();
+                updateCreateButton();
+            };
+            
+            selectedUsersContainer.appendChild(userElement);
+        } catch (error) {
+            console.error('Error getting user data:', error);
+        }
+    });
+}
+
+function updateCreateButton() {
+    const createButton = document.getElementById('create-chat-button');
+    if (selectedUsers.size === 0) {
+        createButton.disabled = true;
+        createButton.style.opacity = '0.5';
+    } else {
+        createButton.disabled = false;
+        createButton.style.opacity = '1';
+        createButton.textContent = selectedUsers.size === 1 ? 'Create DM' : `Create Group (${selectedUsers.size})`;
+    }
+}
+
+async function createChat() {
+    if (selectedUsers.size === 0) return;
+
+    try {
+        const participants = [currentUser.uid, ...selectedUsers];
+        const chatData = {
+            participants: participants,
+            isGroup: selectedUsers.size > 1,
+            createdAt: serverTimestamp()
+        };
+
+        if (selectedUsers.size > 1) {
+            // For group chats, add a name
+            const userDocs = await Promise.all(
+                Array.from(selectedUsers).map(userId => getDoc(doc(db, 'users', userId)))
+            );
+            const usernames = userDocs.map(doc => doc.data().username);
+            chatData.name = `${usernames.join(', ')}`;
+        }
+
+        const chatRef = await addDoc(collection(db, 'chats'), chatData);
+        
+        // Clear selection and close modal
+        selectedUsers.clear();
+        updateSelectedUsersDisplay();
+        updateCreateButton();
+        closeComposeModal();
+        
+        // Load the new chat
+        loadUsers();
+    } catch (error) {
+        console.error('Error creating chat:', error);
+        alert('Error creating chat. Please try again.');
+    }
+}
+
+// Add event listeners for compose modal
+document.addEventListener('DOMContentLoaded', () => {
+    // ... existing event listeners ...
+
+    // Create chat button event listener
+    const createButton = document.getElementById('create-chat-button');
+    if (createButton) {
+        createButton.addEventListener('click', createChat);
+    }
+
+    // Clear selected users when modal is closed
+    const composeModal = document.getElementById('compose-modal');
+    if (composeModal) {
+        composeModal.addEventListener('hidden', () => {
+            selectedUsers.clear();
+            updateSelectedUsersDisplay();
+            updateCreateButton();
+        });
+    }
+});
+
+// Update typing status in Firestore
+async function updateTypingStatus(typing) {
+    if (!currentUser || !currentChatUser) return;
+    
+    console.log('Updating typing status:', {
+        typing,
+        currentUser: currentUser.uid,
+        currentChatUser: currentChatUser.id
+    });
+    
+    try {
+        const docRef = doc(db, 'typing', `${currentUser.uid}_${currentChatUser.id}`);
+        console.log('Document reference:', docRef.path);
+        
+        await setDoc(docRef, {
+            isTyping: typing,
+            userId: currentUser.uid,
+            otherUserId: currentChatUser.id,
+            timestamp: serverTimestamp()
+        }, { merge: true });
+        
+        console.log('Typing status updated successfully');
+    } catch (error) {
+        console.error('Error updating typing status:', error);
+    }
+}
+
+// Listen for typing status changes
+function setupTypingListener() {
+    if (!currentUser || !currentChatUser) return;
+    
+    console.log('Setting up typing listener:', {
+        currentUser: currentUser.uid,
+        currentChatUser: currentChatUser.id
+    });
+    
+    const typingRef = doc(db, 'typing', `${currentChatUser.id}_${currentUser.uid}`);
+    console.log('Listening to document:', typingRef.path);
+    
+    const unsubscribe = onSnapshot(typingRef, (doc) => {
+        console.log('Typing status changed:', doc.data());
+        
+        const data = doc.data();
+        const chatMessages = document.getElementById('chat-messages');
+        const existingIndicator = document.getElementById('typing-indicator');
+        
+        if (data?.isTyping) {
+            console.log('User is typing, adding indicator');
+            if (!existingIndicator) {
+                const typingIndicator = document.createElement('div');
+                typingIndicator.id = 'typing-indicator';
+                typingIndicator.className = 'typing-indicator';
+                typingIndicator.innerHTML = `
+                    <lord-icon
+                        src="https://cdn.lordicon.com/jpgpblwn.json"
+                        trigger="loop"
+                        state="loop-scale"
+                        colors="primary:#b6b8c8"
+                        style="width:24px;height:24px">
+                    </lord-icon>
+                `;
+                chatMessages.appendChild(typingIndicator);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        } else if (existingIndicator) {
+            console.log('User stopped typing, removing indicator');
+            existingIndicator.remove();
+        }
+    }, (error) => {
+        console.error('Error in typing listener:', error);
+    });
+    
+    return unsubscribe;
 }
 
 // Add event listeners for search
@@ -1324,7 +1496,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add click handler for the user options icon
     document.querySelector('.chat-header svg').addEventListener('click', () => {
         if (currentChatUser) {
-            openUserOptionsModal(currentChatUser.id, currentChatUser.username);
+            openUserOptionsModal(currentChatUser.id, currentChatUser.name);
         }
     });
     
@@ -1334,79 +1506,20 @@ document.addEventListener('DOMContentLoaded', () => {
             closeUserOptionsModal();
         }
     });
-});
 
-// Update typing status in Firestore
-async function updateTypingStatus(typing) {
-    if (!currentUser || !currentChatUser) return;
-    
-    console.log('Updating typing status:', {
-        typing,
-        currentUser: currentUser.uid,
-        currentChatUser: currentChatUser.id
-    });
-    
-    try {
-        const docRef = doc(db, 'typing', `${currentUser.uid}_${currentChatUser.id}`);
-        console.log('Document reference:', docRef.path);
-        
-        await setDoc(docRef, {
-            isTyping: typing,
-            userId: currentUser.uid,
-            otherUserId: currentChatUser.id,
-            timestamp: serverTimestamp()
-        }, { merge: true });
-        
-        console.log('Typing status updated successfully');
-    } catch (error) {
-        console.error('Error updating typing status:', error);
+    // Create chat button event listener
+    const createButton = document.getElementById('create-chat-button');
+    if (createButton) {
+        createButton.addEventListener('click', createChat);
     }
-}
 
-// Listen for typing status changes
-function setupTypingListener() {
-    if (!currentUser || !currentChatUser) return;
-    
-    console.log('Setting up typing listener:', {
-        currentUser: currentUser.uid,
-        currentChatUser: currentChatUser.id
-    });
-    
-    const typingRef = doc(db, 'typing', `${currentChatUser.id}_${currentUser.uid}`);
-    console.log('Listening to document:', typingRef.path);
-    
-    const unsubscribe = onSnapshot(typingRef, (doc) => {
-        console.log('Typing status changed:', doc.data());
-        
-        const data = doc.data();
-        const chatMessages = document.getElementById('chat-messages');
-        const existingIndicator = document.getElementById('typing-indicator');
-        
-        if (data?.isTyping) {
-            console.log('User is typing, adding indicator');
-            if (!existingIndicator) {
-                const typingIndicator = document.createElement('div');
-                typingIndicator.id = 'typing-indicator';
-                typingIndicator.className = 'typing-indicator';
-                typingIndicator.innerHTML = `
-                    <lord-icon
-                        src="https://cdn.lordicon.com/jpgpblwn.json"
-                        trigger="loop"
-                        state="loop-scale"
-                        colors="primary:#b6b8c8"
-                        style="width:24px;height:24px">
-                    </lord-icon>
-                `;
-                chatMessages.appendChild(typingIndicator);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            }
-        } else if (existingIndicator) {
-            console.log('User stopped typing, removing indicator');
-            existingIndicator.remove();
-        }
-    }, (error) => {
-        console.error('Error in typing listener:', error);
-    });
-    
-    return unsubscribe;
-}
+    // Clear selected users when modal is closed
+    const composeModal = document.getElementById('compose-modal');
+    if (composeModal) {
+        composeModal.addEventListener('hidden', () => {
+            selectedUsers.clear();
+            updateSelectedUsersDisplay();
+            updateCreateButton();
+        });
+    }
+});
