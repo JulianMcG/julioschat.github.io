@@ -632,6 +632,7 @@ async function loadMessages() {
 
         const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
             chatMessages.innerHTML = '';
+            let lastMessageTime = null;
             
             snapshot.forEach(doc => {
                 const message = doc.data();
@@ -643,12 +644,53 @@ async function loadMessages() {
                     message.participants.includes(currentUser.uid) &&
                     !blockedUsers.includes(message.senderId)) {
                     
+                    const messageTime = message.timestamp.toDate();
+                    
+                    // Add timestamp or gap if needed
+                    if (lastMessageTime) {
+                        const timeDiff = messageTime - lastMessageTime;
+                        const fiveMinutes = 5 * 60 * 1000; // 5 minutes in milliseconds
+                        const thirtyMinutes = 30 * 60 * 1000; // 30 minutes in milliseconds
+                        
+                        if (timeDiff > thirtyMinutes) {
+                            // Add date separator
+                            const dateSeparator = document.createElement('div');
+                            dateSeparator.className = 'date-separator';
+                            const today = new Date();
+                            const messageDate = messageTime;
+                            
+                            let dateText;
+                            if (messageDate.toDateString() === today.toDateString()) {
+                                dateText = `Today ${messageDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+                            } else if (messageDate.toDateString() === new Date(today - 86400000).toDateString()) {
+                                dateText = `Yesterday ${messageDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+                            } else {
+                                dateText = messageDate.toLocaleDateString([], { 
+                                    month: 'short', 
+                                    day: 'numeric',
+                                    hour: 'numeric',
+                                    minute: '2-digit'
+                                });
+                            }
+                            
+                            dateSeparator.textContent = dateText;
+                            chatMessages.appendChild(dateSeparator);
+                        } else if (timeDiff > fiveMinutes) {
+                            // Add gap
+                            const gap = document.createElement('div');
+                            gap.className = 'message-gap';
+                            chatMessages.appendChild(gap);
+                        }
+                    }
+                    
                     const messageElement = document.createElement('div');
                     messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
                     messageElement.innerHTML = `
                         <div class="content">${message.content}</div>
                     `;
                     chatMessages.appendChild(messageElement);
+                    
+                    lastMessageTime = messageTime;
                 }
             });
             
