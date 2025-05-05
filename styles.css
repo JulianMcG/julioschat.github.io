@@ -1085,6 +1085,39 @@ body {
     margin-bottom: 20px;
 }
 
+#settings-modal .notification-sound {
+    margin-bottom: 20px;
+}
+
+#settings-modal .notification-sound label {
+    display: block;
+    color: #B6B8C8;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+#settings-modal .sound-select {
+    width: 100%;
+    padding: 16px 15px;
+    border: 1.5px solid #1C1F28;
+    border-radius: 15px;
+    font-size: 16px;
+    background-color: #10121B;
+    color: #ECEBF7;
+    transition: border-color 0.3s;
+    cursor: pointer;
+}
+
+#settings-modal .sound-select:focus {
+    outline: none;
+    border-color: #1F49C7;
+}
+
+#settings-modal .sound-select option {
+    background-color: #10121B;
+    color: #ECEBF7;
+}
+
 #settings-modal .save-button {
     width: 100%;
     padding: 14px;
