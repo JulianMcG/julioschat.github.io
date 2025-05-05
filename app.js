@@ -633,6 +633,7 @@ async function loadMessages() {
         const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
             chatMessages.innerHTML = '';
             let lastMessageTime = null;
+            let lastMessage = null;
             
             snapshot.forEach(doc => {
                 const message = doc.data();
@@ -691,8 +692,17 @@ async function loadMessages() {
                     chatMessages.appendChild(messageElement);
                     
                     lastMessageTime = messageTime;
+                    lastMessage = message;
                 }
             });
+            
+            // Add read receipt for the last message if it was sent by the current user
+            if (lastMessage && lastMessage.senderId === currentUser.uid) {
+                const readReceipt = document.createElement('div');
+                readReceipt.className = 'read-receipt';
+                readReceipt.textContent = 'Sent';
+                chatMessages.appendChild(readReceipt);
+            }
             
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }, (error) => {
