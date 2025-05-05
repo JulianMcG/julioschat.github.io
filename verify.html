@@ -35,18 +35,6 @@
         .tab:not(.active):hover {
             color: #ECEBF7;
         }
-
-        .access-denied {
-            text-align: center;
-            color: #ff4444;
-            margin-top: 20px;
-        }
-
-        .loading {
-            text-align: center;
-            color: #B6B8C8;
-            margin-top: 20px;
-        }
     </style>
     <!-- Firebase SDK -->
     <script type="module" src="firebase-config.js"></script>
@@ -61,27 +49,22 @@
             where, 
             getDocs
         } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
-        import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
-        // Admin email
-        const ADMIN_EMAIL = 'julianmcgurie2008@gmail.com';
+        // Admin password
+        const ADMIN_PASSWORD = 'admin123';
 
-        // Show loading state initially
-        document.getElementById('loading').style.display = 'block';
-
-        // Check authentication state
-        onAuthStateChanged(auth, (user) => {
-            // Hide loading state
-            document.getElementById('loading').style.display = 'none';
-
-            if (user && user.email === ADMIN_EMAIL) {
-                // User is authenticated and is the admin
+        function checkPassword() {
+            const password = document.getElementById('admin-password').value;
+            const errorMessage = document.getElementById('error-message');
+            
+            if (password === ADMIN_PASSWORD) {
+                document.getElementById('password-form').style.display = 'none';
                 document.getElementById('verify-form').style.display = 'block';
             } else {
-                // User is not authenticated or not the admin
-                document.getElementById('access-denied').style.display = 'block';
+                errorMessage.textContent = 'Incorrect password';
+                errorMessage.style.display = 'block';
             }
-        });
+        }
 
         async function verifyUser() {
             const username = document.getElementById('username').value.trim();
@@ -122,6 +105,16 @@
 
         // Add event listeners when DOM is loaded
         document.addEventListener('DOMContentLoaded', () => {
+            // Password form button
+            document.getElementById('access-button').addEventListener('click', checkPassword);
+            
+            // Password input enter key
+            document.getElementById('admin-password').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    checkPassword();
+                }
+            });
+
             // Verify form button
             document.getElementById('verify-button').addEventListener('click', verifyUser);
             
@@ -145,8 +138,13 @@
 <body>
     <div class="container">
         <div class="section">
-            <div id="loading" class="loading">
-                <h2>Loading...</h2>
+            <div class="auth-form" id="password-form">
+                <h2>Admin Access</h2>
+                <div class="form-group">
+                    <input type="password" id="admin-password" placeholder="Enter admin password">
+                </div>
+                <button id="access-button">Access</button>
+                <p id="error-message" class="error-message"></p>
             </div>
 
             <div class="auth-form" id="verify-form" style="display: none;">
@@ -160,11 +158,6 @@
                 </div>
                 <button id="verify-button">Update Verification</button>
                 <p id="verify-message" class="error-message"></p>
-            </div>
-
-            <div id="access-denied" class="access-denied" style="display: none;">
-                <h2>Access Denied</h2>
-                <p>You must be logged in as the admin to access this page.</p>
             </div>
         </div>
     </div>
