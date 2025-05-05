@@ -605,6 +605,17 @@ async function startChat(userId, username) {
     loadMessages();
 }
 
+// Function to convert markdown-style formatting to HTML
+function formatMessageContent(content) {
+    // Replace markdown with HTML tags
+    return content
+        .replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>') // Bold Italics
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
+        .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italics
+        .replace(/__(.*?)__/g, '<u>$1</u>') // Underline
+        .replace(/~~(.*?)~~/g, '<s>$1</s>'); // Strikethrough
+}
+
 async function loadMessages() {
     if (!currentUser || !currentChatUser) {
         console.log('No current user or chat user');
@@ -681,7 +692,7 @@ async function loadMessages() {
                     const messageElement = document.createElement('div');
                     messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
                     messageElement.innerHTML = `
-                        <div class="content">${message.content}</div>
+                        <div class="content">${formatMessageContent(message.content)}</div>
                     `;
                     chatMessages.appendChild(messageElement);
                     
