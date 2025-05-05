@@ -20,8 +20,7 @@ import {
     addDoc,
     serverTimestamp,
     arrayUnion,
-    arrayRemove,
-    writeBatch
+    arrayRemove
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
@@ -328,17 +327,13 @@ async function loadUsers() {
         );
         const messagesSnapshot = await getDocs(messagesQuery);
 
-        // Get unique user IDs from messages and track unread messages
+        // Get unique user IDs from messages
         const dmUserIds = new Set();
-        const unreadMessages = new Map();
         messagesSnapshot.forEach(doc => {
             const message = doc.data();
             message.participants.forEach(id => {
                 if (id !== currentUser.uid) {
                     dmUserIds.add(id);
-                    if (message.receiverId === currentUser.uid && !message.read) {
-                        unreadMessages.set(id, (unreadMessages.get(id) || 0) + 1);
-                    }
                 }
             });
         });
@@ -352,8 +347,7 @@ async function loadUsers() {
                 username: userData.username,
                 profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
                 verified: userData.verified,
-                isPinned: pinnedConversations.includes(userId),
-                unreadCount: unreadMessages.get(userId) || 0
+                isPinned: pinnedConversations.includes(userId)
             };
         });
 
@@ -410,7 +404,6 @@ function createUserElement(user) {
     userElement.innerHTML = `
         <img src="${user.profilePicture || 'default-avatar.png'}" alt="${user.username}" class="profile-picture">
         <span class="username">${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
-        ${user.unreadCount > 0 ? `<span class="unread-badge">${user.unreadCount}</span>` : ''}
         <div class="user-actions">
             <span class="material-symbols-outlined action-icon pin-icon">keep</span>
             <span class="material-symbols-outlined action-icon close-icon">close</span>
@@ -449,29 +442,6 @@ function createUserElement(user) {
 
 async function startChat(userId, username) {
     currentChatUser = { id: userId, username: username };
-    
-    // Mark messages as read
-    try {
-        const messagesQuery = query(
-            collection(db, 'messages'),
-            where('participants', 'array-contains', currentUser.uid),
-            where('receiverId', '==', currentUser.uid),
-            where('senderId', '==', userId),
-            where('read', '==', false)
-        );
-        const messagesSnapshot = await getDocs(messagesQuery);
-        
-        const batch = writeBatch(db);
-        messagesSnapshot.forEach(doc => {
-            batch.update(doc.ref, { read: true });
-        });
-        await batch.commit();
-        
-        // Reload users to update unread counts
-        await loadUsers();
-    } catch (error) {
-        console.error('Error marking messages as read:', error);
-    }
     
     // Check if user is already in sidebar
     const existingUser = document.querySelector(`.user-item[data-uid="${userId}"]`);
@@ -927,8 +897,7 @@ async function sendMessage(content) {
             senderId: currentUser.uid,
             receiverId: currentChatUser.id,
             participants: [currentUser.uid, currentChatUser.id],
-            timestamp: serverTimestamp(),
-            read: false
+            timestamp: serverTimestamp()
         };
 
         // Add message to Firestore
@@ -1146,15 +1115,11 @@ async function searchAllUsers(searchTerm) {
 
         // Get unique user IDs from messages
         const dmUserIds = new Set();
-        const unreadMessages = new Map();
         messagesSnapshot.forEach(doc => {
             const message = doc.data();
             message.participants.forEach(id => {
                 if (id !== currentUser.uid) {
                     dmUserIds.add(id);
-                    if (message.receiverId === currentUser.uid && !message.read) {
-                        unreadMessages.set(id, (unreadMessages.get(id) || 0) + 1);
-                    }
                 }
             });
         });
