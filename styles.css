@@ -562,6 +562,7 @@ body {
     text-align: right;
     border-radius: 15px 15px 5px 15px;
     position: relative;
+    margin-bottom: 0;
 }
 
 .read-receipt {
@@ -572,6 +573,11 @@ body {
     margin-top: 2px;
     margin-bottom: 8px;
     font-weight: 500;
+    display: none;
+}
+
+.message.sent:last-child .read-receipt {
+    display: block;
 }
 
 .message-actions {
