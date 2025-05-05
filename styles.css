@@ -875,6 +875,7 @@ body {
     font-size: 18px;
     margin-left: 4px;
     vertical-align: middle;
+    font-variation-settings: 'FILL' 1;
 }
 
 .chat-header .verified-badge {
@@ -882,6 +883,7 @@ body {
     font-size: 20px;
     margin-left: 6px;
     vertical-align: middle;
+    font-variation-settings: 'FILL' 1;
 }
 
 /* Compose Modal Styles */
