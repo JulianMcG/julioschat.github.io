@@ -20,8 +20,7 @@ import {
     addDoc,
     serverTimestamp,
     arrayUnion,
-    arrayRemove,
-    writeBatch
+    arrayRemove
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
@@ -30,7 +29,6 @@ let currentChatUser = null;
 let typingTimeout = null;
 let isTyping = false;
 const storage = getStorage();
-let selectedUsers = new Set();
 
 // Profile Picture Upload
 document.getElementById('profile-picture-preview').addEventListener('click', () => {
@@ -721,11 +719,6 @@ function openComposeModal() {
 function closeComposeModal() {
     const modal = document.getElementById('compose-modal');
     modal.style.display = 'none';
-    selectedUsers.clear();
-    updateSelectedUsersDisplay();
-    updateCreateDMButton();
-    document.getElementById('compose-search').value = '';
-    document.getElementById('compose-results').innerHTML = '';
 }
 
 // Compose new message
@@ -812,15 +805,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span>${user.username}</span>
                         `;
                         userElement.onclick = () => {
-                            if (!selectedUsers.has(user)) {
-                                if (selectedUsers.size < 10) {
-                                    selectedUsers.add(user);
-                                    updateSelectedUsersDisplay();
-                                    updateCreateDMButton();
-                                } else {
-                                    alert('Maximum 10 users allowed in a group chat');
-                                }
-                            }
+                            startChat(user.id, user.username);
+                            closeComposeModal();
                         };
                         composeResults.appendChild(userElement);
                     });
@@ -1424,107 +1410,3 @@ function setupTypingListener() {
     
     return unsubscribe;
 }
-
-function updateCreateDMButton() {
-    const createDMButton = document.querySelector('.create-dm-button');
-    if (selectedUsers.size === 0) {
-        createDMButton.disabled = true;
-        createDMButton.textContent = 'Select users to message';
-    } else if (selectedUsers.size === 1) {
-        createDMButton.disabled = false;
-        createDMButton.textContent = 'Create DM';
-    } else if (selectedUsers.size > 10) {
-        createDMButton.disabled = true;
-        createDMButton.textContent = 'Maximum 10 users allowed';
-    } else {
-        createDMButton.disabled = false;
-        createDMButton.textContent = `Create Group Chat (${selectedUsers.size} users)`;
-    }
-}
-
-function updateSelectedUsersDisplay() {
-    const selectedUsersContainer = document.getElementById('selected-users');
-    selectedUsersContainer.innerHTML = '';
-    
-    selectedUsers.forEach(user => {
-        const userElement = document.createElement('div');
-        userElement.className = 'selected-user';
-        userElement.innerHTML = `
-            <img src="${user.profilePicture}" alt="${user.username}">
-            <span>${user.username}</span>
-            <span class="material-symbols-outlined remove-user">close</span>
-        `;
-        
-        userElement.querySelector('.remove-user').onclick = () => {
-            selectedUsers.delete(user);
-            updateSelectedUsersDisplay();
-            updateCreateDMButton();
-        };
-        
-        selectedUsersContainer.appendChild(userElement);
-    });
-}
-
-// Create DM button event listener
-document.querySelector('.create-dm-button').addEventListener('click', async () => {
-    if (selectedUsers.size === 0) return;
-    
-    if (selectedUsers.size === 1) {
-        // Single user - create DM
-        const user = Array.from(selectedUsers)[0];
-        startChat(user.id, user.username);
-    } else {
-        // Multiple users - create group chat
-        const userIds = Array.from(selectedUsers).map(user => user.id);
-        const usernames = Array.from(selectedUsers).map(user => user.username);
-        
-        // Create group chat document
-        try {
-            const groupChatRef = await addDoc(collection(db, 'groupChats'), {
-                participants: [currentUser.uid, ...userIds],
-                createdBy: currentUser.uid,
-                createdAt: serverTimestamp(),
-                name: usernames.join(', '),
-                lastMessage: null,
-                lastMessageTime: null
-            });
-            
-            // Add group chat to each participant's list
-            const batch = writeBatch(db);
-            [currentUser.uid, ...userIds].forEach(userId => {
-                const userRef = doc(db, 'users', userId);
-                batch.update(userRef, {
-                    groupChats: arrayUnion(groupChatRef.id)
-                });
-            });
-            await batch.commit();
-            
-            // Start the group chat
-            startGroupChat(groupChatRef.id, usernames.join(', '));
-        } catch (error) {
-            console.error('Error creating group chat:', error);
-            alert('Error creating group chat. Please try again.');
-        }
-    }
-    
-    closeComposeModal();
-    selectedUsers.clear();
-    updateSelectedUsersDisplay();
-    updateCreateDMButton();
-});
-
-// Reset selected users when modal is closed
-function closeComposeModal() {
-    const modal = document.getElementById('compose-modal');
-    modal.style.display = 'none';
-    selectedUsers.clear();
-    updateSelectedUsersDisplay();
-    updateCreateDMButton();
-    document.getElementById('compose-search').value = '';
-    document.getElementById('compose-results').innerHTML = '';
-}
-
-// Initialize create DM button state
-document.addEventListener('DOMContentLoaded', () => {
-    updateCreateDMButton();
-});
