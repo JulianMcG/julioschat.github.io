@@ -360,17 +360,22 @@ async function loadUsers() {
                         return null;
                     }
 
-                    const user = {
+                    // Debug the user data
+                    console.log('User data:', {
+                        id: userId,
+                        username: userData.username,
+                        verified: userData.verified,
+                        rawVerified: userData.verified
+                    });
+
+                    return {
                         id: userId,
                         username: userData.username,
                         profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
-                        verified: Boolean(userData.verified), // Ensure verified is a boolean
+                        verified: userData.verified === true, // Strict boolean check
                         isPinned: pinnedConversations.includes(userId),
                         lastMessageTime: userLastMessageTimes.get(userId) || new Date(0)
                     };
-
-                    console.log(`User loaded: ${user.username}, Verified: ${user.verified}`);
-                    return user;
                 } catch (error) {
                     console.error(`Error loading user ${userId}:`, error);
                     return null;
@@ -437,11 +442,17 @@ function createUserElement(user) {
     userElement.className = 'user-item';
     
     // Debug verification status
-    console.log(`Creating element for ${user.username}, Verified: ${user.verified}`);
+    console.log('Creating element for:', {
+        username: user.username,
+        verified: user.verified,
+        id: user.id
+    });
+    
+    const verifiedBadge = user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : '';
     
     userElement.innerHTML = `
         <img src="${user.profilePicture}" alt="${user.username}" class="profile-picture">
-        <span class="username">${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
+        <span class="username">${user.username}${verifiedBadge}</span>
         <div class="user-actions">
             <span class="material-symbols-outlined action-icon pin-icon">keep</span>
             <span class="material-symbols-outlined action-icon close-icon">close</span>
