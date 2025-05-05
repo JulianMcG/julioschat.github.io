@@ -1440,7 +1440,7 @@ async function loadNotificationSoundPreference() {
         const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
         const userData = userDoc.data();
         const selectedSound = userData?.notificationSound || 'Birdy.mp3';
-        const notificationsEnabled = userData?.notificationsEnabled ?? true;
+        notificationsEnabled = userData?.notificationsEnabled ?? true;
         
         // Update select element
         const soundSelect = document.getElementById('notification-sound');
@@ -1462,7 +1462,7 @@ async function saveNotificationSoundPreference() {
     const soundSelect = document.getElementById('notification-sound');
     const selectedSound = soundSelect.value;
     const notificationToggle = document.getElementById('notification-toggle');
-    const notificationsEnabled = notificationToggle.checked;
+    notificationsEnabled = notificationToggle.checked;
     
     try {
         await setDoc(doc(db, 'users', currentUser.uid), {
@@ -1483,8 +1483,9 @@ async function saveNotificationSoundPreference() {
 // Play notification sound
 function playNotificationSound() {
     if (!isTabFocused && notificationsEnabled) {
-        notificationSound.currentTime = 0;
-        notificationSound.play().catch(error => {
+        // Create a new audio instance to allow multiple sounds to play
+        const sound = new Audio(notificationSound.src);
+        sound.play().catch(error => {
             console.error('Error playing notification sound:', error);
         });
     }
