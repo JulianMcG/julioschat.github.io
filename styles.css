@@ -562,22 +562,6 @@ body {
     text-align: right;
     border-radius: 15px 15px 5px 15px;
     position: relative;
-    margin-bottom: 0;
-}
-
-.read-receipt {
-    font-size: 11px;
-    color: #B6B8C8;
-    text-align: right;
-    margin-right: 20px;
-    margin-top: 2px;
-    margin-bottom: 8px;
-    font-weight: 500;
-    display: none;
-}
-
-.message.sent:last-child .read-receipt {
-    display: block;
 }
 
 .message-actions {
