@@ -467,8 +467,6 @@ body {
     color: #ECEBF7;
     font-size: 14px;
     padding: 8px;
-    -webkit-autocorrect: on;
-    autocorrect: on;
 }
 
 .message-input input:focus {
