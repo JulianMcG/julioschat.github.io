@@ -310,6 +310,7 @@ function showChatSection() {
 // Chat Functions
 async function loadUsers() {
     const usersContainer = document.getElementById('users-container');
+    // Clear the container completely
     usersContainer.innerHTML = '';
 
     try {
