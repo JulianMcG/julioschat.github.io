@@ -7,7 +7,6 @@ import {
     onAuthStateChanged,
     updateProfile,
     GoogleAuthProvider,
-    OAuthProvider,
     signInWithPopup
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { 
@@ -153,10 +152,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const signupButton = document.getElementById('signup-button');
     const googleLoginButton = document.getElementById('google-login-button');
     const googleSignupButton = document.getElementById('google-signup-button');
-    const appleLoginButton = document.getElementById('apple-login-button');
-    const appleSignupButton = document.getElementById('apple-signup-button');
-    const microsoftLoginButton = document.getElementById('microsoft-login-button');
-    const microsoftSignupButton = document.getElementById('microsoft-signup-button');
 
     if (signupLink) {
         signupLink.addEventListener('click', (e) => {
@@ -186,22 +181,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (googleSignupButton) {
         googleSignupButton.addEventListener('click', signInWithGoogle);
-    }
-
-    if (appleLoginButton) {
-        appleLoginButton.addEventListener('click', signInWithApple);
-    }
-
-    if (appleSignupButton) {
-        appleSignupButton.addEventListener('click', signInWithApple);
-    }
-
-    if (microsoftLoginButton) {
-        microsoftLoginButton.addEventListener('click', signInWithMicrosoft);
-    }
-
-    if (microsoftSignupButton) {
-        microsoftSignupButton.addEventListener('click', signInWithMicrosoft);
     }
 });
 
@@ -1623,59 +1602,5 @@ async function signInWithGoogle() {
     } catch (error) {
         console.error('Google Sign-In error:', error);
         alert(`Error signing in with Google: ${error.message}`);
-    }
-}
-
-async function signInWithApple() {
-    try {
-        const provider = new OAuthProvider('apple.com');
-        const result = await signInWithPopup(auth, provider);
-        const user = result.user;
-
-        // Check if user document exists
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        
-        if (!userDoc.exists()) {
-            // Create new user document if it doesn't exist
-            await setDoc(doc(db, 'users', user.uid), {
-                username: user.displayName || user.email.split('@')[0],
-                email: user.email,
-                profilePicture: user.photoURL,
-                createdAt: serverTimestamp()
-            });
-        }
-
-        // Show chat section
-        showChatSection();
-    } catch (error) {
-        console.error('Apple Sign-In error:', error);
-        alert(`Error signing in with Apple: ${error.message}`);
-    }
-}
-
-async function signInWithMicrosoft() {
-    try {
-        const provider = new OAuthProvider('microsoft.com');
-        const result = await signInWithPopup(auth, provider);
-        const user = result.user;
-
-        // Check if user document exists
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        
-        if (!userDoc.exists()) {
-            // Create new user document if it doesn't exist
-            await setDoc(doc(db, 'users', user.uid), {
-                username: user.displayName || user.email.split('@')[0],
-                email: user.email,
-                profilePicture: user.photoURL,
-                createdAt: serverTimestamp()
-            });
-        }
-
-        // Show chat section
-        showChatSection();
-    } catch (error) {
-        console.error('Microsoft Sign-In error:', error);
-        alert(`Error signing in with Microsoft: ${error.message}`);
     }
 }
