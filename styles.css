@@ -554,16 +554,6 @@ body {
     right: 0;
 }
 
-.read-receipt {
-    text-align: right;
-    color: #B6B8C8;
-    font-size: 12px;
-    margin: 2px 20px 0 auto;
-    padding-right: 10px;
-    position: relative;
-    top: -5px;
-}
-
 .message.sent {
     background-color: #1F49C7;
     color: #ECEBF7;
