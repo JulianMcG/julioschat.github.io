@@ -388,6 +388,16 @@ body {
     gap: 4px;
 }
 
+.last-message {
+    color: #B6B8C8;
+    font-size: 12px;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+
 .pinned .username::after {
     content: "keep";
     font-family: 'Material Symbols Outlined';
