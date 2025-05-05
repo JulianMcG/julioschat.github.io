@@ -31,6 +31,7 @@
         async function verifyUser() {
             const username = document.getElementById('username').value.trim();
             const verifyMessage = document.getElementById('verify-message');
+            const action = document.getElementById('verify-action').value;
             
             if (!username) {
                 verifyMessage.textContent = 'Please enter a username';
@@ -51,15 +52,15 @@
 
                 const userDoc = usersSnapshot.docs[0];
                 await setDoc(doc(db, 'users', userDoc.id), {
-                    verified: true
+                    verified: action === 'grant'
                 }, { merge: true });
 
-                verifyMessage.textContent = `Successfully verified ${username}`;
+                verifyMessage.textContent = `Successfully ${action === 'grant' ? 'verified' : 'unverified'} ${username}`;
                 verifyMessage.style.color = '#4CAF50';
                 verifyMessage.style.display = 'block';
             } catch (error) {
-                console.error('Error verifying user:', error);
-                verifyMessage.textContent = 'Error verifying user. Please try again.';
+                console.error('Error updating verification status:', error);
+                verifyMessage.textContent = 'Error updating verification status. Please try again.';
                 verifyMessage.style.display = 'block';
             }
         }
@@ -101,11 +102,17 @@
             </div>
 
             <div class="auth-form" id="verify-form" style="display: none;">
-                <h2>Verify Users</h2>
+                <h2>Manage Verification</h2>
                 <div class="form-group">
-                    <input type="text" id="username" placeholder="Enter username to verify">
+                    <input type="text" id="username" placeholder="Enter username">
                 </div>
-                <button id="verify-button">Verify User</button>
+                <div class="form-group">
+                    <select id="verify-action" class="form-group">
+                        <option value="grant">Grant Verification</option>
+                        <option value="revoke">Revoke Verification</option>
+                    </select>
+                </div>
+                <button id="verify-button">Update Verification</button>
                 <p id="verify-message" class="error-message"></p>
             </div>
         </div>
