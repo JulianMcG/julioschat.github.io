@@ -133,14 +133,26 @@
                     <button class="save-button">Save Changes</button>
                 </div>
                 <div class="notification-sound">
-                    <label for="notification-sound">Notification Sound</label>
-                    <select id="notification-sound" class="sound-select">
-                        <option value="Birdy.mp3">Birdy</option>
-                        <option value="Entrance.mp3">Entrance</option>
-                        <option value="Flutter.mp3">Flutter</option>
-                        <option value="Grow.mp3">Grow</option>
-                        <option value="Point.mp3">Point</option>
-                    </select>
+                    <div class="notification-toggle">
+                        <label for="notification-toggle">Notification Sounds</label>
+                        <label class="switch">
+                            <input type="checkbox" id="notification-toggle" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="sound-preview">
+                        <label for="notification-sound">Sound</label>
+                        <select id="notification-sound" class="sound-select">
+                            <option value="Birdy.mp3">Birdy</option>
+                            <option value="Entrance.mp3">Entrance</option>
+                            <option value="Flutter.mp3">Flutter</option>
+                            <option value="Grow.mp3">Grow</option>
+                            <option value="Point.mp3">Point</option>
+                        </select>
+                        <button id="preview-sound" class="preview-button">
+                            <span class="material-symbols-outlined">play_arrow</span>
+                        </button>
+                    </div>
                 </div>
                 <div class="signout-section">
                     <button class="signout-button">Sign Out</button>
