@@ -1077,9 +1077,13 @@ document.getElementById('settings-profile-picture-input').addEventListener('chan
 document.querySelector('.save-button').addEventListener('click', async () => {
     const newUsername = document.getElementById('settings-username').value.trim();
     const newProfilePicture = document.getElementById('settings-profile-picture').src;
+    const usernameInput = document.getElementById('settings-username');
+
+    // Clear previous errors
+    clearErrorMessages();
 
     if (!newUsername) {
-        alert('Please enter a username');
+        showError(usernameInput, 'Please enter a username');
         return;
     }
 
@@ -1094,7 +1098,7 @@ document.querySelector('.save-button').addEventListener('click', async () => {
             
             // If the username is taken by someone else
             if (userDoc.id !== currentUser.uid) {
-                alert('Username is already taken');
+                showError(usernameInput, 'Username is already taken');
                 return;
             }
         }
