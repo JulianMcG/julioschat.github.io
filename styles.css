@@ -881,7 +881,7 @@ body {
 .chat-header .verified-badge {
     color: #1F49C7;
     font-size: 20px;
-    margin-left: 6px;
+    margin-left: 4px;
     vertical-align: middle;
     font-variation-settings: 'FILL' 1;
 }
