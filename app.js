@@ -31,16 +31,39 @@ let isTyping = false;
 const storage = getStorage();
 
 // Notification Sound
-let notificationSound = new Audio('NotifSounds/Birdy.mp3');
+let notificationSound = null;
 let isTabFocused = true;
 let notificationsEnabled = true;
 let lastSoundPlayTime = 0;
 const SOUND_COOLDOWN = 1000; // 1 second cooldown
 
 // Initialize notification sound
-function initializeNotificationSound() {
-    notificationSound.volume = 0.3; // Set volume to 30%
-    notificationSound.load(); // Preload the sound
+async function initializeNotificationSound() {
+    try {
+        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        const userData = userDoc.data();
+        const selectedSound = userData?.notificationSound || 'Birdy.mp3';
+        notificationsEnabled = userData?.notificationsEnabled ?? true;
+        
+        // Update select element
+        const soundSelect = document.getElementById('notification-sound');
+        soundSelect.value = selectedSound;
+        
+        // Update toggle
+        const notificationToggle = document.getElementById('notification-toggle');
+        notificationToggle.checked = notificationsEnabled;
+        
+        // Create and initialize audio
+        notificationSound = new Audio(`NotifSounds/${selectedSound}`);
+        notificationSound.volume = 0.3;
+        await notificationSound.load();
+        
+        // Set up event listeners
+        soundSelect.addEventListener('change', saveNotificationSoundPreference);
+        notificationToggle.addEventListener('change', saveNotificationSoundPreference);
+    } catch (error) {
+        console.error('Error initializing notification sound:', error);
+    }
 }
 
 // Profile Picture Upload
