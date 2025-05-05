@@ -1476,17 +1476,23 @@ input:checked + .slider:before {
     gap: 10px;
     width: 100%;
     padding: 12px;
-    background-color: #1C1F28;
-    border: 1px solid #1C1F28;
+    background-color: #494C56;
+    border: 3px solid rgba(255, 255, 255, 0.05);
     border-radius: 15px;
     color: #ECEBF7;
     font-size: 1rem;
     cursor: pointer;
     transition: background-color 0.2s;
+    box-shadow: 0 5px 0 #31333A;
 }
 
 .google-button:hover {
-    background-color: #2A2D38;
+    background-color: #5a5d68;
+}
+
+.google-button:active {
+    transform: translateY(5px);
+    box-shadow: 0 0 0 #31333A;
 }
 
 .google-button img {
