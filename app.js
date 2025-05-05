@@ -37,6 +37,12 @@ let notificationsEnabled = true;
 let lastSoundPlayTime = 0;
 const SOUND_COOLDOWN = 1000; // 1 second cooldown
 
+// Initialize notification sound
+function initializeNotificationSound() {
+    notificationSound.volume = 0.3; // Set volume to 30%
+    notificationSound.load(); // Preload the sound
+}
+
 // Profile Picture Upload
 document.getElementById('profile-picture-preview').addEventListener('click', () => {
     document.getElementById('profile-picture-input').click();
@@ -1454,7 +1460,7 @@ async function loadNotificationSoundPreference() {
         
         // Update audio source
         notificationSound = new Audio(`NotifSounds/${selectedSound}`);
-        notificationSound.volume = 0.3; // Set volume to 30%
+        initializeNotificationSound();
     } catch (error) {
         console.error('Error loading notification sound preference:', error);
     }
@@ -1475,7 +1481,7 @@ async function saveNotificationSoundPreference() {
         
         // Update audio source and play preview
         notificationSound = new Audio(`NotifSounds/${selectedSound}`);
-        notificationSound.volume = 0.3; // Set volume to 30%
+        initializeNotificationSound();
         notificationSound.play().catch(error => {
             console.error('Error playing notification sound:', error);
         });
@@ -1492,6 +1498,7 @@ function playNotificationSound() {
         // Create a new audio instance to allow multiple sounds to play
         const sound = new Audio(notificationSound.src);
         sound.volume = 0.3; // Set volume to 30%
+        sound.load(); // Preload the sound
         sound.play().catch(error => {
             console.error('Error playing notification sound:', error);
         });
