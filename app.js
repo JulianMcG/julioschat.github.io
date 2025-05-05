@@ -1470,8 +1470,11 @@ async function saveNotificationSoundPreference() {
             notificationsEnabled: notificationsEnabled
         }, { merge: true });
         
-        // Update audio source
+        // Update audio source and play preview
         notificationSound = new Audio(`NotifSounds/${selectedSound}`);
+        notificationSound.play().catch(error => {
+            console.error('Error playing notification sound:', error);
+        });
     } catch (error) {
         console.error('Error saving notification sound preference:', error);
     }
