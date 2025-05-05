@@ -1344,4 +1344,97 @@ button:hover {
 .message-edit-input:focus {
     outline: none;
     border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Notification Sound Styles */
+.notification-toggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.notification-toggle label {
+    color: #B6B8C8;
+    font-size: 14px;
+}
+
+/* Toggle Switch */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 24px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #1C1F28;
+    transition: .4s;
+    border-radius: 24px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 2px;
+    bottom: 2px;
+    background-color: #ECEBF7;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #1F49C7;
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+/* Sound Preview */
+.sound-preview {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sound-preview label {
+    color: #B6B8C8;
+    font-size: 14px;
+    margin-right: 10px;
+}
+
+.preview-button {
+    background-color: #1F49C7;
+    color: #ECEBF7;
+    border: none;
+    border-radius: 8px;
+    padding: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s;
+}
+
+.preview-button:hover {
+    background-color: #1a3db0;
+}
+
+.preview-button .material-symbols-outlined {
+    font-size: 20px;
 } 
