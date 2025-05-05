@@ -1416,25 +1416,4 @@ input:checked + .slider:before {
     color: #B6B8C8;
     font-size: 14px;
     margin-right: 10px;
-}
-
-.preview-button {
-    background-color: #1F49C7;
-    color: #ECEBF7;
-    border: none;
-    border-radius: 8px;
-    padding: 8px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.3s;
-}
-
-.preview-button:hover {
-    background-color: #1a3db0;
-}
-
-.preview-button .material-symbols-outlined {
-    font-size: 20px;
 } 
