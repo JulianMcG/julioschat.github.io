@@ -608,12 +608,8 @@ async function startChat(userId, username) {
 
 async function loadMessages() {
     if (!currentUser || !currentChatUser) {
-        console.log('No current user or chat user');
         return;
     }
-
-    const chatMessages = document.getElementById('chat-messages');
-    chatMessages.innerHTML = '';
 
     try {
         // Get current user's blocked users list
@@ -634,7 +630,7 @@ async function loadMessages() {
         const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
             chatMessages.innerHTML = '';
             let lastMessageTime = 0;
-            
+
             snapshot.forEach(doc => {
                 const message = doc.data();
                 
@@ -646,13 +642,16 @@ async function loadMessages() {
                     !blockedUsers.includes(message.senderId)) {
                     
                     const messageTime = message.timestamp?.toDate() || new Date();
-                    
-                    // Update message as read if it's received
+
+                    // Update message as read if it's received and not already read
                     if (message.receiverId === currentUser.uid && !message.read) {
-                        updateDoc(doc.ref, { read: true });
+                        updateDoc(doc.ref, { 
+                            read: true,
+                            readAt: serverTimestamp()
+                        });
                     }
-                    
-                    // Add timestamp or gap if needed
+
+                    // Add date separator if needed
                     if (lastMessageTime) {
                         const timeDiff = messageTime - lastMessageTime;
                         const fiveMinutes = 5 * 60 * 1000; // 5 minutes in milliseconds
@@ -694,10 +693,10 @@ async function loadMessages() {
                     
                     if (message.senderId === currentUser.uid) {
                         const readReceipt = document.createElement('div');
-                        readReceipt.className = `read-receipt ${message.read ? 'double' : 'single'}`;
+                        readReceipt.className = `read-receipt ${message.read ? 'seen' : 'sent'}`;
                         readReceipt.innerHTML = `
                             <span class="material-symbols-outlined">done</span>
-                            ${message.read ? '<span class="material-symbols-outlined">done</span>' : ''}
+                            <span>${message.read ? 'Seen' : 'Sent'}</span>
                         `;
                         messageElement.appendChild(readReceipt);
                     }
