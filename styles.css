@@ -523,6 +523,37 @@ body {
     display: inline-block;
 }
 
+.message-gap {
+    height: 10px;
+    width: 100%;
+}
+
+.date-separator {
+    text-align: center;
+    color: #B6B8C8;
+    font-size: 12px;
+    margin: 15px 0;
+    position: relative;
+}
+
+.date-separator::before,
+.date-separator::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 30%;
+    height: 1px;
+    background-color: #1C1F28;
+}
+
+.date-separator::before {
+    left: 0;
+}
+
+.date-separator::after {
+    right: 0;
+}
+
 .message.sent {
     background-color: #1F49C7;
     color: #ECEBF7;
