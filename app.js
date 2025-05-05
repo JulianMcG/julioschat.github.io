@@ -29,7 +29,6 @@ let currentChatUser = null;
 let typingTimeout = null;
 let isTyping = false;
 const storage = getStorage();
-let currentUsersUnsubscribe = null;
 
 // Profile Picture Upload
 document.getElementById('profile-picture-preview').addEventListener('click', () => {
@@ -325,93 +324,73 @@ async function loadUsers() {
             collection(db, 'messages'),
             where('participants', 'array-contains', currentUser.uid)
         );
+        const messagesSnapshot = await getDocs(messagesQuery);
 
-        // Set up real-time listener for messages
-        if (currentUsersUnsubscribe) {
-            currentUsersUnsubscribe();
-        }
-
-        currentUsersUnsubscribe = onSnapshot(messagesQuery, async (snapshot) => {
-            // Create a map to store the latest message timestamp for each user
-            const userLastMessageTimes = new Map();
-            const dmUserIds = new Set();
-            
-            snapshot.forEach(doc => {
-                const message = doc.data();
-                message.participants.forEach(id => {
-                    if (id !== currentUser.uid) {
-                        dmUserIds.add(id);
-                        const timestamp = message.timestamp?.toDate() || new Date(0);
-                        if (!userLastMessageTimes.has(id) || timestamp > userLastMessageTimes.get(id)) {
-                            userLastMessageTimes.set(id, timestamp);
-                        }
-                    }
-                });
-            });
-
-            // Get user details for each DM'd user
-            const usersPromises = Array.from(dmUserIds).map(async (userId) => {
-                const userDoc = await getDoc(doc(db, 'users', userId));
-                const userData = userDoc.data();
-                return {
-                    id: userId,
-                    username: userData.username,
-                    profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
-                    verified: userData.verified,
-                    isPinned: pinnedConversations.includes(userId),
-                    lastMessageTime: userLastMessageTimes.get(userId) || new Date(0)
-                };
-            });
-
-            const users = await Promise.all(usersPromises);
-
-            // Sort users: pinned first, then by last message time
-            users.sort((a, b) => {
-                if (a.isPinned && !b.isPinned) return -1;
-                if (!a.isPinned && b.isPinned) return 1;
-                return b.lastMessageTime - a.lastMessageTime;
-            });
-
-            // Clear existing users
-            usersContainer.innerHTML = '';
-
-            // Display users
-            users.forEach(user => {
-                if (!hiddenConversations.includes(user.id)) {
-                    const userElement = createUserElement(user);
-                    userElement.dataset.uid = user.id;
-                    
-                    if (user.isPinned) {
-                        userElement.classList.add('pinned');
-                        usersContainer.insertBefore(userElement, usersContainer.firstChild);
-                    } else {
-                        usersContainer.appendChild(userElement);
-                    }
-                    
-                    // Add click handler for the user item
-                    userElement.onclick = (e) => {
-                        if (!e.target.classList.contains('action-icon')) {
-                            startChat(user.id, user.username);
-                        }
-                    };
-
-                    // Add click handler for close icon
-                    const closeIcon = userElement.querySelector('.close-icon');
-                    closeIcon.onclick = async (e) => {
-                        e.stopPropagation();
-                        userElement.remove();
-                        try {
-                            await setDoc(doc(db, 'users', currentUser.uid), {
-                                hiddenConversations: arrayUnion(user.id)
-                            }, { merge: true });
-                        } catch (error) {
-                            console.error('Error hiding conversation:', error);
-                        }
-                    };
+        // Get unique user IDs from messages
+        const dmUserIds = new Set();
+        messagesSnapshot.forEach(doc => {
+            const message = doc.data();
+            message.participants.forEach(id => {
+                if (id !== currentUser.uid) {
+                    dmUserIds.add(id);
                 }
             });
-        }, (error) => {
-            console.error('Error in users listener:', error);
+        });
+
+        // Get user details for each DM'd user
+        const usersPromises = Array.from(dmUserIds).map(async (userId) => {
+            const userDoc = await getDoc(doc(db, 'users', userId));
+            const userData = userDoc.data();
+            return {
+                id: userId,
+                username: userData.username,
+                profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
+                verified: userData.verified,
+                isPinned: pinnedConversations.includes(userId)
+            };
+        });
+
+        const users = await Promise.all(usersPromises);
+
+        // Sort users: pinned first, then alphabetically
+        users.sort((a, b) => {
+            if (a.isPinned && !b.isPinned) return -1;
+            if (!a.isPinned && b.isPinned) return 1;
+            return a.username.localeCompare(b.username);
+        });
+
+        // Display users
+        users.forEach(user => {
+            const userElement = createUserElement(user);
+            userElement.dataset.uid = user.id;
+            
+            if (user.isPinned) {
+                userElement.classList.add('pinned');
+                usersContainer.insertBefore(userElement, usersContainer.firstChild);
+            } else {
+                usersContainer.appendChild(userElement);
+            }
+            
+            // Add click handler for the user item
+            userElement.onclick = (e) => {
+                if (!e.target.classList.contains('action-icon')) {
+                    startChat(user.id, user.username);
+                }
+            };
+
+            // Add click handler for close icon
+            const closeIcon = userElement.querySelector('.close-icon');
+            closeIcon.onclick = async (e) => {
+                e.stopPropagation();
+                userElement.remove();
+                try {
+                    await setDoc(doc(db, 'users', currentUser.uid), {
+                        hiddenConversations: arrayUnion(user.id)
+                    }, { merge: true });
+                } catch (error) {
+                    console.error('Error hiding conversation:', error);
+                }
+            };
         });
     } catch (error) {
         console.error('Error loading users:', error);
@@ -423,7 +402,7 @@ function createUserElement(user) {
     userElement.className = 'user-item';
     userElement.innerHTML = `
         <img src="${user.profilePicture || 'default-avatar.png'}" alt="${user.username}" class="profile-picture">
-        <span class="username">${user.username}${user.verified ? '<span class="material-symbols-filled verified-badge">verified</span>' : ''}</span>
+        <span class="username">${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
         <div class="user-actions">
             <span class="material-symbols-outlined action-icon pin-icon">keep</span>
             <span class="material-symbols-outlined action-icon close-icon">close</span>
@@ -478,7 +457,7 @@ async function startChat(userId, username) {
         userElement.dataset.uid = userId;
         userElement.innerHTML = `
             <img src="${profilePicture}" alt="${username}" class="profile-picture">
-            <span class="username">${username}${isVerified ? '<span class="material-symbols-filled verified-badge">verified</span>' : ''}</span>
+            <span class="username">${username}${isVerified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
             <div class="user-actions">
                 <span class="material-symbols-outlined action-icon pin-icon">keep</span>
                 <span class="material-symbols-outlined action-icon close-icon">close</span>
@@ -554,7 +533,7 @@ async function startChat(userId, username) {
     const isVerified = userData?.verified || false;
 
     // Update chat header with verified badge if user is verified
-    const verifiedBadge = isVerified ? '<span class="material-symbols-filled verified-badge">verified</span>' : '';
+    const verifiedBadge = isVerified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : '';
     document.getElementById('active-chat-username').innerHTML = `${username}${verifiedBadge}`;
 
     // Show message input and user options icon
@@ -941,7 +920,7 @@ function updateCurrentUserProfile(user) {
             const isVerified = userData?.verified || false;
             
             // Update username with verified badge if user is verified
-            const verifiedBadge = isVerified ? '<span class="material-symbols-filled verified-badge">verified</span>' : '';
+            const verifiedBadge = isVerified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : '';
             document.getElementById('current-username').innerHTML = `${user.displayName || 'Username'}${verifiedBadge}`;
             document.getElementById('current-user-avatar').src = user.photoURL || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
 
@@ -1230,7 +1209,7 @@ function updateChatHeader(user) {
     
     chatHeader.innerHTML = `
         <img src="${user.photoURL || 'default-avatar.png'}" alt="${user.username}" class="profile-picture">
-        <span class="username">${user.username}${user.verified ? '<span class="material-symbols-filled verified-badge">verified</span>' : ''}</span>
+        <span class="username">${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
     `;
 }
 
@@ -1442,10 +1421,3 @@ function setupTypingListener() {
     
     return unsubscribe;
 }
-
-// Add cleanup for the listener when the page is unloaded
-window.addEventListener('beforeunload', () => {
-    if (currentUsersUnsubscribe) {
-        currentUsersUnsubscribe();
-    }
-});
