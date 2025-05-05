@@ -664,8 +664,8 @@ async function loadMessages() {
                     message.participants.includes(currentUser.uid) &&
                     !blockedUsers.includes(message.senderId)) {
                     
-                    // Play notification sound if message is from other user
-                    if (message.senderId !== currentUser.uid) {
+                    // Play notification sound if message is from other user and tab is not focused
+                    if (message.senderId !== currentUser.uid && !isTabFocused) {
                         playNotificationSound();
                     }
                     
@@ -1495,12 +1495,21 @@ function playNotificationSound() {
         sound.play().catch(error => {
             console.error('Error playing notification sound:', error);
         });
+        console.log('Playing notification sound:', {
+            isTabFocused,
+            notificationsEnabled,
+            timeSinceLastPlay: now - lastSoundPlayTime
+        });
     }
 }
 
 // Tab focus detection
 document.addEventListener('visibilitychange', () => {
     isTabFocused = document.visibilityState === 'visible';
+    console.log('Tab focus changed:', {
+        isTabFocused,
+        visibilityState: document.visibilityState
+    });
 });
 
 // Add event listeners for notification settings
@@ -1510,4 +1519,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     soundSelect.addEventListener('change', saveNotificationSoundPreference);
     notificationToggle.addEventListener('change', saveNotificationSoundPreference);
+    
+    // Log initial state
+    console.log('Initial notification state:', {
+        isTabFocused,
+        notificationsEnabled,
+        selectedSound: soundSelect.value
+    });
 });
