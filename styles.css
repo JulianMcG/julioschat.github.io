@@ -1469,10 +1469,10 @@ input:checked + .slider:before {
     font-size: 0.9rem;
 }
 
-.google-button {
+.button-wrapper .google-button {
     width: 100%;
     padding: 14px;
-    background-color: #494C56;
+    background-color: #494C56 !important;
     color: #ECEBF7;
     border: 3px solid rgba(255, 255, 255, 0.05);
     border-radius: 15px;
@@ -1488,16 +1488,17 @@ input:checked + .slider:before {
     gap: 10px;
 }
 
-.google-button:hover {
+.button-wrapper .google-button:hover {
+    background-color: #494C56 !important;
     transform: translateY(-2px);
 }
 
-.google-button:active {
+.button-wrapper .google-button:active {
     transform: translateY(5px);
     box-shadow: 0 0 0 #31333A;
 }
 
-.google-button img {
+.button-wrapper .google-button img {
     width: 18px;
     height: 18px;
 } 
