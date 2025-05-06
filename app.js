@@ -25,6 +25,7 @@ import {
     arrayRemove
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+import { onValue, onDisconnect } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
 let currentUser = null;
 let currentChatUser = null;
@@ -439,17 +440,42 @@ async function loadUsers() {
 function createUserElement(user) {
     const userElement = document.createElement('div');
     userElement.className = 'user-item';
-    userElement.innerHTML = `
-        <img src="${user.profilePicture || 'default-avatar.png'}" alt="${user.username}" class="profile-picture">
-        <span class="username">${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
-        <div class="user-actions">
-            <span class="material-symbols-outlined action-icon pin-icon">keep</span>
-            <span class="material-symbols-outlined action-icon close-icon">close</span>
-        </div>
-    `;
+    userElement.setAttribute('data-user-id', user.id);
     
+    const profilePicture = document.createElement('img');
+    profilePicture.className = 'profile-picture';
+    profilePicture.src = user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
+    profilePicture.alt = user.username;
+
+    const usernameSpan = document.createElement('span');
+    usernameSpan.className = 'username';
+    usernameSpan.textContent = user.username;
+    if (user.verified) {
+        const verifiedBadge = document.createElement('span');
+        verifiedBadge.className = 'material-symbols-outlined verified-badge';
+        verifiedBadge.textContent = 'verified';
+        usernameSpan.appendChild(verifiedBadge);
+    }
+
+    const userActions = document.createElement('div');
+    userActions.className = 'user-actions';
+
+    const pinIcon = document.createElement('span');
+    pinIcon.className = 'material-symbols-outlined action-icon pin-icon';
+    pinIcon.textContent = 'keep';
+
+    const closeIcon = document.createElement('span');
+    closeIcon.className = 'material-symbols-outlined action-icon close-icon';
+    closeIcon.textContent = 'close';
+
+    userActions.appendChild(pinIcon);
+    userActions.appendChild(closeIcon);
+
+    userElement.appendChild(profilePicture);
+    userElement.appendChild(usernameSpan);
+    userElement.appendChild(userActions);
+
     // Add click handler for pin icon
-    const pinIcon = userElement.querySelector('.pin-icon');
     pinIcon.onclick = async (e) => {
         e.stopPropagation();
         const isPinned = userElement.classList.contains('pinned');
@@ -981,11 +1007,13 @@ function updateCurrentUserProfile(user) {
 }
 
 // Auth State Listener
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
     if (user) {
         currentUser = user;
-        updateCurrentUserProfile(user);
         showChatSection();
+        await loadUsers();
+        setupOnlineStatus();
+        updateCurrentUserProfile(user);
         loadNotificationSoundPreference();
     } else {
         currentUser = null;
@@ -1603,4 +1631,45 @@ async function signInWithGoogle() {
         console.error('Google Sign-In error:', error);
         alert(`Error signing in with Google: ${error.message}`);
     }
+}
+
+// Online Status Tracking
+function setupOnlineStatus() {
+    if (!currentUser) return;
+
+    // Create a reference to this user's online status
+    const userStatusRef = doc(db, 'status', currentUser.uid);
+    const isOfflineForDatabase = {
+        state: 'offline',
+        lastChanged: serverTimestamp(),
+    };
+    const isOnlineForDatabase = {
+        state: 'online',
+        lastChanged: serverTimestamp(),
+    };
+
+    // Set the user's online status to online
+    setDoc(userStatusRef, isOnlineForDatabase);
+
+    // When the user disconnects, set their status to offline
+    window.addEventListener('beforeunload', () => {
+        setDoc(userStatusRef, isOfflineForDatabase);
+    });
+
+    // Listen for changes to all users' online status
+    const statusRef = collection(db, 'status');
+    onSnapshot(statusRef, (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+            const data = change.doc.data();
+            const userElement = document.querySelector(`[data-user-id="${change.doc.id}"]`);
+            if (userElement) {
+                const profilePicture = userElement.querySelector('.profile-picture');
+                if (data.state === 'online') {
+                    profilePicture.classList.add('online');
+                } else {
+                    profilePicture.classList.remove('online');
+                }
+            }
+        });
+    });
 }
