@@ -357,6 +357,9 @@ async function loadUsers() {
         const currentUserData = currentUserDoc.data();
         const hiddenConversations = currentUserData?.hiddenConversations || [];
         const pinnedConversations = currentUserData?.pinnedConversations || [];
+        
+        console.log('Loading users - Pinned conversations:', pinnedConversations);
+        console.log('Loading users - Hidden conversations:', hiddenConversations);
 
         // Get all messages where current user is a participant
         const messagesQuery = query(
@@ -376,20 +379,25 @@ async function loadUsers() {
             });
         });
 
+        console.log('DM User IDs:', Array.from(dmUserIds));
+
         // Get user details for each DM'd user
         const usersPromises = Array.from(dmUserIds).map(async (userId) => {
             const userDoc = await getDoc(doc(db, 'users', userId));
             const userData = userDoc.data();
+            const isPinned = pinnedConversations.includes(userId);
+            console.log(`User ${userId} pinned state:`, isPinned);
             return {
                 id: userId,
                 username: userData.username,
                 profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
                 verified: userData.verified,
-                isPinned: pinnedConversations.includes(userId)
+                isPinned: isPinned
             };
         });
 
         const users = await Promise.all(usersPromises);
+        console.log('Processed users:', users);
 
         // Sort users: pinned first, then alphabetically
         users.sort((a, b) => {
@@ -397,6 +405,8 @@ async function loadUsers() {
             if (!a.isPinned && b.isPinned) return 1;
             return a.username.localeCompare(b.username);
         });
+
+        console.log('Sorted users:', users);
 
         // Display users
         users.forEach(user => {
@@ -464,15 +474,34 @@ function createUserElement(user) {
         }
         
         try {
+            console.log('Pinning user:', user.id, 'Current pinned state:', isPinned);
+            
+            // First get the current state
+            const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+            const userData = userDoc.data();
+            const currentPinned = userData?.pinnedConversations || [];
+            console.log('Current pinned conversations:', currentPinned);
+
             if (!isPinned) {
+                // Add to pinned
+                const updatedPinned = [...currentPinned, user.id];
+                console.log('Adding to pinned, new array:', updatedPinned);
                 await setDoc(doc(db, 'users', currentUser.uid), {
-                    pinnedConversations: arrayUnion(user.id)
-                }, { merge: true });
+                    pinnedConversations: updatedPinned
+                });
             } else {
+                // Remove from pinned
+                const updatedPinned = currentPinned.filter(id => id !== user.id);
+                console.log('Removing from pinned, new array:', updatedPinned);
                 await setDoc(doc(db, 'users', currentUser.uid), {
-                    pinnedConversations: arrayRemove(user.id)
-                }, { merge: true });
+                    pinnedConversations: updatedPinned
+                });
             }
+
+            // Verify the update
+            const updatedDoc = await getDoc(doc(db, 'users', currentUser.uid));
+            const updatedData = updatedDoc.data();
+            console.log('Updated pinned conversations:', updatedData?.pinnedConversations);
         } catch (error) {
             console.error('Error pinning conversation:', error);
             // Revert UI changes if save fails
