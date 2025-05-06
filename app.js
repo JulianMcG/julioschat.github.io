@@ -423,11 +423,8 @@ async function loadUsers() {
                 e.stopPropagation();
                 userElement.remove();
                 try {
-                    const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-                    const userData = userDoc.data();
-                    const hiddenConversations = userData?.hiddenConversations || [];
                     await setDoc(doc(db, 'users', currentUser.uid), {
-                        hiddenConversations: [...hiddenConversations, user.id]
+                        hiddenConversations: arrayUnion(user.id)
                     }, { merge: true });
                 } catch (error) {
                     console.error('Error hiding conversation:', error);
