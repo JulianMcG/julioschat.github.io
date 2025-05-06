@@ -352,7 +352,7 @@ async function loadUsers() {
     usersContainer.innerHTML = '';
 
     try {
-        // Get current user's hidden conversations
+        // Get current user's hidden conversations and pinned conversations
         const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
         const currentUserData = currentUserDoc.data();
         const hiddenConversations = currentUserData?.hiddenConversations || [];
@@ -370,7 +370,7 @@ async function loadUsers() {
         messagesSnapshot.forEach(doc => {
             const message = doc.data();
             message.participants.forEach(id => {
-                if (id !== currentUser.uid) {
+                if (id !== currentUser.uid && !hiddenConversations.includes(id)) {
                     dmUserIds.add(id);
                 }
             });
@@ -423,8 +423,11 @@ async function loadUsers() {
                 e.stopPropagation();
                 userElement.remove();
                 try {
+                    const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+                    const userData = userDoc.data();
+                    const hiddenConversations = userData?.hiddenConversations || [];
                     await setDoc(doc(db, 'users', currentUser.uid), {
-                        hiddenConversations: arrayUnion(user.id)
+                        hiddenConversations: [...hiddenConversations, user.id]
                     }, { merge: true });
                 } catch (error) {
                     console.error('Error hiding conversation:', error);
@@ -470,18 +473,25 @@ function createUserElement(user) {
             
             if (!isPinned) {
                 if (!pinnedConversations.includes(user.id)) {
+                    const updatedPinnedConversations = [...pinnedConversations, user.id];
                     await setDoc(doc(db, 'users', currentUser.uid), {
-                        pinnedConversations: [...pinnedConversations, user.id]
-                    }, { merge: true });
+                        pinnedConversations: updatedPinnedConversations
+                    });
                 }
             } else {
                 const updatedPinnedConversations = pinnedConversations.filter(id => id !== user.id);
                 await setDoc(doc(db, 'users', currentUser.uid), {
                     pinnedConversations: updatedPinnedConversations
-                }, { merge: true });
+                });
             }
         } catch (error) {
             console.error('Error pinning conversation:', error);
+            // Revert UI changes if save fails
+            userElement.classList.toggle('pinned');
+            if (!isPinned) {
+                const usersContainer = document.getElementById('users-container');
+                usersContainer.appendChild(userElement);
+            }
         }
     };
 
