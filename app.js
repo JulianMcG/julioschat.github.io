@@ -491,8 +491,8 @@ function createUserElement(user) {
             
             // First get the current state
             const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-            const userData = userDoc.data();
-            let currentPinned = userData?.pinnedConversations || [];
+            const userData = userDoc.data() || {};
+            let currentPinned = userData.pinnedConversations || [];
             
             // Ensure currentPinned is an array
             if (!Array.isArray(currentPinned)) {
@@ -508,15 +508,17 @@ function createUserElement(user) {
                 }
                 console.log('Adding to pinned, new array:', currentPinned);
                 await setDoc(doc(db, 'users', currentUser.uid), {
+                    ...userData,
                     pinnedConversations: currentPinned
-                }, { merge: true });
+                });
             } else {
                 // Remove from pinned
                 currentPinned = currentPinned.filter(id => id !== user.id);
                 console.log('Removing from pinned, new array:', currentPinned);
                 await setDoc(doc(db, 'users', currentUser.uid), {
+                    ...userData,
                     pinnedConversations: currentPinned
-                }, { merge: true });
+                });
             }
 
             // Verify the update
