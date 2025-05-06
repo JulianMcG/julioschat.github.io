@@ -355,15 +355,20 @@ async function loadUsers() {
         // Get current user's hidden conversations and pinned conversations
         const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
         const currentUserData = currentUserDoc.data();
-        let hiddenConversations = currentUserData?.hiddenConversations || [];
-        let pinnedConversations = currentUserData?.pinnedConversations || [];
         
-        // Ensure arrays are actually arrays
-        if (!Array.isArray(hiddenConversations)) {
-            hiddenConversations = [];
-        }
-        if (!Array.isArray(pinnedConversations)) {
-            pinnedConversations = [];
+        console.log('Raw user data:', currentUserData);
+        
+        // Initialize arrays with proper type checking
+        let hiddenConversations = [];
+        let pinnedConversations = [];
+        
+        if (currentUserData) {
+            if (Array.isArray(currentUserData.hiddenConversations)) {
+                hiddenConversations = currentUserData.hiddenConversations;
+            }
+            if (Array.isArray(currentUserData.pinnedConversations)) {
+                pinnedConversations = currentUserData.pinnedConversations;
+            }
         }
         
         console.log('Loading users - Pinned conversations:', pinnedConversations);
@@ -394,7 +399,7 @@ async function loadUsers() {
             const userDoc = await getDoc(doc(db, 'users', userId));
             const userData = userDoc.data();
             const isPinned = pinnedConversations.includes(userId);
-            console.log(`User ${userId} pinned state:`, isPinned);
+            console.log(`User ${userId} pinned state:`, isPinned, 'Pinned conversations:', pinnedConversations);
             return {
                 id: userId,
                 username: userData.username,
