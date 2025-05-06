@@ -385,8 +385,8 @@ body {
 
 .online-status {
     position: absolute;
-    bottom: -4px;
-    right: -4px;
+    bottom: -3px;
+    right: -3px;
     width: 18px;
     height: 18px;
     background-color: #27C46A;
