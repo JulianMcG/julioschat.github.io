@@ -439,10 +439,11 @@ async function loadUsers() {
 function createUserElement(user) {
     const userElement = document.createElement('div');
     userElement.className = 'user-item';
+    userElement.dataset.uid = user.id;
     userElement.innerHTML = `
-        <div style="position: relative;">
+        <div class="profile-picture-container">
             <img src="${user.profilePicture || 'default-avatar.png'}" alt="${user.username}" class="profile-picture">
-            <div class="online-status" style="display: ${user.isOnline ? 'block' : 'none'}"></div>
+            <div class="online-status"></div>
         </div>
         <span class="username">${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
         <div class="user-actions">
@@ -477,6 +478,18 @@ function createUserElement(user) {
             console.error('Error pinning conversation:', error);
         }
     };
+
+    // Set up online status tracking
+    const onlineStatusRef = doc(db, 'users', user.id);
+    onSnapshot(onlineStatusRef, (doc) => {
+        const userData = doc.data();
+        const onlineStatus = userElement.querySelector('.online-status');
+        if (userData?.isOnline) {
+            onlineStatus.classList.add('active');
+        } else {
+            onlineStatus.classList.remove('active');
+        }
+    });
     
     return userElement;
 }
@@ -984,13 +997,31 @@ function updateCurrentUserProfile(user) {
 }
 
 // Auth State Listener
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
     if (user) {
         currentUser = user;
-        setupOnlineStatus();
         updateCurrentUserProfile(user);
         showChatSection();
         loadNotificationSoundPreference();
+
+        // User is signed in
+        try {
+            // Set user as online
+            await setDoc(doc(db, 'users', user.uid), {
+                isOnline: true,
+                lastSeen: serverTimestamp()
+            }, { merge: true });
+
+            // Set up offline detection
+            window.addEventListener('beforeunload', async () => {
+                await setDoc(doc(db, 'users', user.uid), {
+                    isOnline: false,
+                    lastSeen: serverTimestamp()
+                }, { merge: true });
+            });
+        } catch (error) {
+            console.error('Error updating online status:', error);
+        }
     } else {
         currentUser = null;
         showAuthSection();
@@ -1607,62 +1638,4 @@ async function signInWithGoogle() {
         console.error('Google Sign-In error:', error);
         alert(`Error signing in with Google: ${error.message}`);
     }
-}
-
-// Online Status Tracking
-function setupOnlineStatus() {
-    if (!currentUser) return;
-
-    // Create a reference to the user's online status
-    const userStatusRef = doc(db, 'status', currentUser.uid);
-    const isOfflineForDatabase = {
-        state: 'offline',
-        lastChanged: serverTimestamp(),
-    };
-    const isOnlineForDatabase = {
-        state: 'online',
-        lastChanged: serverTimestamp(),
-    };
-
-    // Create a reference to the special '.info/connected' path in Realtime Database
-    const isOfflineForFirestore = {
-        state: 'offline',
-        lastChanged: serverTimestamp(),
-    };
-    const isOnlineForFirestore = {
-        state: 'online',
-        lastChanged: serverTimestamp(),
-    };
-
-    // When the client's connection state changes, update the user's status
-    onAuthStateChanged(auth, (user) => {
-        if (user) {
-            // Set user as online
-            setDoc(userStatusRef, isOnlineForFirestore);
-            
-            // Set up listener for online status changes
-            const statusRef = collection(db, 'status');
-            const unsubscribe = onSnapshot(statusRef, (snapshot) => {
-                snapshot.docChanges().forEach((change) => {
-                    if (change.type === 'modified') {
-                        const userId = change.doc.id;
-                        const status = change.doc.data().state;
-                        const userElement = document.querySelector(`.user-item[data-uid="${userId}"]`);
-                        if (userElement) {
-                            const onlineStatus = userElement.querySelector('.online-status');
-                            if (onlineStatus) {
-                                onlineStatus.style.display = status === 'online' ? 'block' : 'none';
-                            }
-                        }
-                    }
-                });
-            });
-
-            // Clean up listener when user signs out
-            window.addEventListener('beforeunload', () => {
-                setDoc(userStatusRef, isOfflineForFirestore);
-                unsubscribe();
-            });
-        }
-    });
 }
