@@ -355,8 +355,16 @@ async function loadUsers() {
         // Get current user's hidden conversations and pinned conversations
         const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
         const currentUserData = currentUserDoc.data();
-        const hiddenConversations = currentUserData?.hiddenConversations || [];
-        const pinnedConversations = currentUserData?.pinnedConversations || [];
+        let hiddenConversations = currentUserData?.hiddenConversations || [];
+        let pinnedConversations = currentUserData?.pinnedConversations || [];
+        
+        // Ensure arrays are actually arrays
+        if (!Array.isArray(hiddenConversations)) {
+            hiddenConversations = [];
+        }
+        if (!Array.isArray(pinnedConversations)) {
+            pinnedConversations = [];
+        }
         
         console.log('Loading users - Pinned conversations:', pinnedConversations);
         console.log('Loading users - Hidden conversations:', hiddenConversations);
@@ -479,23 +487,31 @@ function createUserElement(user) {
             // First get the current state
             const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
             const userData = userDoc.data();
-            const currentPinned = userData?.pinnedConversations || [];
+            let currentPinned = userData?.pinnedConversations || [];
+            
+            // Ensure currentPinned is an array
+            if (!Array.isArray(currentPinned)) {
+                currentPinned = [];
+            }
+            
             console.log('Current pinned conversations:', currentPinned);
 
             if (!isPinned) {
-                // Add to pinned
-                const updatedPinned = [...currentPinned, user.id];
-                console.log('Adding to pinned, new array:', updatedPinned);
+                // Add to pinned if not already in array
+                if (!currentPinned.includes(user.id)) {
+                    currentPinned.push(user.id);
+                }
+                console.log('Adding to pinned, new array:', currentPinned);
                 await setDoc(doc(db, 'users', currentUser.uid), {
-                    pinnedConversations: updatedPinned
-                });
+                    pinnedConversations: currentPinned
+                }, { merge: true });
             } else {
                 // Remove from pinned
-                const updatedPinned = currentPinned.filter(id => id !== user.id);
-                console.log('Removing from pinned, new array:', updatedPinned);
+                currentPinned = currentPinned.filter(id => id !== user.id);
+                console.log('Removing from pinned, new array:', currentPinned);
                 await setDoc(doc(db, 'users', currentUser.uid), {
-                    pinnedConversations: updatedPinned
-                });
+                    pinnedConversations: currentPinned
+                }, { merge: true });
             }
 
             // Verify the update
