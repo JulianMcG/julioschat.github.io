@@ -22,8 +22,7 @@ import {
     addDoc,
     serverTimestamp,
     arrayUnion,
-    arrayRemove,
-    updateDoc
+    arrayRemove
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
@@ -353,27 +352,11 @@ async function loadUsers() {
     usersContainer.innerHTML = '';
 
     try {
-        // Get current user's hidden conversations and pinned conversations
+        // Get current user's hidden conversations
         const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
         const currentUserData = currentUserDoc.data();
-        
-        console.log('Raw user data:', currentUserData);
-        
-        // Initialize arrays with proper type checking
-        let hiddenConversations = [];
-        let pinnedConversations = [];
-        
-        if (currentUserData) {
-            if (Array.isArray(currentUserData.hiddenConversations)) {
-                hiddenConversations = currentUserData.hiddenConversations;
-            }
-            if (Array.isArray(currentUserData.pinnedConversations)) {
-                pinnedConversations = currentUserData.pinnedConversations;
-            }
-        }
-        
-        console.log('Loading users - Pinned conversations:', pinnedConversations);
-        console.log('Loading users - Hidden conversations:', hiddenConversations);
+        const hiddenConversations = currentUserData?.hiddenConversations || [];
+        const pinnedConversations = currentUserData?.pinnedConversations || [];
 
         // Get all messages where current user is a participant
         const messagesQuery = query(
@@ -387,31 +370,26 @@ async function loadUsers() {
         messagesSnapshot.forEach(doc => {
             const message = doc.data();
             message.participants.forEach(id => {
-                if (id !== currentUser.uid && !hiddenConversations.includes(id)) {
+                if (id !== currentUser.uid) {
                     dmUserIds.add(id);
                 }
             });
         });
 
-        console.log('DM User IDs:', Array.from(dmUserIds));
-
         // Get user details for each DM'd user
         const usersPromises = Array.from(dmUserIds).map(async (userId) => {
             const userDoc = await getDoc(doc(db, 'users', userId));
             const userData = userDoc.data();
-            const isPinned = pinnedConversations.includes(userId);
-            console.log(`User ${userId} pinned state:`, isPinned, 'Pinned conversations:', pinnedConversations);
             return {
                 id: userId,
                 username: userData.username,
                 profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
                 verified: userData.verified,
-                isPinned: isPinned
+                isPinned: pinnedConversations.includes(userId)
             };
         });
 
         const users = await Promise.all(usersPromises);
-        console.log('Processed users:', users);
 
         // Sort users: pinned first, then alphabetically
         users.sort((a, b) => {
@@ -419,8 +397,6 @@ async function loadUsers() {
             if (!a.isPinned && b.isPinned) return 1;
             return a.username.localeCompare(b.username);
         });
-
-        console.log('Sorted users:', users);
 
         // Display users
         users.forEach(user => {
@@ -464,9 +440,9 @@ function createUserElement(user) {
     const userElement = document.createElement('div');
     userElement.className = 'user-item';
     userElement.innerHTML = `
-        <div class="profile-picture-container">
+        <div style="position: relative;">
             <img src="${user.profilePicture || 'default-avatar.png'}" alt="${user.username}" class="profile-picture">
-            <div class="online-status"></div>
+            <div class="online-status" style="display: ${user.isOnline ? 'block' : 'none'}"></div>
         </div>
         <span class="username">${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
         <div class="user-actions">
@@ -488,64 +464,19 @@ function createUserElement(user) {
         }
         
         try {
-            console.log('Pinning user:', user.id, 'Current pinned state:', isPinned);
-            
-            // First get the current state
-            const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-            const userData = userDoc.data() || {};
-            let currentPinned = userData.pinnedConversations || [];
-            
-            // Ensure currentPinned is an array
-            if (!Array.isArray(currentPinned)) {
-                currentPinned = [];
-            }
-            
-            console.log('Current pinned conversations:', currentPinned);
-
             if (!isPinned) {
-                // Add to pinned if not already in array
-                if (!currentPinned.includes(user.id)) {
-                    currentPinned.push(user.id);
-                }
-                console.log('Adding to pinned, new array:', currentPinned);
-                await updateDoc(doc(db, 'users', currentUser.uid), {
-                    pinnedConversations: currentPinned
-                });
+                await setDoc(doc(db, 'users', currentUser.uid), {
+                    pinnedConversations: arrayUnion(user.id)
+                }, { merge: true });
             } else {
-                // Remove from pinned
-                currentPinned = currentPinned.filter(id => id !== user.id);
-                console.log('Removing from pinned, new array:', currentPinned);
-                await updateDoc(doc(db, 'users', currentUser.uid), {
-                    pinnedConversations: currentPinned
-                });
+                await setDoc(doc(db, 'users', currentUser.uid), {
+                    pinnedConversations: arrayRemove(user.id)
+                }, { merge: true });
             }
-
-            // Verify the update
-            const updatedDoc = await getDoc(doc(db, 'users', currentUser.uid));
-            const updatedData = updatedDoc.data();
-            console.log('Updated pinned conversations:', updatedData?.pinnedConversations);
         } catch (error) {
             console.error('Error pinning conversation:', error);
-            // Revert UI changes if save fails
-            userElement.classList.toggle('pinned');
-            if (!isPinned) {
-                const usersContainer = document.getElementById('users-container');
-                usersContainer.appendChild(userElement);
-            }
         }
     };
-
-    // Set up online status listener
-    const onlineStatusRef = doc(db, 'users', user.id);
-    onSnapshot(onlineStatusRef, (doc) => {
-        const userData = doc.data();
-        const onlineStatus = userElement.querySelector('.online-status');
-        if (userData?.isOnline) {
-            onlineStatus.classList.add('active');
-        } else {
-            onlineStatus.classList.remove('active');
-        }
-    });
     
     return userElement;
 }
@@ -609,20 +540,13 @@ async function startChat(userId, username) {
             }
             
             try {
-                const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-                const userData = userDoc.data();
-                const pinnedConversations = userData?.pinnedConversations || [];
-                
                 if (!isPinned) {
-                    if (!pinnedConversations.includes(userId)) {
-                        await setDoc(doc(db, 'users', currentUser.uid), {
-                            pinnedConversations: [...pinnedConversations, userId]
-                        }, { merge: true });
-                    }
-                } else {
-                    const updatedPinnedConversations = pinnedConversations.filter(id => id !== userId);
                     await setDoc(doc(db, 'users', currentUser.uid), {
-                        pinnedConversations: updatedPinnedConversations
+                        pinnedConversations: arrayUnion(userId)
+                    }, { merge: true });
+                } else {
+                    await setDoc(doc(db, 'users', currentUser.uid), {
+                        pinnedConversations: arrayRemove(userId)
                     }, { merge: true });
                 }
             } catch (error) {
@@ -1063,14 +987,13 @@ function updateCurrentUserProfile(user) {
 onAuthStateChanged(auth, (user) => {
     if (user) {
         currentUser = user;
+        setupOnlineStatus();
         updateCurrentUserProfile(user);
         showChatSection();
         loadNotificationSoundPreference();
-        updateOnlineStatus(true);
     } else {
         currentUser = null;
         showAuthSection();
-        updateOnlineStatus(false);
     }
 });
 
@@ -1686,19 +1609,60 @@ async function signInWithGoogle() {
     }
 }
 
-// Add online status tracking
-function updateOnlineStatus(isOnline) {
-    if (currentUser) {
-        setDoc(doc(db, 'users', currentUser.uid), {
-            isOnline: isOnline,
-            lastSeen: serverTimestamp()
-        }, { merge: true });
-    }
+// Online Status Tracking
+function setupOnlineStatus() {
+    if (!currentUser) return;
+
+    // Create a reference to the user's online status
+    const userStatusRef = doc(db, 'status', currentUser.uid);
+    const isOfflineForDatabase = {
+        state: 'offline',
+        lastChanged: serverTimestamp(),
+    };
+    const isOnlineForDatabase = {
+        state: 'online',
+        lastChanged: serverTimestamp(),
+    };
+
+    // Create a reference to the special '.info/connected' path in Realtime Database
+    const isOfflineForFirestore = {
+        state: 'offline',
+        lastChanged: serverTimestamp(),
+    };
+    const isOnlineForFirestore = {
+        state: 'online',
+        lastChanged: serverTimestamp(),
+    };
+
+    // When the client's connection state changes, update the user's status
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            // Set user as online
+            setDoc(userStatusRef, isOnlineForFirestore);
+            
+            // Set up listener for online status changes
+            const statusRef = collection(db, 'status');
+            const unsubscribe = onSnapshot(statusRef, (snapshot) => {
+                snapshot.docChanges().forEach((change) => {
+                    if (change.type === 'modified') {
+                        const userId = change.doc.id;
+                        const status = change.doc.data().state;
+                        const userElement = document.querySelector(`.user-item[data-uid="${userId}"]`);
+                        if (userElement) {
+                            const onlineStatus = userElement.querySelector('.online-status');
+                            if (onlineStatus) {
+                                onlineStatus.style.display = status === 'online' ? 'block' : 'none';
+                            }
+                        }
+                    }
+                });
+            });
+
+            // Clean up listener when user signs out
+            window.addEventListener('beforeunload', () => {
+                setDoc(userStatusRef, isOfflineForFirestore);
+                unsubscribe();
+            });
+        }
+    });
 }
-
-// Update online status when user connects/disconnects
-window.addEventListener('online', () => updateOnlineStatus(true));
-window.addEventListener('offline', () => updateOnlineStatus(false));
-
-// Update online status when user closes the tab/window
-window.addEventListener('beforeunload', () => updateOnlineStatus(false));
