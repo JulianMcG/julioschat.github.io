@@ -439,9 +439,6 @@ async function loadUsers() {
 function createUserElement(user) {
     const userElement = document.createElement('div');
     userElement.className = 'user-item';
-    if (user.isPinned) {
-        userElement.classList.add('pinned');
-    }
     userElement.innerHTML = `
         <div class="profile-picture-container">
             <img src="${user.profilePicture || 'default-avatar.png'}" alt="${user.username}" class="profile-picture">
@@ -467,13 +464,20 @@ function createUserElement(user) {
         }
         
         try {
+            const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+            const userData = userDoc.data();
+            const pinnedConversations = userData?.pinnedConversations || [];
+            
             if (!isPinned) {
-                await setDoc(doc(db, 'users', currentUser.uid), {
-                    pinnedConversations: arrayUnion(user.id)
-                }, { merge: true });
+                if (!pinnedConversations.includes(user.id)) {
+                    await setDoc(doc(db, 'users', currentUser.uid), {
+                        pinnedConversations: [...pinnedConversations, user.id]
+                    }, { merge: true });
+                }
             } else {
+                const updatedPinnedConversations = pinnedConversations.filter(id => id !== user.id);
                 await setDoc(doc(db, 'users', currentUser.uid), {
-                    pinnedConversations: arrayRemove(user.id)
+                    pinnedConversations: updatedPinnedConversations
                 }, { merge: true });
             }
         } catch (error) {
@@ -555,13 +559,20 @@ async function startChat(userId, username) {
             }
             
             try {
+                const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+                const userData = userDoc.data();
+                const pinnedConversations = userData?.pinnedConversations || [];
+                
                 if (!isPinned) {
-                    await setDoc(doc(db, 'users', currentUser.uid), {
-                        pinnedConversations: arrayUnion(userId)
-                    }, { merge: true });
+                    if (!pinnedConversations.includes(userId)) {
+                        await setDoc(doc(db, 'users', currentUser.uid), {
+                            pinnedConversations: [...pinnedConversations, userId]
+                        }, { merge: true });
+                    }
                 } else {
+                    const updatedPinnedConversations = pinnedConversations.filter(id => id !== userId);
                     await setDoc(doc(db, 'users', currentUser.uid), {
-                        pinnedConversations: arrayRemove(userId)
+                        pinnedConversations: updatedPinnedConversations
                     }, { merge: true });
                 }
             } catch (error) {
