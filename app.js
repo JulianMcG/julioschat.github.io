@@ -439,6 +439,9 @@ async function loadUsers() {
 function createUserElement(user) {
     const userElement = document.createElement('div');
     userElement.className = 'user-item';
+    if (user.isPinned) {
+        userElement.classList.add('pinned');
+    }
     userElement.innerHTML = `
         <div class="profile-picture-container">
             <img src="${user.profilePicture || 'default-avatar.png'}" alt="${user.username}" class="profile-picture">
