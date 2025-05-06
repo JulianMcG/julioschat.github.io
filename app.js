@@ -22,7 +22,8 @@ import {
     addDoc,
     serverTimestamp,
     arrayUnion,
-    arrayRemove
+    arrayRemove,
+    updateDoc
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
@@ -507,16 +508,14 @@ function createUserElement(user) {
                     currentPinned.push(user.id);
                 }
                 console.log('Adding to pinned, new array:', currentPinned);
-                await setDoc(doc(db, 'users', currentUser.uid), {
-                    ...userData,
+                await updateDoc(doc(db, 'users', currentUser.uid), {
                     pinnedConversations: currentPinned
                 });
             } else {
                 // Remove from pinned
                 currentPinned = currentPinned.filter(id => id !== user.id);
                 console.log('Removing from pinned, new array:', currentPinned);
-                await setDoc(doc(db, 'users', currentUser.uid), {
-                    ...userData,
+                await updateDoc(doc(db, 'users', currentUser.uid), {
                     pinnedConversations: currentPinned
                 });
             }
