@@ -369,34 +369,29 @@ body {
     padding: 10px;
 }
 
-.profile-picture-container {
-    position: relative;
+.profile-picture {
     width: 40px;
     height: 40px;
-    margin-right: 10px;
-}
-
-.profile-picture {
-    width: 100%;
-    height: 100%;
     border-radius: 50%;
     object-fit: cover;
+    margin-right: 10px;
+    position: relative;
 }
 
 .online-status {
     position: absolute;
-    bottom: -2px;
-    right: -2px;
-    width: 18px;
-    height: 18px;
+    bottom: 0;
+    right: 0;
+    width: 12px;
+    height: 12px;
     background-color: #27C46A;
-    border: 4px solid #0c0e16;
+    border: 4px solid #0C0E16;
     border-radius: 50%;
-    display: none;
+    transition: border-color 0.3s;
 }
 
-.online-status.active {
-    display: block;
+.user-item.active .online-status {
+    border-color: #13161F;
 }
 
 .user-avatar {
