@@ -352,7 +352,7 @@ async function loadUsers() {
     usersContainer.innerHTML = '';
 
     try {
-        // Get current user's hidden conversations
+        // Get current user's hidden conversations and pinned conversations
         const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
         const currentUserData = currentUserDoc.data();
         const hiddenConversations = currentUserData?.hiddenConversations || [];
@@ -370,7 +370,7 @@ async function loadUsers() {
         messagesSnapshot.forEach(doc => {
             const message = doc.data();
             message.participants.forEach(id => {
-                if (id !== currentUser.uid) {
+                if (id !== currentUser.uid && !hiddenConversations.includes(id)) {
                     dmUserIds.add(id);
                 }
             });
@@ -439,13 +439,6 @@ async function loadUsers() {
 function createUserElement(user) {
     const userElement = document.createElement('div');
     userElement.className = 'user-item';
-    userElement.dataset.uid = user.id;
-    
-    // Add pinned class if user is pinned
-    if (user.isPinned) {
-        userElement.classList.add('pinned');
-    }
-    
     userElement.innerHTML = `
         <div class="profile-picture-container">
             <img src="${user.profilePicture || 'default-avatar.png'}" alt="${user.username}" class="profile-picture">
@@ -465,39 +458,33 @@ function createUserElement(user) {
         const isPinned = userElement.classList.contains('pinned');
         userElement.classList.toggle('pinned');
         
+        if (!isPinned) {
+            const usersContainer = document.getElementById('users-container');
+            usersContainer.insertBefore(userElement, usersContainer.firstChild);
+        }
+        
         try {
             if (!isPinned) {
-                // Pin the conversation
                 await setDoc(doc(db, 'users', currentUser.uid), {
                     pinnedConversations: arrayUnion(user.id)
                 }, { merge: true });
-                
-                // Move to top of list
-                const usersContainer = document.getElementById('users-container');
-                usersContainer.insertBefore(userElement, usersContainer.firstChild);
             } else {
-                // Unpin the conversation
                 await setDoc(doc(db, 'users', currentUser.uid), {
                     pinnedConversations: arrayRemove(user.id)
                 }, { merge: true });
-                
-                // Move to unpinned section
-                const usersContainer = document.getElementById('users-container');
-                const firstUnpinned = Array.from(usersContainer.children).find(child => !child.classList.contains('pinned'));
-                if (firstUnpinned) {
-                    usersContainer.insertBefore(userElement, firstUnpinned);
-                } else {
-                    usersContainer.appendChild(userElement);
-                }
             }
         } catch (error) {
             console.error('Error pinning conversation:', error);
-            // Revert the UI change if the database update fails
+            // Revert UI changes if save fails
             userElement.classList.toggle('pinned');
+            if (!isPinned) {
+                const usersContainer = document.getElementById('users-container');
+                usersContainer.appendChild(userElement);
+            }
         }
     };
 
-    // Set up online status tracking
+    // Set up online status listener
     const onlineStatusRef = doc(db, 'users', user.id);
     onSnapshot(onlineStatusRef, (doc) => {
         const userData = doc.data();
@@ -571,13 +558,20 @@ async function startChat(userId, username) {
             }
             
             try {
+                const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+                const userData = userDoc.data();
+                const pinnedConversations = userData?.pinnedConversations || [];
+                
                 if (!isPinned) {
-                    await setDoc(doc(db, 'users', currentUser.uid), {
-                        pinnedConversations: arrayUnion(userId)
-                    }, { merge: true });
+                    if (!pinnedConversations.includes(userId)) {
+                        await setDoc(doc(db, 'users', currentUser.uid), {
+                            pinnedConversations: [...pinnedConversations, userId]
+                        }, { merge: true });
+                    }
                 } else {
+                    const updatedPinnedConversations = pinnedConversations.filter(id => id !== userId);
                     await setDoc(doc(db, 'users', currentUser.uid), {
-                        pinnedConversations: arrayRemove(userId)
+                        pinnedConversations: updatedPinnedConversations
                     }, { merge: true });
                 }
             } catch (error) {
@@ -1015,34 +1009,17 @@ function updateCurrentUserProfile(user) {
 }
 
 // Auth State Listener
-onAuthStateChanged(auth, async (user) => {
+onAuthStateChanged(auth, (user) => {
     if (user) {
         currentUser = user;
         updateCurrentUserProfile(user);
         showChatSection();
         loadNotificationSoundPreference();
-
-        // User is signed in
-        try {
-            // Set user as online
-            await setDoc(doc(db, 'users', user.uid), {
-                isOnline: true,
-                lastSeen: serverTimestamp()
-            }, { merge: true });
-
-            // Set up offline detection
-            window.addEventListener('beforeunload', async () => {
-                await setDoc(doc(db, 'users', user.uid), {
-                    isOnline: false,
-                    lastSeen: serverTimestamp()
-                }, { merge: true });
-            });
-        } catch (error) {
-            console.error('Error updating online status:', error);
-        }
+        updateOnlineStatus(true);
     } else {
         currentUser = null;
         showAuthSection();
+        updateOnlineStatus(false);
     }
 });
 
@@ -1657,3 +1634,20 @@ async function signInWithGoogle() {
         alert(`Error signing in with Google: ${error.message}`);
     }
 }
+
+// Add online status tracking
+function updateOnlineStatus(isOnline) {
+    if (currentUser) {
+        setDoc(doc(db, 'users', currentUser.uid), {
+            isOnline: isOnline,
+            lastSeen: serverTimestamp()
+        }, { merge: true });
+    }
+}
+
+// Update online status when user connects/disconnects
+window.addEventListener('online', () => updateOnlineStatus(true));
+window.addEventListener('offline', () => updateOnlineStatus(false));
+
+// Update online status when user closes the tab/window
+window.addEventListener('beforeunload', () => updateOnlineStatus(false));
