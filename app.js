@@ -440,6 +440,12 @@ function createUserElement(user) {
     const userElement = document.createElement('div');
     userElement.className = 'user-item';
     userElement.dataset.uid = user.id;
+    
+    // Add pinned class if user is pinned
+    if (user.isPinned) {
+        userElement.classList.add('pinned');
+    }
+    
     userElement.innerHTML = `
         <div class="profile-picture-container">
             <img src="${user.profilePicture || 'default-avatar.png'}" alt="${user.username}" class="profile-picture">
@@ -459,23 +465,35 @@ function createUserElement(user) {
         const isPinned = userElement.classList.contains('pinned');
         userElement.classList.toggle('pinned');
         
-        if (!isPinned) {
-            const usersContainer = document.getElementById('users-container');
-            usersContainer.insertBefore(userElement, usersContainer.firstChild);
-        }
-        
         try {
             if (!isPinned) {
+                // Pin the conversation
                 await setDoc(doc(db, 'users', currentUser.uid), {
                     pinnedConversations: arrayUnion(user.id)
                 }, { merge: true });
+                
+                // Move to top of list
+                const usersContainer = document.getElementById('users-container');
+                usersContainer.insertBefore(userElement, usersContainer.firstChild);
             } else {
+                // Unpin the conversation
                 await setDoc(doc(db, 'users', currentUser.uid), {
                     pinnedConversations: arrayRemove(user.id)
                 }, { merge: true });
+                
+                // Move to unpinned section
+                const usersContainer = document.getElementById('users-container');
+                const firstUnpinned = Array.from(usersContainer.children).find(child => !child.classList.contains('pinned'));
+                if (firstUnpinned) {
+                    usersContainer.insertBefore(userElement, firstUnpinned);
+                } else {
+                    usersContainer.appendChild(userElement);
+                }
             }
         } catch (error) {
             console.error('Error pinning conversation:', error);
+            // Revert the UI change if the database update fails
+            userElement.classList.toggle('pinned');
         }
     };
 
