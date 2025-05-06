@@ -467,22 +467,14 @@ function createUserElement(user) {
         }
         
         try {
-            const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-            const userData = userDoc.data();
-            const pinnedConversations = userData?.pinnedConversations || [];
-            
             if (!isPinned) {
-                if (!pinnedConversations.includes(user.id)) {
-                    const updatedPinnedConversations = [...pinnedConversations, user.id];
-                    await setDoc(doc(db, 'users', currentUser.uid), {
-                        pinnedConversations: updatedPinnedConversations
-                    });
-                }
-            } else {
-                const updatedPinnedConversations = pinnedConversations.filter(id => id !== user.id);
                 await setDoc(doc(db, 'users', currentUser.uid), {
-                    pinnedConversations: updatedPinnedConversations
-                });
+                    pinnedConversations: arrayUnion(user.id)
+                }, { merge: true });
+            } else {
+                await setDoc(doc(db, 'users', currentUser.uid), {
+                    pinnedConversations: arrayRemove(user.id)
+                }, { merge: true });
             }
         } catch (error) {
             console.error('Error pinning conversation:', error);
