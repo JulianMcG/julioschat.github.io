@@ -352,8 +352,16 @@ async function loadUsers() {
     usersContainer.innerHTML = '';
 
     try {
-        // Get current user's data
-        const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        // Get current user's data and all messages in parallel
+        const [currentUserDoc, messagesSnapshot] = await Promise.all([
+            getDoc(doc(db, 'users', currentUser.uid)),
+            getDocs(query(
+                collection(db, 'messages'),
+                where('participants', 'array-contains', currentUser.uid),
+                orderBy('timestamp', 'desc')
+            ))
+        ]);
+
         if (!currentUserDoc.exists()) {
             throw new Error('User document not found');
         }
@@ -362,30 +370,22 @@ async function loadUsers() {
         const hiddenConversations = currentUserData?.hiddenConversations || [];
         const pinnedConversations = currentUserData?.pinnedConversations || [];
 
-        // Get all messages where current user is a participant
-        const messagesQuery = query(
-            collection(db, 'messages'),
-            where('participants', 'array-contains', currentUser.uid)
-        );
-        
-        const messagesSnapshot = await getDocs(messagesQuery);
+        // Process messages to get latest message for each conversation
         const latestMessages = new Map();
+        const seenUsers = new Set();
 
-        // Find the latest message for each conversation
         messagesSnapshot.forEach(doc => {
             const message = doc.data();
             if (!message.participants) return;
 
             const otherUserId = message.participants.find(id => id !== currentUser.uid);
-            if (!otherUserId || hiddenConversations.includes(otherUserId)) return;
+            if (!otherUserId || hiddenConversations.includes(otherUserId) || seenUsers.has(otherUserId)) return;
 
-            const currentLatest = latestMessages.get(otherUserId);
-            if (!currentLatest || message.timestamp > currentLatest.timestamp) {
-                latestMessages.set(otherUserId, {
-                    timestamp: message.timestamp,
-                    content: message.content
-                });
-            }
+            seenUsers.add(otherUserId);
+            latestMessages.set(otherUserId, {
+                timestamp: message.timestamp,
+                content: message.content
+            });
         });
 
         if (latestMessages.size === 0) {
@@ -396,27 +396,28 @@ async function loadUsers() {
             return;
         }
 
-        // Get user details for each conversation
-        const users = [];
-        for (const [userId, messageData] of latestMessages) {
-            try {
-                const userDoc = await getDoc(doc(db, 'users', userId));
-                if (!userDoc.exists()) continue;
+        // Get all user documents in parallel
+        const userPromises = Array.from(latestMessages.keys()).map(userId => 
+            getDoc(doc(db, 'users', userId))
+        );
+        const userDocs = await Promise.all(userPromises);
 
-                const userData = userDoc.data();
-                users.push({
-                    id: userId,
+        // Process user data
+        const users = userDocs
+            .filter(doc => doc.exists())
+            .map(doc => {
+                const userData = doc.data();
+                const messageData = latestMessages.get(doc.id);
+                return {
+                    id: doc.id,
                     username: userData.username || 'Unknown User',
                     profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
                     verified: userData.verified || false,
-                    isPinned: pinnedConversations.includes(userId),
+                    isPinned: pinnedConversations.includes(doc.id),
                     lastMessageTime: messageData.timestamp,
                     lastMessage: messageData.content
-                });
-            } catch (error) {
-                console.error(`Error loading user ${userId}:`, error);
-            }
-        }
+                };
+            });
 
         // Sort users: pinned first, then by last message time
         users.sort((a, b) => {
@@ -1584,16 +1585,22 @@ async function loadNotificationSoundPreference() {
     try {
         const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
         const userData = userDoc.data();
+        
+        // Set default values if not found
         const selectedSound = userData?.notificationSound || 'Birdy.mp3';
         notificationsEnabled = userData?.notificationsEnabled ?? true;
         
         // Update select element
         const soundSelect = document.getElementById('notification-sound');
-        soundSelect.value = selectedSound;
+        if (soundSelect) {
+            soundSelect.value = selectedSound;
+        }
         
         // Update toggle
         const notificationToggle = document.getElementById('notification-toggle');
-        notificationToggle.checked = notificationsEnabled;
+        if (notificationToggle) {
+            notificationToggle.checked = notificationsEnabled;
+        }
         
         // Update audio source
         notificationSound = new Audio(`NotifSounds/${selectedSound}`);
@@ -1611,19 +1618,23 @@ async function saveNotificationSoundPreference() {
     notificationsEnabled = notificationToggle.checked;
     
     try {
+        // Update Firestore
         await setDoc(doc(db, 'users', currentUser.uid), {
             notificationSound: selectedSound,
             notificationsEnabled: notificationsEnabled
         }, { merge: true });
         
-        // Update audio source and play preview
+        // Update audio source
         notificationSound = new Audio(`NotifSounds/${selectedSound}`);
         notificationSound.volume = 0.3; // Set volume to 30%
+        
+        // Play preview
         notificationSound.play().catch(error => {
             console.error('Error playing notification sound:', error);
         });
     } catch (error) {
         console.error('Error saving notification sound preference:', error);
+        alert('Error saving notification preferences. Please try again.');
     }
 }
 
