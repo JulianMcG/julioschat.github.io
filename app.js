@@ -361,47 +361,12 @@ async function loadUsers() {
         const currentUserData = currentUserDoc.data();
         const hiddenConversations = currentUserData?.hiddenConversations || [];
         const pinnedConversations = currentUserData?.pinnedConversations || [];
+        const conversations = currentUserData?.conversations || {};
 
-        // Get all messages where current user is a participant, ordered by timestamp
-        const messagesQuery = query(
-            collection(db, 'messages'),
-            where('participants', 'array-contains', currentUser.uid),
-            orderBy('timestamp', 'desc')
-        );
+        // Get all users that have conversations with current user
+        const userIds = Object.keys(conversations).filter(id => !hiddenConversations.includes(id));
         
-        const messagesSnapshot = await getDocs(messagesQuery);
-        const seenUsers = new Set();
-        const users = [];
-
-        // Process messages to get the most recent message for each conversation
-        for (const doc of messagesSnapshot.docs) {
-            const message = doc.data();
-            if (!message.participants) continue;
-
-            const otherUserId = message.participants.find(id => id !== currentUser.uid);
-            if (!otherUserId || hiddenConversations.includes(otherUserId) || seenUsers.has(otherUserId)) continue;
-
-            seenUsers.add(otherUserId);
-            
-            try {
-                const userDoc = await getDoc(doc(db, 'users', otherUserId));
-                if (!userDoc.exists()) continue;
-
-                const userData = userDoc.data();
-                users.push({
-                    id: otherUserId,
-                    username: userData.username || 'Unknown User',
-                    profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
-                    verified: userData.verified || false,
-                    isPinned: pinnedConversations.includes(otherUserId),
-                    lastMessageTime: message.timestamp
-                });
-            } catch (error) {
-                console.error(`Error loading user ${otherUserId}:`, error);
-            }
-        }
-
-        if (users.length === 0) {
+        if (userIds.length === 0) {
             const noUsersMessage = document.createElement('div');
             noUsersMessage.className = 'no-results';
             noUsersMessage.textContent = 'No conversations yet. Start a new chat!';
@@ -409,11 +374,40 @@ async function loadUsers() {
             return;
         }
 
+        // Get user details for each conversation
+        const userPromises = userIds.map(async (userId) => {
+            try {
+                const userDoc = await getDoc(doc(db, 'users', userId));
+                if (!userDoc.exists()) return null;
+
+                const userData = userDoc.data();
+                const conversationData = conversations[userId];
+
+                return {
+                    id: userId,
+                    username: userData.username || 'Unknown User',
+                    profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
+                    verified: userData.verified || false,
+                    isPinned: pinnedConversations.includes(userId),
+                    lastMessageTime: conversationData.lastMessageTime,
+                    lastMessage: conversationData.lastMessage
+                };
+            } catch (error) {
+                console.error(`Error loading user ${userId}:`, error);
+                return null;
+            }
+        });
+
+        const users = (await Promise.all(userPromises)).filter(user => user !== null);
+
         // Sort users: pinned first, then by last message time
         users.sort((a, b) => {
             if (a.isPinned && !b.isPinned) return -1;
             if (!a.isPinned && b.isPinned) return 1;
-            return 0; // Keep the order from the query
+            
+            const timeA = a.lastMessageTime?.toDate?.() || new Date(0);
+            const timeB = b.lastMessageTime?.toDate?.() || new Date(0);
+            return timeB - timeA;
         });
 
         // Display users
@@ -1000,20 +994,19 @@ async function sendMessage(content) {
         // Update sender's last message time
         const senderRef = doc(db, 'users', currentUser.uid);
         batch.update(senderRef, {
-            [`lastMessageTimes.${currentChatUser.id}`]: timestamp
+            [`conversations.${currentChatUser.id}.lastMessageTime`]: timestamp,
+            [`conversations.${currentChatUser.id}.lastMessage`]: content
         });
 
         // Update receiver's last message time
         const receiverRef = doc(db, 'users', currentChatUser.id);
         batch.update(receiverRef, {
-            [`lastMessageTimes.${currentUser.uid}`]: timestamp
+            [`conversations.${currentUser.uid}.lastMessageTime`]: timestamp,
+            [`conversations.${currentUser.uid}.lastMessage`]: content
         });
 
         // Commit the batch
         await batch.commit();
-
-        // Reload users to update the sidebar order
-        loadUsers();
         
         // Scroll to bottom
         const chatMessages = document.getElementById('chat-messages');
