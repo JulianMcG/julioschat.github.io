@@ -538,13 +538,15 @@ function createUserElement(user) {
 async function startChat(userId, username) {
     currentChatUser = { id: userId, username: username };
     
-    // Clear unread indicator for this user
+    // Clear unread indicator for this user and update last read time
     const userElement = document.querySelector(`.user-item[data-uid="${userId}"]`);
     if (userElement) {
         const unreadIndicator = userElement.querySelector('.unread-indicator');
         if (unreadIndicator) {
             unreadIndicator.style.display = 'none';
         }
+        // Update the last read time to now
+        userElement.dataset.lastReadTime = new Date().toISOString();
     }
     
     // Check if user is already in sidebar
@@ -743,6 +745,7 @@ async function loadMessages() {
         const currentUserData = currentUserDoc.data();
         const blockedUsers = currentUserData?.blockedUsers || [];
 
+        // Mark all messages from this user as read
         const messagesQuery = query(
             collection(db, 'messages'),
             where('participants', 'array-contains', currentUser.uid),
@@ -822,12 +825,17 @@ async function loadMessages() {
                         playNotificationSound();
                     }
 
-                    // Show unread indicator for the sender
+                    // Show unread indicator for the sender only if the message is newer than the last time we opened their chat
                     const userElement = document.querySelector(`.user-item[data-uid="${message.senderId}"]`);
                     if (userElement) {
-                        const unreadIndicator = userElement.querySelector('.unread-indicator');
-                        if (unreadIndicator) {
-                            unreadIndicator.style.display = 'block';
+                        const lastReadTime = userElement.dataset.lastReadTime ? new Date(userElement.dataset.lastReadTime) : new Date(0);
+                        const messageTime = message.timestamp.toDate();
+                        
+                        if (messageTime > lastReadTime) {
+                            const unreadIndicator = userElement.querySelector('.unread-indicator');
+                            if (unreadIndicator) {
+                                unreadIndicator.style.display = 'block';
+                            }
                         }
                     }
                 }
