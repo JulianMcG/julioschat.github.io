@@ -413,13 +413,12 @@ body {
     gap: 4px;
 }
 
+.pin-icon {
+    display: none;
+}
+
 .pinned .username::after {
-    content: "keep";
-    font-family: 'Material Symbols Outlined';
-    color: #B6B8C8;
-    font-size: 16px;
-    margin-left: 4px;
-    font-variation-settings: 'FILL' 1;
+    display: none;
 }
 
 .user-actions {
@@ -441,16 +440,6 @@ body {
 
 .action-icon:hover {
     color: #ECEBF7;
-}
-
-.pin-icon {
-    color: #B6B8C8;
-    font-variation-settings: 'FILL' 0;
-}
-
-.pinned .pin-icon {
-    color: #B6B8C8;
-    font-variation-settings: 'FILL' 1;
 }
 
 .chat-area {
@@ -727,21 +716,6 @@ body {
     height: 40px;
     border-radius: 50%;
     object-fit: cover;
-}
-
-.profile-info .username {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.profile-info .verified-badge {
-    color: #1F49C7;
-    font-size: 18px;
-    display: inline-flex;
-    align-items: center;
-    margin-left: 4px;
-    font-variation-settings: 'FILL' 1;
 }
 
 .settings-icon {
