@@ -355,16 +355,19 @@ async function loadUsers() {
     try {
         // Get current user's hidden conversations and pinned conversations
         const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        if (!currentUserDoc.exists()) {
+            throw new Error('User document not found');
+        }
+        
         const currentUserData = currentUserDoc.data();
         const hiddenConversations = currentUserData?.hiddenConversations || [];
         const pinnedConversations = currentUserData?.pinnedConversations || [];
         const lastMessageTimes = currentUserData?.lastMessageTimes || {};
 
-        // Get all messages where current user is a participant, ordered by timestamp
+        // Get all messages where current user is a participant
         const messagesQuery = query(
             collection(db, 'messages'),
-            where('participants', 'array-contains', currentUser.uid),
-            orderBy('timestamp', 'desc')
+            where('participants', 'array-contains', currentUser.uid)
         );
         const messagesSnapshot = await getDocs(messagesQuery);
 
@@ -374,32 +377,49 @@ async function loadUsers() {
         
         messagesSnapshot.forEach(doc => {
             const message = doc.data();
+            if (!message.participants) return;
+            
             message.participants.forEach(id => {
                 if (id !== currentUser.uid && !hiddenConversations.includes(id)) {
                     dmUserIds.add(id);
                     // Only update if we haven't seen a message from this user yet
-                    if (!userLastMessageTimes[id]) {
+                    if (!userLastMessageTimes[id] && message.timestamp) {
                         userLastMessageTimes[id] = message.timestamp;
                     }
                 }
             });
         });
 
+        if (dmUserIds.size === 0) {
+            const noUsersMessage = document.createElement('div');
+            noUsersMessage.className = 'no-results';
+            noUsersMessage.textContent = 'No conversations yet. Start a new chat!';
+            usersContainer.appendChild(noUsersMessage);
+            return;
+        }
+
         // Get user details for each DM'd user
         const usersPromises = Array.from(dmUserIds).map(async (userId) => {
-            const userDoc = await getDoc(doc(db, 'users', userId));
-            const userData = userDoc.data();
-            return {
-                id: userId,
-                username: userData.username,
-                profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
-                verified: userData.verified,
-                isPinned: pinnedConversations.includes(userId),
-                lastMessageTime: userLastMessageTimes[userId] || lastMessageTimes[userId] || new Date(0)
-            };
+            try {
+                const userDoc = await getDoc(doc(db, 'users', userId));
+                if (!userDoc.exists()) return null;
+                
+                const userData = userDoc.data();
+                return {
+                    id: userId,
+                    username: userData.username || 'Unknown User',
+                    profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
+                    verified: userData.verified || false,
+                    isPinned: pinnedConversations.includes(userId),
+                    lastMessageTime: userLastMessageTimes[userId] || lastMessageTimes[userId] || new Date(0)
+                };
+            } catch (error) {
+                console.error(`Error loading user ${userId}:`, error);
+                return null;
+            }
         });
 
-        const users = await Promise.all(usersPromises);
+        const users = (await Promise.all(usersPromises)).filter(user => user !== null);
 
         // Sort users: pinned first, then by last message time
         users.sort((a, b) => {
@@ -437,9 +457,13 @@ async function loadUsers() {
 
         // Only update Firestore if there are significant changes
         if (hasSignificantChanges) {
-            await setDoc(doc(db, 'users', currentUser.uid), {
-                lastMessageTimes: updatedLastMessageTimes
-            }, { merge: true });
+            try {
+                await setDoc(doc(db, 'users', currentUser.uid), {
+                    lastMessageTimes: updatedLastMessageTimes
+                }, { merge: true });
+            } catch (error) {
+                console.error('Error updating last message times:', error);
+            }
         }
 
         // Display users
@@ -476,13 +500,6 @@ async function loadUsers() {
             };
         });
 
-        // If no users are displayed, show a message
-        if (users.length === 0) {
-            const noUsersMessage = document.createElement('div');
-            noUsersMessage.className = 'no-results';
-            noUsersMessage.textContent = 'No conversations yet. Start a new chat!';
-            usersContainer.appendChild(noUsersMessage);
-        }
     } catch (error) {
         console.error('Error loading users:', error);
         const errorMessage = document.createElement('div');
