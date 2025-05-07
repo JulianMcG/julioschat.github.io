@@ -23,8 +23,7 @@ import {
     serverTimestamp,
     arrayUnion,
     arrayRemove,
-    writeBatch,
-    limit
+    writeBatch
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
@@ -362,6 +361,7 @@ async function loadUsers() {
         const currentUserData = currentUserDoc.data();
         const hiddenConversations = currentUserData?.hiddenConversations || [];
         const pinnedConversations = currentUserData?.pinnedConversations || [];
+        const lastReadTimes = currentUserData?.lastReadTimes || {};
 
         // Get all messages where current user is a participant
         const messagesQuery = query(
@@ -384,8 +384,7 @@ async function loadUsers() {
             if (!currentLatest || message.timestamp > currentLatest.timestamp) {
                 latestMessages.set(otherUserId, {
                     timestamp: message.timestamp,
-                    content: message.content,
-                    messageId: doc.id
+                    content: message.content
                 });
             }
         });
@@ -398,18 +397,6 @@ async function loadUsers() {
             return;
         }
 
-        // Get read status for each conversation
-        const readStatusQuery = query(
-            collection(db, 'readStatus'),
-            where('userId', '==', currentUser.uid)
-        );
-        const readStatusSnapshot = await getDocs(readStatusQuery);
-        const readStatus = new Map();
-        readStatusSnapshot.forEach(doc => {
-            const data = doc.data();
-            readStatus.set(data.otherUserId, data.lastReadMessageId);
-        });
-
         // Get user details for each conversation
         const users = [];
         for (const [userId, messageData] of latestMessages) {
@@ -418,8 +405,10 @@ async function loadUsers() {
                 if (!userDoc.exists()) continue;
 
                 const userData = userDoc.data();
-                const isUnread = !readStatus.has(userId) || readStatus.get(userId) !== messageData.messageId;
-                
+                const lastReadTime = lastReadTimes[userId] ? new Date(lastReadTimes[userId]) : new Date(0);
+                const messageTime = messageData.timestamp.toDate();
+                const hasUnread = messageTime > lastReadTime;
+
                 users.push({
                     id: userId,
                     username: userData.username || 'Unknown User',
@@ -428,7 +417,7 @@ async function loadUsers() {
                     isPinned: pinnedConversations.includes(userId),
                     lastMessageTime: messageData.timestamp,
                     lastMessage: messageData.content,
-                    isUnread: isUnread
+                    hasUnread: hasUnread
                 });
             } catch (error) {
                 console.error(`Error loading user ${userId}:`, error);
@@ -492,7 +481,7 @@ function createUserElement(user) {
     const userElement = document.createElement('div');
     userElement.className = 'user-item';
     userElement.innerHTML = `
-        <div class="unread-indicator" style="display: ${user.isUnread ? 'block' : 'none'}"></div>
+        <div class="unread-indicator" style="display: ${user.hasUnread ? 'block' : 'none'}"></div>
         <div class="profile-picture-container">
             <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.username}" class="profile-picture">
             <div class="online-status"></div>
@@ -555,34 +544,28 @@ function createUserElement(user) {
 async function startChat(userId, username) {
     currentChatUser = { id: userId, username: username };
     
-    // Get the latest message ID for this conversation
-    const messagesQuery = query(
-        collection(db, 'messages'),
-        where('participants', 'array-contains', currentUser.uid),
-        orderBy('timestamp', 'desc'),
-        limit(1)
-    );
-    
-    const messagesSnapshot = await getDocs(messagesQuery);
-    if (!messagesSnapshot.empty) {
-        const latestMessage = messagesSnapshot.docs[0];
+    // Update last read time in Firestore
+    try {
+        const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        const currentUserData = currentUserDoc.data();
+        const lastReadTimes = currentUserData?.lastReadTimes || {};
         
-        // Update read status
-        await setDoc(doc(db, 'readStatus', `${currentUser.uid}_${userId}`), {
-            userId: currentUser.uid,
-            otherUserId: userId,
-            lastReadMessageId: latestMessage.id,
-            lastReadTime: serverTimestamp()
-        });
-    }
-    
-    // Clear unread indicator
-    const userElement = document.querySelector(`.user-item[data-uid="${userId}"]`);
-    if (userElement) {
-        const unreadIndicator = userElement.querySelector('.unread-indicator');
-        if (unreadIndicator) {
-            unreadIndicator.style.display = 'none';
+        lastReadTimes[userId] = new Date().toISOString();
+        
+        await setDoc(doc(db, 'users', currentUser.uid), {
+            lastReadTimes: lastReadTimes
+        }, { merge: true });
+        
+        // Clear unread indicator
+        const userElement = document.querySelector(`.user-item[data-uid="${userId}"]`);
+        if (userElement) {
+            const unreadIndicator = userElement.querySelector('.unread-indicator');
+            if (unreadIndicator) {
+                unreadIndicator.style.display = 'none';
+            }
         }
+    } catch (error) {
+        console.error('Error updating last read time:', error);
     }
     
     // Check if user is already in sidebar
