@@ -859,19 +859,21 @@ document.addEventListener('DOMContentLoaded', () => {
             if (searchTerm.length > 0) {
                 try {
                     // Get all users except current user
-                    const usersSnapshot = await getDocs(collection(db, 'users'));
+                    const usersQuery = query(collection(db, 'users'));
+                    const usersSnapshot = await getDocs(usersQuery);
                     const suggestions = [];
                     
                     usersSnapshot.forEach(doc => {
                         if (doc.id !== currentUser.uid) {
                             const user = doc.data();
-                            const username = user.username.toLowerCase();
+                            const username = user.username?.toLowerCase() || '';
                             
                             if (username.includes(searchTerm)) {
                                 suggestions.push({
                                     id: doc.id,
                                     username: user.username,
-                                    profilePicture: user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'
+                                    profilePicture: user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
+                                    verified: user.verified || false
                                 });
                             }
                         }
@@ -881,21 +883,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     suggestions.sort((a, b) => a.username.localeCompare(b.username));
 
                     // Display suggestions
-                    suggestions.forEach(user => {
-                        const userElement = document.createElement('div');
-                        userElement.className = 'compose-user-item';
-                        userElement.innerHTML = `
-                            <img src="${user.profilePicture}" alt="${user.username}" class="user-avatar">
-                            <span>${user.username}</span>
-                        `;
-                        userElement.onclick = () => {
-                            startChat(user.id, user.username);
-                            closeComposeModal();
-                        };
-                        composeResults.appendChild(userElement);
-                    });
-
-                    if (suggestions.length === 0) {
+                    if (suggestions.length > 0) {
+                        suggestions.forEach(user => {
+                            const userElement = document.createElement('div');
+                            userElement.className = 'compose-user-item';
+                            userElement.innerHTML = `
+                                <img src="${user.profilePicture}" alt="${user.username}" class="user-avatar">
+                                <span>${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
+                            `;
+                            userElement.onclick = () => {
+                                startChat(user.id, user.username);
+                                closeComposeModal();
+                            };
+                            composeResults.appendChild(userElement);
+                        });
+                    } else {
                         const noResults = document.createElement('div');
                         noResults.className = 'no-results';
                         noResults.textContent = 'No users found';
