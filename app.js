@@ -352,21 +352,9 @@ async function loadUsers() {
     usersContainer.innerHTML = '';
 
     try {
-        console.log('Starting to load users...');
-        
-        // Get current user's data and all messages in parallel
-        const [currentUserDoc, messagesSnapshot] = await Promise.all([
-            getDoc(doc(db, 'users', currentUser.uid)),
-            getDocs(query(
-                collection(db, 'messages'),
-                where('participants', 'array-contains', currentUser.uid)
-            ))
-        ]);
-
-        console.log('Fetched user data and messages');
-
+        // Get current user's data
+        const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
         if (!currentUserDoc.exists()) {
-            console.error('Current user document not found');
             throw new Error('User document not found');
         }
 
@@ -374,50 +362,33 @@ async function loadUsers() {
         const hiddenConversations = currentUserData?.hiddenConversations || [];
         const pinnedConversations = currentUserData?.pinnedConversations || [];
 
-        console.log('Processing messages...');
-
-        // Process messages to get latest message for each conversation
+        // Get all messages where current user is a participant
+        const messagesQuery = query(
+            collection(db, 'messages'),
+            where('participants', 'array-contains', currentUser.uid)
+        );
+        
+        const messagesSnapshot = await getDocs(messagesQuery);
         const latestMessages = new Map();
-        const seenUsers = new Set();
 
+        // Find the latest message for each conversation
         messagesSnapshot.forEach(doc => {
-            try {
-                const message = doc.data();
-                if (!message.participants) {
-                    console.log('Message has no participants:', doc.id);
-                    return;
-                }
+            const message = doc.data();
+            if (!message.participants) return;
 
-                const otherUserId = message.participants.find(id => id !== currentUser.uid);
-                if (!otherUserId) {
-                    console.log('Could not find other user in participants:', message.participants);
-                    return;
-                }
+            const otherUserId = message.participants.find(id => id !== currentUser.uid);
+            if (!otherUserId || hiddenConversations.includes(otherUserId)) return;
 
-                if (hiddenConversations.includes(otherUserId)) {
-                    console.log('User is hidden:', otherUserId);
-                    return;
-                }
-
-                if (seenUsers.has(otherUserId)) {
-                    console.log('User already seen:', otherUserId);
-                    return;
-                }
-
-                seenUsers.add(otherUserId);
+            const currentLatest = latestMessages.get(otherUserId);
+            if (!currentLatest || message.timestamp > currentLatest.timestamp) {
                 latestMessages.set(otherUserId, {
                     timestamp: message.timestamp,
                     content: message.content
                 });
-            } catch (error) {
-                console.error('Error processing message:', doc.id, error);
             }
         });
 
-        console.log('Found conversations:', latestMessages.size);
-
         if (latestMessages.size === 0) {
-            console.log('No conversations found');
             const noUsersMessage = document.createElement('div');
             noUsersMessage.className = 'no-results';
             noUsersMessage.textContent = 'No conversations yet. Start a new chat!';
@@ -425,46 +396,27 @@ async function loadUsers() {
             return;
         }
 
-        console.log('Fetching user documents...');
+        // Get user details for each conversation
+        const users = [];
+        for (const [userId, messageData] of latestMessages) {
+            try {
+                const userDoc = await getDoc(doc(db, 'users', userId));
+                if (!userDoc.exists()) continue;
 
-        // Get all user documents in parallel
-        const userPromises = Array.from(latestMessages.keys()).map(userId => 
-            getDoc(doc(db, 'users', userId))
-        );
-        const userDocs = await Promise.all(userPromises);
-
-        console.log('Processing user data...');
-
-        // Process user data
-        const users = userDocs
-            .filter(doc => {
-                if (!doc.exists()) {
-                    console.log('User document does not exist:', doc.id);
-                    return false;
-                }
-                return true;
-            })
-            .map(doc => {
-                try {
-                    const userData = doc.data();
-                    const messageData = latestMessages.get(doc.id);
-                    return {
-                        id: doc.id,
-                        username: userData.username || 'Unknown User',
-                        profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
-                        verified: userData.verified || false,
-                        isPinned: pinnedConversations.includes(doc.id),
-                        lastMessageTime: messageData.timestamp,
-                        lastMessage: messageData.content
-                    };
-                } catch (error) {
-                    console.error('Error processing user data:', doc.id, error);
-                    return null;
-                }
-            })
-            .filter(user => user !== null);
-
-        console.log('Sorting users...');
+                const userData = userDoc.data();
+                users.push({
+                    id: userId,
+                    username: userData.username || 'Unknown User',
+                    profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
+                    verified: userData.verified || false,
+                    isPinned: pinnedConversations.includes(userId),
+                    lastMessageTime: messageData.timestamp,
+                    lastMessage: messageData.content
+                });
+            } catch (error) {
+                console.error(`Error loading user ${userId}:`, error);
+            }
+        }
 
         // Sort users: pinned first, then by last message time
         users.sort((a, b) => {
@@ -476,47 +428,39 @@ async function loadUsers() {
             return timeB - timeA;
         });
 
-        console.log('Displaying users...');
-
         // Display users
         users.forEach(user => {
-            try {
-                const userElement = createUserElement(user);
-                userElement.dataset.uid = user.id;
-                
-                if (user.isPinned) {
-                    userElement.classList.add('pinned');
-                    usersContainer.insertBefore(userElement, usersContainer.firstChild);
-                } else {
-                    usersContainer.appendChild(userElement);
-                }
-                
-                // Add click handler for the user item
-                userElement.onclick = (e) => {
-                    if (!e.target.classList.contains('action-icon')) {
-                        startChat(user.id, user.username);
-                    }
-                };
-
-                // Add click handler for close icon
-                const closeIcon = userElement.querySelector('.close-icon');
-                closeIcon.onclick = async (e) => {
-                    e.stopPropagation();
-                    userElement.remove();
-                    try {
-                        await setDoc(doc(db, 'users', currentUser.uid), {
-                            hiddenConversations: arrayUnion(user.id)
-                        }, { merge: true });
-                    } catch (error) {
-                        console.error('Error hiding conversation:', error);
-                    }
-                };
-            } catch (error) {
-                console.error('Error creating user element:', user.id, error);
+            const userElement = createUserElement(user);
+            userElement.dataset.uid = user.id;
+            
+            if (user.isPinned) {
+                userElement.classList.add('pinned');
+                usersContainer.insertBefore(userElement, usersContainer.firstChild);
+            } else {
+                usersContainer.appendChild(userElement);
             }
-        });
+            
+            // Add click handler for the user item
+            userElement.onclick = (e) => {
+                if (!e.target.classList.contains('action-icon')) {
+                    startChat(user.id, user.username);
+                }
+            };
 
-        console.log('Finished loading users');
+            // Add click handler for close icon
+            const closeIcon = userElement.querySelector('.close-icon');
+            closeIcon.onclick = async (e) => {
+                e.stopPropagation();
+                userElement.remove();
+                try {
+                    await setDoc(doc(db, 'users', currentUser.uid), {
+                        hiddenConversations: arrayUnion(user.id)
+                    }, { merge: true });
+                } catch (error) {
+                    console.error('Error hiding conversation:', error);
+                }
+            };
+        });
 
     } catch (error) {
         console.error('Error loading users:', error);
@@ -1640,22 +1584,16 @@ async function loadNotificationSoundPreference() {
     try {
         const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
         const userData = userDoc.data();
-        
-        // Set default values if not found
         const selectedSound = userData?.notificationSound || 'Birdy.mp3';
         notificationsEnabled = userData?.notificationsEnabled ?? true;
         
         // Update select element
         const soundSelect = document.getElementById('notification-sound');
-        if (soundSelect) {
-            soundSelect.value = selectedSound;
-        }
+        soundSelect.value = selectedSound;
         
         // Update toggle
         const notificationToggle = document.getElementById('notification-toggle');
-        if (notificationToggle) {
-            notificationToggle.checked = notificationsEnabled;
-        }
+        notificationToggle.checked = notificationsEnabled;
         
         // Update audio source
         notificationSound = new Audio(`NotifSounds/${selectedSound}`);
@@ -1673,23 +1611,19 @@ async function saveNotificationSoundPreference() {
     notificationsEnabled = notificationToggle.checked;
     
     try {
-        // Update Firestore
         await setDoc(doc(db, 'users', currentUser.uid), {
             notificationSound: selectedSound,
             notificationsEnabled: notificationsEnabled
         }, { merge: true });
         
-        // Update audio source
+        // Update audio source and play preview
         notificationSound = new Audio(`NotifSounds/${selectedSound}`);
         notificationSound.volume = 0.3; // Set volume to 30%
-        
-        // Play preview
         notificationSound.play().catch(error => {
             console.error('Error playing notification sound:', error);
         });
     } catch (error) {
         console.error('Error saving notification sound preference:', error);
-        alert('Error saving notification preferences. Please try again.');
     }
 }
 
