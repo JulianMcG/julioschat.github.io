@@ -1623,8 +1623,14 @@ async function signInWithGoogle() {
                 username: user.displayName || user.email.split('@')[0],
                 email: user.email,
                 profilePicture: user.photoURL,
+                verified: true, // Set verified to true for Google accounts
                 createdAt: serverTimestamp()
             });
+        } else {
+            // Update existing user document to ensure verified status
+            await setDoc(doc(db, 'users', user.uid), {
+                verified: true // Set verified to true for Google accounts
+            }, { merge: true });
         }
 
         // Show chat section
