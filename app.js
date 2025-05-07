@@ -475,12 +475,12 @@ function createUserElement(user) {
     const userElement = document.createElement('div');
     userElement.className = 'user-item';
     userElement.innerHTML = `
+        <div class="unread-indicator"></div>
         <div class="profile-picture-container">
             <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.username}" class="profile-picture">
             <div class="online-status"></div>
         </div>
         <span class="username">${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
-        <div class="unread-indicator" style="display: none;">1</div>
         <div class="user-actions">
             <span class="material-symbols-outlined action-icon pin-icon">keep</span>
             <span class="material-symbols-outlined action-icon close-icon">close</span>
@@ -544,7 +544,6 @@ async function startChat(userId, username) {
         const unreadIndicator = userElement.querySelector('.unread-indicator');
         if (unreadIndicator) {
             unreadIndicator.style.display = 'none';
-            unreadIndicator.textContent = '1';
         }
     }
     
@@ -828,9 +827,7 @@ async function loadMessages() {
                     if (userElement) {
                         const unreadIndicator = userElement.querySelector('.unread-indicator');
                         if (unreadIndicator) {
-                            unreadIndicator.style.display = 'flex';
-                            const currentCount = parseInt(unreadIndicator.textContent) || 0;
-                            unreadIndicator.textContent = currentCount + 1;
+                            unreadIndicator.style.display = 'block';
                         }
                     }
                 }
