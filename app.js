@@ -362,36 +362,32 @@ async function loadUsers() {
         const hiddenConversations = currentUserData?.hiddenConversations || [];
         const pinnedConversations = currentUserData?.pinnedConversations || [];
 
-        // Get all messages where current user is a participant, ordered by timestamp
+        // Get all messages where current user is a participant
         const messagesQuery = query(
             collection(db, 'messages'),
-            where('participants', 'array-contains', currentUser.uid),
-            orderBy('timestamp', 'desc')
+            where('participants', 'array-contains', currentUser.uid)
         );
+        
         const messagesSnapshot = await getDocs(messagesQuery);
+        const conversations = new Map();
 
-        // Create a map to store unique conversations with their latest message
-        const conversationMap = new Map();
-
-        // Process messages to find unique conversations and their latest message times
+        // First pass: collect all unique conversations
         messagesSnapshot.forEach(doc => {
             const message = doc.data();
-            if (!message.participants || !message.timestamp) return;
+            if (!message.participants) return;
 
-            // Find the other participant in the conversation
             const otherUserId = message.participants.find(id => id !== currentUser.uid);
             if (!otherUserId || hiddenConversations.includes(otherUserId)) return;
 
-            // Only store if we haven't seen this conversation yet
-            if (!conversationMap.has(otherUserId)) {
-                conversationMap.set(otherUserId, {
-                    lastMessageTime: message.timestamp,
+            if (!conversations.has(otherUserId)) {
+                conversations.set(otherUserId, {
+                    lastMessageTime: message.timestamp || new Date(0),
                     messageId: doc.id
                 });
             }
         });
 
-        if (conversationMap.size === 0) {
+        if (conversations.size === 0) {
             const noUsersMessage = document.createElement('div');
             noUsersMessage.className = 'no-results';
             noUsersMessage.textContent = 'No conversations yet. Start a new chat!';
@@ -400,21 +396,22 @@ async function loadUsers() {
         }
 
         // Get user details for each conversation
-        const users = [];
-        const userPromises = Array.from(conversationMap.entries()).map(async ([userId, messageData]) => {
+        const userPromises = Array.from(conversations.keys()).map(async (userId) => {
             try {
                 const userDoc = await getDoc(doc(db, 'users', userId));
                 if (!userDoc.exists()) return null;
 
                 const userData = userDoc.data();
+                const conversationData = conversations.get(userId);
+
                 return {
                     id: userId,
                     username: userData.username || 'Unknown User',
                     profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
                     verified: userData.verified || false,
                     isPinned: pinnedConversations.includes(userId),
-                    lastMessageTime: messageData.lastMessageTime,
-                    messageId: messageData.messageId
+                    lastMessageTime: conversationData.lastMessageTime,
+                    messageId: conversationData.messageId
                 };
             } catch (error) {
                 console.error(`Error loading user ${userId}:`, error);
@@ -422,10 +419,10 @@ async function loadUsers() {
             }
         });
 
-        const loadedUsers = (await Promise.all(userPromises)).filter(user => user !== null);
+        const users = (await Promise.all(userPromises)).filter(user => user !== null);
 
         // Sort users: pinned first, then by last message time
-        loadedUsers.sort((a, b) => {
+        users.sort((a, b) => {
             if (a.isPinned && !b.isPinned) return -1;
             if (!a.isPinned && b.isPinned) return 1;
             
@@ -435,7 +432,7 @@ async function loadUsers() {
         });
 
         // Display users
-        loadedUsers.forEach(user => {
+        users.forEach(user => {
             const userElement = createUserElement(user);
             userElement.dataset.uid = user.id;
             
