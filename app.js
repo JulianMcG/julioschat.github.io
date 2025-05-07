@@ -362,8 +362,7 @@ async function loadUsers() {
         // Get all messages where current user is a participant
         const messagesQuery = query(
             collection(db, 'messages'),
-            where('participants', 'array-contains', currentUser.uid),
-            orderBy('timestamp', 'desc')
+            where('participants', 'array-contains', currentUser.uid)
         );
         const messagesSnapshot = await getDocs(messagesQuery);
 
@@ -377,7 +376,9 @@ async function loadUsers() {
                 if (id !== currentUser.uid && !hiddenConversations.includes(id)) {
                     dmUserIds.add(id);
                     // Update last message time if this message is more recent
-                    if (!userLastMessageTimes[id] || message.timestamp > userLastMessageTimes[id]) {
+                    const messageTime = message.timestamp?.toDate?.() || new Date(0);
+                    const currentTime = userLastMessageTimes[id]?.toDate?.() || new Date(0);
+                    if (!userLastMessageTimes[id] || messageTime > currentTime) {
                         userLastMessageTimes[id] = message.timestamp;
                     }
                 }
@@ -388,13 +389,14 @@ async function loadUsers() {
         const usersPromises = Array.from(dmUserIds).map(async (userId) => {
             const userDoc = await getDoc(doc(db, 'users', userId));
             const userData = userDoc.data();
+            const lastMessageTime = userLastMessageTimes[userId] || lastMessageTimes[userId];
             return {
                 id: userId,
                 username: userData.username,
                 profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
                 verified: userData.verified,
                 isPinned: pinnedConversations.includes(userId),
-                lastMessageTime: userLastMessageTimes[userId] || lastMessageTimes[userId] || new Date(0)
+                lastMessageTime: lastMessageTime || new Date(0)
             };
         });
 
@@ -404,7 +406,11 @@ async function loadUsers() {
         users.sort((a, b) => {
             if (a.isPinned && !b.isPinned) return -1;
             if (!a.isPinned && b.isPinned) return 1;
-            return b.lastMessageTime - a.lastMessageTime;
+            
+            // Handle timestamp comparison
+            const timeA = a.lastMessageTime?.toDate?.() || new Date(0);
+            const timeB = b.lastMessageTime?.toDate?.() || new Date(0);
+            return timeB - timeA;
         });
 
         // Update last message times in Firestore
@@ -455,8 +461,21 @@ async function loadUsers() {
                 }
             };
         });
+
+        // If no users are displayed, show a message
+        if (users.length === 0) {
+            const noUsersMessage = document.createElement('div');
+            noUsersMessage.className = 'no-results';
+            noUsersMessage.textContent = 'No conversations yet. Start a new chat!';
+            usersContainer.appendChild(noUsersMessage);
+        }
     } catch (error) {
         console.error('Error loading users:', error);
+        // Show error message in the sidebar
+        const errorMessage = document.createElement('div');
+        errorMessage.className = 'no-results';
+        errorMessage.textContent = 'Error loading conversations. Please try again.';
+        usersContainer.appendChild(errorMessage);
     }
 }
 
