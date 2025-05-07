@@ -480,6 +480,7 @@ function createUserElement(user) {
             <div class="online-status"></div>
         </div>
         <span class="username">${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
+        <div class="unread-indicator" style="display: none;">1</div>
         <div class="user-actions">
             <span class="material-symbols-outlined action-icon pin-icon">keep</span>
             <span class="material-symbols-outlined action-icon close-icon">close</span>
@@ -536,6 +537,16 @@ function createUserElement(user) {
 
 async function startChat(userId, username) {
     currentChatUser = { id: userId, username: username };
+    
+    // Clear unread indicator for this user
+    const userElement = document.querySelector(`.user-item[data-uid="${userId}"]`);
+    if (userElement) {
+        const unreadIndicator = userElement.querySelector('.unread-indicator');
+        if (unreadIndicator) {
+            unreadIndicator.style.display = 'none';
+            unreadIndicator.textContent = '1';
+        }
+    }
     
     // Check if user is already in sidebar
     const existingUser = document.querySelector(`.user-item[data-uid="${userId}"]`);
@@ -805,6 +816,23 @@ async function loadMessages() {
                     
                     lastMessageTime = messageTime;
                     lastMessageSenderId = message.senderId;
+                } else if (message.senderId !== currentUser.uid && !blockedUsers.includes(message.senderId)) {
+                    // This is a message from another conversation
+                    // Play notification sound if tab is not focused
+                    if (!isTabFocused) {
+                        playNotificationSound();
+                    }
+
+                    // Show unread indicator for the sender
+                    const userElement = document.querySelector(`.user-item[data-uid="${message.senderId}"]`);
+                    if (userElement) {
+                        const unreadIndicator = userElement.querySelector('.unread-indicator');
+                        if (unreadIndicator) {
+                            unreadIndicator.style.display = 'flex';
+                            const currentCount = parseInt(unreadIndicator.textContent) || 0;
+                            unreadIndicator.textContent = currentCount + 1;
+                        }
+                    }
                 }
             });
             
