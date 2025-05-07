@@ -192,7 +192,7 @@ async function isUsernameTaken(username) {
         return !usersSnapshot.empty;
     } catch (error) {
         console.error('Error checking username:', error);
-        return true; // Return true on error to be safe
+        throw error; // Throw the error instead of returning true
     }
 }
 
@@ -1620,14 +1620,20 @@ async function signInWithGoogle() {
         if (!userDoc.exists()) {
             // Create new user document if it doesn't exist
             await setDoc(doc(db, 'users', user.uid), {
-                username: user.displayName || user.email.split('@')[0],
+                username: user.displayName || 'User' + Math.random().toString(36).substr(2, 9),
                 email: user.email,
                 profilePicture: user.photoURL,
-                createdAt: serverTimestamp()
+                createdAt: serverTimestamp(),
+                verified: false // Set initial verification status
+            });
+
+            // Update the profile
+            await updateProfile(user, {
+                displayName: user.displayName || 'User' + Math.random().toString(36).substr(2, 9),
+                photoURL: user.photoURL
             });
         }
 
-        // Show chat section
         showChatSection();
     } catch (error) {
         console.error('Google Sign-In error:', error);
