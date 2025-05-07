@@ -362,14 +362,15 @@ async function loadUsers() {
         const hiddenConversations = currentUserData?.hiddenConversations || [];
         const pinnedConversations = currentUserData?.pinnedConversations || [];
 
-        // Get all messages where current user is a participant
+        // Get all messages where current user is a participant, ordered by timestamp
         const messagesQuery = query(
             collection(db, 'messages'),
-            where('participants', 'array-contains', currentUser.uid)
+            where('participants', 'array-contains', currentUser.uid),
+            orderBy('timestamp', 'desc')
         );
         const messagesSnapshot = await getDocs(messagesQuery);
 
-        // Create a map to store the latest message time for each conversation
+        // Create a map to store unique conversations with their latest message
         const conversationMap = new Map();
 
         // Process messages to find unique conversations and their latest message times
@@ -377,14 +378,17 @@ async function loadUsers() {
             const message = doc.data();
             if (!message.participants || !message.timestamp) return;
 
-            message.participants.forEach(userId => {
-                if (userId !== currentUser.uid && !hiddenConversations.includes(userId)) {
-                    const currentLatest = conversationMap.get(userId);
-                    if (!currentLatest || message.timestamp.toDate() > currentLatest.toDate()) {
-                        conversationMap.set(userId, message.timestamp);
-                    }
-                }
-            });
+            // Find the other participant in the conversation
+            const otherUserId = message.participants.find(id => id !== currentUser.uid);
+            if (!otherUserId || hiddenConversations.includes(otherUserId)) return;
+
+            // Only store if we haven't seen this conversation yet
+            if (!conversationMap.has(otherUserId)) {
+                conversationMap.set(otherUserId, {
+                    lastMessageTime: message.timestamp,
+                    messageId: doc.id
+                });
+            }
         });
 
         if (conversationMap.size === 0) {
@@ -397,27 +401,31 @@ async function loadUsers() {
 
         // Get user details for each conversation
         const users = [];
-        for (const [userId, lastMessageTime] of conversationMap) {
+        const userPromises = Array.from(conversationMap.entries()).map(async ([userId, messageData]) => {
             try {
                 const userDoc = await getDoc(doc(db, 'users', userId));
-                if (!userDoc.exists()) continue;
+                if (!userDoc.exists()) return null;
 
                 const userData = userDoc.data();
-                users.push({
+                return {
                     id: userId,
                     username: userData.username || 'Unknown User',
                     profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
                     verified: userData.verified || false,
                     isPinned: pinnedConversations.includes(userId),
-                    lastMessageTime: lastMessageTime
-                });
+                    lastMessageTime: messageData.lastMessageTime,
+                    messageId: messageData.messageId
+                };
             } catch (error) {
                 console.error(`Error loading user ${userId}:`, error);
+                return null;
             }
-        }
+        });
+
+        const loadedUsers = (await Promise.all(userPromises)).filter(user => user !== null);
 
         // Sort users: pinned first, then by last message time
-        users.sort((a, b) => {
+        loadedUsers.sort((a, b) => {
             if (a.isPinned && !b.isPinned) return -1;
             if (!a.isPinned && b.isPinned) return 1;
             
@@ -427,7 +435,7 @@ async function loadUsers() {
         });
 
         // Display users
-        users.forEach(user => {
+        loadedUsers.forEach(user => {
             const userElement = createUserElement(user);
             userElement.dataset.uid = user.id;
             
