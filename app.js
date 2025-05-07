@@ -187,12 +187,19 @@ document.addEventListener('DOMContentLoaded', () => {
 // Check if username exists
 async function isUsernameTaken(username) {
     try {
+        // First check if the username matches the current user's username
+        if (currentUser && currentUser.displayName === username) {
+            return false;
+        }
+
+        // Then check if any other user has this username
         const usersQuery = query(collection(db, 'users'), where('username', '==', username));
         const usersSnapshot = await getDocs(usersQuery);
         return !usersSnapshot.empty;
     } catch (error) {
         console.error('Error checking username:', error);
-        throw error; // Throw the error instead of returning true
+        // If we can't check, assume username is taken to be safe
+        return true;
     }
 }
 
