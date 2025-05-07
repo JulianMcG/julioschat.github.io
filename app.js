@@ -349,20 +349,18 @@ function showChatSection() {
 // Chat Functions
 async function loadUsers() {
     const usersContainer = document.getElementById('users-container');
-    // Clear the container completely
     usersContainer.innerHTML = '';
 
     try {
-        // Get current user's hidden conversations and pinned conversations
+        // Get current user's data
         const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
         if (!currentUserDoc.exists()) {
             throw new Error('User document not found');
         }
-        
+
         const currentUserData = currentUserDoc.data();
         const hiddenConversations = currentUserData?.hiddenConversations || [];
         const pinnedConversations = currentUserData?.pinnedConversations || [];
-        const lastMessageTimes = currentUserData?.lastMessageTimes || {};
 
         // Get all messages where current user is a participant
         const messagesQuery = query(
@@ -371,26 +369,25 @@ async function loadUsers() {
         );
         const messagesSnapshot = await getDocs(messagesQuery);
 
-        // Get unique user IDs from messages and track their last message time
-        const dmUserIds = new Set();
-        const userLastMessageTimes = {};
-        
+        // Create a map to store the latest message time for each conversation
+        const conversationMap = new Map();
+
+        // Process messages to find unique conversations and their latest message times
         messagesSnapshot.forEach(doc => {
             const message = doc.data();
-            if (!message.participants) return;
-            
-            message.participants.forEach(id => {
-                if (id !== currentUser.uid && !hiddenConversations.includes(id)) {
-                    dmUserIds.add(id);
-                    // Only update if we haven't seen a message from this user yet
-                    if (!userLastMessageTimes[id] && message.timestamp) {
-                        userLastMessageTimes[id] = message.timestamp;
+            if (!message.participants || !message.timestamp) return;
+
+            message.participants.forEach(userId => {
+                if (userId !== currentUser.uid && !hiddenConversations.includes(userId)) {
+                    const currentLatest = conversationMap.get(userId);
+                    if (!currentLatest || message.timestamp.toDate() > currentLatest.toDate()) {
+                        conversationMap.set(userId, message.timestamp);
                     }
                 }
             });
         });
 
-        if (dmUserIds.size === 0) {
+        if (conversationMap.size === 0) {
             const noUsersMessage = document.createElement('div');
             noUsersMessage.className = 'no-results';
             noUsersMessage.textContent = 'No conversations yet. Start a new chat!';
@@ -398,73 +395,36 @@ async function loadUsers() {
             return;
         }
 
-        // Get user details for each DM'd user
-        const usersPromises = Array.from(dmUserIds).map(async (userId) => {
+        // Get user details for each conversation
+        const users = [];
+        for (const [userId, lastMessageTime] of conversationMap) {
             try {
                 const userDoc = await getDoc(doc(db, 'users', userId));
-                if (!userDoc.exists()) return null;
-                
+                if (!userDoc.exists()) continue;
+
                 const userData = userDoc.data();
-                return {
+                users.push({
                     id: userId,
                     username: userData.username || 'Unknown User',
                     profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
                     verified: userData.verified || false,
                     isPinned: pinnedConversations.includes(userId),
-                    lastMessageTime: userLastMessageTimes[userId] || lastMessageTimes[userId] || new Date(0)
-                };
+                    lastMessageTime: lastMessageTime
+                });
             } catch (error) {
                 console.error(`Error loading user ${userId}:`, error);
-                return null;
             }
-        });
-
-        const users = (await Promise.all(usersPromises)).filter(user => user !== null);
+        }
 
         // Sort users: pinned first, then by last message time
         users.sort((a, b) => {
-            // Pinned conversations always come first
             if (a.isPinned && !b.isPinned) return -1;
             if (!a.isPinned && b.isPinned) return 1;
             
-            // If both are pinned or both are not pinned, sort by last message time
             const timeA = a.lastMessageTime?.toDate?.() || new Date(0);
             const timeB = b.lastMessageTime?.toDate?.() || new Date(0);
-            
-            // Only update if the difference is significant (more than 1 second)
-            const timeDiff = timeB - timeA;
-            if (Math.abs(timeDiff) < 1000) return 0;
-            
-            return timeDiff;
+            return timeB - timeA;
         });
-
-        // Only update Firestore if there are significant changes
-        const updatedLastMessageTimes = {};
-        let hasSignificantChanges = false;
-
-        users.forEach(user => {
-            if (user.lastMessageTime) {
-                const currentTime = lastMessageTimes[user.id]?.toDate?.() || new Date(0);
-                const newTime = user.lastMessageTime?.toDate?.() || new Date(0);
-                
-                // Only update if the time difference is significant
-                if (Math.abs(newTime - currentTime) > 1000) {
-                    updatedLastMessageTimes[user.id] = user.lastMessageTime;
-                    hasSignificantChanges = true;
-                }
-            }
-        });
-
-        // Only update Firestore if there are significant changes
-        if (hasSignificantChanges) {
-            try {
-                await setDoc(doc(db, 'users', currentUser.uid), {
-                    lastMessageTimes: updatedLastMessageTimes
-                }, { merge: true });
-            } catch (error) {
-                console.error('Error updating last message times:', error);
-            }
-        }
 
         // Display users
         users.forEach(user => {
