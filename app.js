@@ -357,21 +357,29 @@ async function loadUsers() {
         const currentUserData = currentUserDoc.data();
         const hiddenConversations = currentUserData?.hiddenConversations || [];
         const pinnedConversations = currentUserData?.pinnedConversations || [];
+        const lastMessageTimes = currentUserData?.lastMessageTimes || {};
 
         // Get all messages where current user is a participant
         const messagesQuery = query(
             collection(db, 'messages'),
-            where('participants', 'array-contains', currentUser.uid)
+            where('participants', 'array-contains', currentUser.uid),
+            orderBy('timestamp', 'desc')
         );
         const messagesSnapshot = await getDocs(messagesQuery);
 
-        // Get unique user IDs from messages
+        // Get unique user IDs from messages and track their last message time
         const dmUserIds = new Set();
+        const userLastMessageTimes = {};
+        
         messagesSnapshot.forEach(doc => {
             const message = doc.data();
             message.participants.forEach(id => {
                 if (id !== currentUser.uid && !hiddenConversations.includes(id)) {
                     dmUserIds.add(id);
+                    // Update last message time if this message is more recent
+                    if (!userLastMessageTimes[id] || message.timestamp > userLastMessageTimes[id]) {
+                        userLastMessageTimes[id] = message.timestamp;
+                    }
                 }
             });
         });
@@ -385,19 +393,34 @@ async function loadUsers() {
                 username: userData.username,
                 profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
                 verified: userData.verified,
-                isPinned: pinnedConversations.includes(userId)
+                isPinned: pinnedConversations.includes(userId),
+                lastMessageTime: userLastMessageTimes[userId] || lastMessageTimes[userId] || new Date(0)
             };
         });
 
         const users = await Promise.all(usersPromises);
 
-        // Sort users: pinned first, then alphabetically
+        // Sort users: pinned first, then by last message time
         users.sort((a, b) => {
             if (a.isPinned && !b.isPinned) return -1;
             if (!a.isPinned && b.isPinned) return 1;
-            if (!a.username || !b.username) return 0;
-            return a.username.localeCompare(b.username);
+            return b.lastMessageTime - a.lastMessageTime;
         });
+
+        // Update last message times in Firestore
+        const updatedLastMessageTimes = {};
+        users.forEach(user => {
+            if (user.lastMessageTime) {
+                updatedLastMessageTimes[user.id] = user.lastMessageTime;
+            }
+        });
+
+        // Only update if there are changes
+        if (Object.keys(updatedLastMessageTimes).length > 0) {
+            await setDoc(doc(db, 'users', currentUser.uid), {
+                lastMessageTimes: updatedLastMessageTimes
+            }, { merge: true });
+        }
 
         // Display users
         users.forEach(user => {
@@ -958,12 +981,7 @@ async function sendMessage(content) {
             return;
         }
 
-        console.log('Attempting to send message with data:', {
-            content,
-            senderId: currentUser.uid,
-            receiverId: currentChatUser.id,
-            participants: [currentUser.uid, currentChatUser.id]
-        });
+        const timestamp = serverTimestamp();
 
         // Create message data
         const messageData = {
@@ -971,12 +989,27 @@ async function sendMessage(content) {
             senderId: currentUser.uid,
             receiverId: currentChatUser.id,
             participants: [currentUser.uid, currentChatUser.id],
-            timestamp: serverTimestamp()
+            timestamp: timestamp
         };
 
         // Add message to Firestore
         const docRef = await addDoc(collection(db, 'messages'), messageData);
-        console.log('Message sent successfully with ID:', docRef.id);
+
+        // Update last message time for both users
+        await setDoc(doc(db, 'users', currentUser.uid), {
+            lastMessageTimes: {
+                [currentChatUser.id]: timestamp
+            }
+        }, { merge: true });
+
+        await setDoc(doc(db, 'users', currentChatUser.id), {
+            lastMessageTimes: {
+                [currentUser.uid]: timestamp
+            }
+        }, { merge: true });
+
+        // Reload users to update the sidebar order
+        loadUsers();
         
         // Scroll to bottom
         const chatMessages = document.getElementById('chat-messages');
