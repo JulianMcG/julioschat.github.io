@@ -729,6 +729,21 @@ body {
     object-fit: cover;
 }
 
+.profile-info .username {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.profile-info .verified-badge {
+    color: #1F49C7;
+    font-size: 18px;
+    display: inline-flex;
+    align-items: center;
+    margin-left: 4px;
+    font-variation-settings: 'FILL' 1;
+}
+
 .settings-icon {
     color: #B6B8C8;
     cursor: pointer;
