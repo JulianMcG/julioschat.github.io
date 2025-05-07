@@ -361,44 +361,71 @@ async function loadUsers() {
         const currentUserData = currentUserDoc.data();
         const hiddenConversations = currentUserData?.hiddenConversations || [];
         const pinnedConversations = currentUserData?.pinnedConversations || [];
-        const conversations = currentUserData?.conversations || {};
 
-        // Get all users that have conversations with current user
-        const userIds = Object.keys(conversations).filter(id => !hiddenConversations.includes(id));
+        // Get all messages where current user is a participant, ordered by timestamp
+        const messagesQuery = query(
+            collection(db, 'messages'),
+            where('participants', 'array-contains', currentUser.uid),
+            orderBy('timestamp', 'desc')
+        );
         
-        if (userIds.length === 0) {
+        const messagesSnapshot = await getDocs(messagesQuery);
+        const seenUsers = new Set();
+        const users = [];
+
+        // Process messages to get the most recent message for each conversation
+        for (const doc of messagesSnapshot.docs) {
+            const message = doc.data();
+            if (!message.participants) continue;
+
+            const otherUserId = message.participants.find(id => id !== currentUser.uid);
+            if (!otherUserId || hiddenConversations.includes(otherUserId) || seenUsers.has(otherUserId)) continue;
+
+            seenUsers.add(otherUserId);
+            
+            try {
+                const userDoc = await getDoc(doc(db, 'users', otherUserId));
+                if (!userDoc.exists()) continue;
+
+                const userData = userDoc.data();
+                users.push({
+                    id: otherUserId,
+                    username: userData.username || 'Unknown User',
+                    profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
+                    verified: userData.verified || false,
+                    isPinned: pinnedConversations.includes(otherUserId),
+                    lastMessageTime: message.timestamp,
+                    lastMessage: message.content
+                });
+
+                // Initialize conversations field for both users
+                const batch = writeBatch(db);
+                
+                // Update current user's document
+                batch.set(doc(db, 'users', currentUser.uid), {
+                    [`conversations.${otherUserId}.lastMessageTime`]: message.timestamp,
+                    [`conversations.${otherUserId}.lastMessage`]: message.content
+                }, { merge: true });
+
+                // Update other user's document
+                batch.set(doc(db, 'users', otherUserId), {
+                    [`conversations.${currentUser.uid}.lastMessageTime`]: message.timestamp,
+                    [`conversations.${currentUser.uid}.lastMessage`]: message.content
+                }, { merge: true });
+
+                await batch.commit();
+            } catch (error) {
+                console.error(`Error loading user ${otherUserId}:`, error);
+            }
+        }
+
+        if (users.length === 0) {
             const noUsersMessage = document.createElement('div');
             noUsersMessage.className = 'no-results';
             noUsersMessage.textContent = 'No conversations yet. Start a new chat!';
             usersContainer.appendChild(noUsersMessage);
             return;
         }
-
-        // Get user details for each conversation
-        const userPromises = userIds.map(async (userId) => {
-            try {
-                const userDoc = await getDoc(doc(db, 'users', userId));
-                if (!userDoc.exists()) return null;
-
-                const userData = userDoc.data();
-                const conversationData = conversations[userId];
-
-                return {
-                    id: userId,
-                    username: userData.username || 'Unknown User',
-                    profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
-                    verified: userData.verified || false,
-                    isPinned: pinnedConversations.includes(userId),
-                    lastMessageTime: conversationData.lastMessageTime,
-                    lastMessage: conversationData.lastMessage
-                };
-            } catch (error) {
-                console.error(`Error loading user ${userId}:`, error);
-                return null;
-            }
-        });
-
-        const users = (await Promise.all(userPromises)).filter(user => user !== null);
 
         // Sort users: pinned first, then by last message time
         users.sort((a, b) => {
