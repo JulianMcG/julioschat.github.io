@@ -442,7 +442,7 @@ function createUserElement(user) {
     userElement.className = 'user-item';
     userElement.innerHTML = `
         <div class="profile-picture-container">
-            <img src="${user.profilePicture || 'default-avatar.png'}" alt="${user.username}" class="profile-picture">
+            <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.username}" class="profile-picture">
             <div class="online-status"></div>
         </div>
         <span class="username">${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
@@ -485,12 +485,12 @@ function createUserElement(user) {
         }
     };
 
-    // Set up online status listener
+    // Set up online status listener with improved logic
     const onlineStatusRef = doc(db, 'users', user.id);
     onSnapshot(onlineStatusRef, (doc) => {
         const userData = doc.data();
         const onlineStatus = userElement.querySelector('.online-status');
-        if (userData?.isOnline) {
+        if (userData?.isOnline && isUserActuallyOnline(userData.lastSeen)) {
             onlineStatus.classList.add('active');
         } else {
             onlineStatus.classList.remove('active');
@@ -1638,7 +1638,7 @@ async function signInWithGoogle() {
     }
 }
 
-// Add online status tracking
+// Add online status tracking with periodic checks
 function updateOnlineStatus(isOnline) {
     if (currentUser) {
         setDoc(doc(db, 'users', currentUser.uid), {
@@ -1648,9 +1648,25 @@ function updateOnlineStatus(isOnline) {
     }
 }
 
+// Function to check if a user is actually online
+function isUserActuallyOnline(lastSeen) {
+    if (!lastSeen) return false;
+    const lastSeenTime = lastSeen.toDate();
+    const now = new Date();
+    const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+    return lastSeenTime > fiveMinutesAgo;
+}
+
 // Update online status when user connects/disconnects
 window.addEventListener('online', () => updateOnlineStatus(true));
 window.addEventListener('offline', () => updateOnlineStatus(false));
 
 // Update online status when user closes the tab/window
 window.addEventListener('beforeunload', () => updateOnlineStatus(false));
+
+// Set up periodic online status check
+setInterval(() => {
+    if (currentUser) {
+        updateOnlineStatus(true);
+    }
+}, 4 * 60 * 1000); // Check every 4 minutes
