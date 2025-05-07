@@ -1005,30 +1005,13 @@ async function sendMessage(content) {
 
         // Add message to Firestore
         await addDoc(collection(db, 'messages'), messageData);
-
-        // Update last message time for both users
-        const batch = writeBatch(db);
-        
-        // Update sender's last message time
-        const senderRef = doc(db, 'users', currentUser.uid);
-        batch.update(senderRef, {
-            [`conversations.${currentChatUser.id}.lastMessageTime`]: timestamp,
-            [`conversations.${currentChatUser.id}.lastMessage`]: content
-        });
-
-        // Update receiver's last message time
-        const receiverRef = doc(db, 'users', currentChatUser.id);
-        batch.update(receiverRef, {
-            [`conversations.${currentUser.uid}.lastMessageTime`]: timestamp,
-            [`conversations.${currentUser.uid}.lastMessage`]: content
-        });
-
-        // Commit the batch
-        await batch.commit();
         
         // Scroll to bottom
         const chatMessages = document.getElementById('chat-messages');
         chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        // Reload users list to update order
+        loadUsers();
     } catch (error) {
         console.error('Error sending message:', error);
     }
