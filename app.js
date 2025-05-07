@@ -362,16 +362,18 @@ async function loadUsers() {
         const hiddenConversations = currentUserData?.hiddenConversations || [];
         const pinnedConversations = currentUserData?.pinnedConversations || [];
 
-        // Get all messages where current user is a participant
+        // Get all messages where current user is a participant, ordered by timestamp
         const messagesQuery = query(
             collection(db, 'messages'),
-            where('participants', 'array-contains', currentUser.uid)
+            where('participants', 'array-contains', currentUser.uid),
+            orderBy('timestamp', 'desc')
         );
         
         const messagesSnapshot = await getDocs(messagesQuery);
         const latestMessages = new Map();
+        const seenUsers = new Set();
 
-        // Find the latest message for each conversation
+        // Process messages in reverse chronological order
         messagesSnapshot.forEach(doc => {
             const message = doc.data();
             if (!message.participants) return;
@@ -379,8 +381,9 @@ async function loadUsers() {
             const otherUserId = message.participants.find(id => id !== currentUser.uid);
             if (!otherUserId || hiddenConversations.includes(otherUserId)) return;
 
-            const currentLatest = latestMessages.get(otherUserId);
-            if (!currentLatest || message.timestamp > currentLatest.timestamp) {
+            // Only keep the first (most recent) message for each user
+            if (!seenUsers.has(otherUserId)) {
+                seenUsers.add(otherUserId);
                 latestMessages.set(otherUserId, {
                     timestamp: message.timestamp,
                     content: message.content
