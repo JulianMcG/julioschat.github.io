@@ -1516,15 +1516,12 @@ input:checked + .slider:before {
 
 .unread-indicator {
     background-color: #1F49C7;
-    color: #ECEBF7;
     border-radius: 50%;
-    width: 20px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    font-weight: 600;
-    margin-left: auto;
-    margin-right: 10px;
+    width: 8px;
+    height: 8px;
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    display: none;
 } 
