@@ -758,11 +758,6 @@ async function loadMessages() {
                     message.participants.includes(currentUser.uid) &&
                     !blockedUsers.includes(message.senderId)) {
                     
-                    // Play notification sound if message is from other user and tab is not focused
-                    if (message.senderId !== currentUser.uid && !isTabFocused) {
-                        playNotificationSound();
-                    }
-                    
                     const messageTime = message.timestamp.toDate();
                     
                     // Add timestamp or gap if needed
@@ -1073,10 +1068,21 @@ onAuthStateChanged(auth, (user) => {
         showChatSection();
         loadNotificationSoundPreference();
         updateOnlineStatus(true);
+        
+        // Set up the message listener
+        if (window.globalMessageUnsubscribe) {
+            window.globalMessageUnsubscribe();
+        }
+        window.globalMessageUnsubscribe = setupMessageListener();
     } else {
         currentUser = null;
         showAuthSection();
         updateOnlineStatus(false);
+        
+        // Clean up the message listener
+        if (window.globalMessageUnsubscribe) {
+            window.globalMessageUnsubscribe();
+        }
     }
 });
 
@@ -1724,3 +1730,31 @@ setInterval(() => {
         updateOnlineStatus(true);
     }
 }, 4 * 60 * 1000); // Check every 4 minutes
+
+// Add a new listener for all messages
+function setupMessageListener() {
+    if (!currentUser) return;
+
+    const messagesQuery = query(
+        collection(db, 'messages'),
+        where('participants', 'array-contains', currentUser.uid),
+        orderBy('timestamp', 'desc')
+    );
+
+    return onSnapshot(messagesQuery, (snapshot) => {
+        snapshot.docChanges().forEach(change => {
+            if (change.type === 'added') {
+                const message = change.doc.data();
+                
+                // Only play sound if:
+                // 1. Message is from someone else
+                // 2. Sender is not blocked
+                // 3. We're not currently in a chat with this person
+                if (message.senderId !== currentUser.uid && 
+                    !message.participants.includes(currentChatUser?.id)) {
+                    playNotificationSound();
+                }
+            }
+        });
+    });
+}
