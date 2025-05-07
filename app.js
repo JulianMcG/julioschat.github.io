@@ -361,7 +361,6 @@ async function loadUsers() {
         const currentUserData = currentUserDoc.data();
         const hiddenConversations = currentUserData?.hiddenConversations || [];
         const pinnedConversations = currentUserData?.pinnedConversations || [];
-        const lastReadTimes = currentUserData?.lastReadTimes || {};
 
         // Get all messages where current user is a participant
         const messagesQuery = query(
@@ -384,8 +383,7 @@ async function loadUsers() {
             if (!currentLatest || message.timestamp > currentLatest.timestamp) {
                 latestMessages.set(otherUserId, {
                     timestamp: message.timestamp,
-                    content: message.content,
-                    isUnread: !lastReadTimes[otherUserId] || message.timestamp > lastReadTimes[otherUserId]
+                    content: message.content
                 });
             }
         });
@@ -413,8 +411,7 @@ async function loadUsers() {
                     verified: userData.verified || false,
                     isPinned: pinnedConversations.includes(userId),
                     lastMessageTime: messageData.timestamp,
-                    lastMessage: messageData.content,
-                    hasUnread: messageData.isUnread
+                    lastMessage: messageData.content
                 });
             } catch (error) {
                 console.error(`Error loading user ${userId}:`, error);
@@ -435,13 +432,6 @@ async function loadUsers() {
         users.forEach(user => {
             const userElement = createUserElement(user);
             userElement.dataset.uid = user.id;
-            
-            if (user.hasUnread) {
-                const unreadIndicator = userElement.querySelector('.unread-indicator');
-                if (unreadIndicator) {
-                    unreadIndicator.style.display = 'block';
-                }
-            }
             
             if (user.isPinned) {
                 userElement.classList.add('pinned');
@@ -485,7 +475,6 @@ function createUserElement(user) {
     const userElement = document.createElement('div');
     userElement.className = 'user-item';
     userElement.innerHTML = `
-        <div class="unread-indicator"></div>
         <div class="profile-picture-container">
             <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.username}" class="profile-picture">
             <div class="online-status"></div>
@@ -547,24 +536,6 @@ function createUserElement(user) {
 
 async function startChat(userId, username) {
     currentChatUser = { id: userId, username: username };
-    
-    // Update last read time in Firestore
-    try {
-        await setDoc(doc(db, 'users', currentUser.uid), {
-            [`lastReadTimes.${userId}`]: serverTimestamp()
-        }, { merge: true });
-    } catch (error) {
-        console.error('Error updating last read time:', error);
-    }
-    
-    // Clear unread indicator for this user
-    const userElement = document.querySelector(`.user-item[data-uid="${userId}"]`);
-    if (userElement) {
-        const unreadIndicator = userElement.querySelector('.unread-indicator');
-        if (unreadIndicator) {
-            unreadIndicator.style.display = 'none';
-        }
-    }
     
     // Check if user is already in sidebar
     const existingUser = document.querySelector(`.user-item[data-uid="${userId}"]`);
@@ -835,19 +806,10 @@ async function loadMessages() {
                     lastMessageTime = messageTime;
                     lastMessageSenderId = message.senderId;
                 } else if (message.senderId !== currentUser.uid && !blockedUsers.includes(message.senderId)) {
-                    // This is a message from another conversation
+                    // Message is from someone other than current chat user
                     // Play notification sound if tab is not focused
                     if (!isTabFocused) {
                         playNotificationSound();
-                    }
-
-                    // Show unread indicator for the sender
-                    const userElement = document.querySelector(`.user-item[data-uid="${message.senderId}"]`);
-                    if (userElement) {
-                        const unreadIndicator = userElement.querySelector('.unread-indicator');
-                        if (unreadIndicator) {
-                            unreadIndicator.style.display = 'block';
-                        }
                     }
                 }
             });
