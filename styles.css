@@ -759,12 +759,10 @@ body {
     font-size: 24px;
 }
 
-.close-icon {
-    position: absolute;
-    right: 30px;
+.close-modal {
     color: #B6B8C8;
     cursor: pointer;
-    font-size: 20px;
+    font-size: 24px;
 }
 
 .modal-body {
