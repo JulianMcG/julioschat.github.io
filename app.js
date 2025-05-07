@@ -366,8 +366,7 @@ async function loadUsers() {
         // Get all messages where current user is a participant
         const messagesQuery = query(
             collection(db, 'messages'),
-            where('participants', 'array-contains', currentUser.uid),
-            orderBy('timestamp', 'desc')
+            where('participants', 'array-contains', currentUser.uid)
         );
         
         const messagesSnapshot = await getDocs(messagesQuery);
