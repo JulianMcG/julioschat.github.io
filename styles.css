@@ -1512,16 +1512,4 @@ input:checked + .slider:before {
 .button-wrapper .google-button img {
     width: 18px;
     height: 18px;
-}
-
-.unread-indicator {
-    background-color: #1F49C7;
-    border-radius: 50%;
-    width: 8px;
-    height: 8px;
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    display: none;
 } 
