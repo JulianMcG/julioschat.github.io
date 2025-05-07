@@ -22,7 +22,8 @@ import {
     addDoc,
     serverTimestamp,
     arrayUnion,
-    arrayRemove
+    arrayRemove,
+    writeBatch
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
@@ -359,10 +360,11 @@ async function loadUsers() {
         const pinnedConversations = currentUserData?.pinnedConversations || [];
         const lastMessageTimes = currentUserData?.lastMessageTimes || {};
 
-        // Get all messages where current user is a participant
+        // Get all messages where current user is a participant, ordered by timestamp
         const messagesQuery = query(
             collection(db, 'messages'),
-            where('participants', 'array-contains', currentUser.uid)
+            where('participants', 'array-contains', currentUser.uid),
+            orderBy('timestamp', 'desc')
         );
         const messagesSnapshot = await getDocs(messagesQuery);
 
@@ -375,10 +377,8 @@ async function loadUsers() {
             message.participants.forEach(id => {
                 if (id !== currentUser.uid && !hiddenConversations.includes(id)) {
                     dmUserIds.add(id);
-                    // Update last message time if this message is more recent
-                    const messageTime = message.timestamp?.toDate?.() || new Date(0);
-                    const currentTime = userLastMessageTimes[id]?.toDate?.() || new Date(0);
-                    if (!userLastMessageTimes[id] || messageTime > currentTime) {
+                    // Only update if we haven't seen a message from this user yet
+                    if (!userLastMessageTimes[id]) {
                         userLastMessageTimes[id] = message.timestamp;
                     }
                 }
@@ -389,14 +389,13 @@ async function loadUsers() {
         const usersPromises = Array.from(dmUserIds).map(async (userId) => {
             const userDoc = await getDoc(doc(db, 'users', userId));
             const userData = userDoc.data();
-            const lastMessageTime = userLastMessageTimes[userId] || lastMessageTimes[userId];
             return {
                 id: userId,
                 username: userData.username,
                 profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
                 verified: userData.verified,
                 isPinned: pinnedConversations.includes(userId),
-                lastMessageTime: lastMessageTime || new Date(0)
+                lastMessageTime: userLastMessageTimes[userId] || lastMessageTimes[userId] || new Date(0)
             };
         });
 
@@ -404,25 +403,40 @@ async function loadUsers() {
 
         // Sort users: pinned first, then by last message time
         users.sort((a, b) => {
+            // Pinned conversations always come first
             if (a.isPinned && !b.isPinned) return -1;
             if (!a.isPinned && b.isPinned) return 1;
             
-            // Handle timestamp comparison
+            // If both are pinned or both are not pinned, sort by last message time
             const timeA = a.lastMessageTime?.toDate?.() || new Date(0);
             const timeB = b.lastMessageTime?.toDate?.() || new Date(0);
-            return timeB - timeA;
+            
+            // Only update if the difference is significant (more than 1 second)
+            const timeDiff = timeB - timeA;
+            if (Math.abs(timeDiff) < 1000) return 0;
+            
+            return timeDiff;
         });
 
-        // Update last message times in Firestore
+        // Only update Firestore if there are significant changes
         const updatedLastMessageTimes = {};
+        let hasSignificantChanges = false;
+
         users.forEach(user => {
             if (user.lastMessageTime) {
-                updatedLastMessageTimes[user.id] = user.lastMessageTime;
+                const currentTime = lastMessageTimes[user.id]?.toDate?.() || new Date(0);
+                const newTime = user.lastMessageTime?.toDate?.() || new Date(0);
+                
+                // Only update if the time difference is significant
+                if (Math.abs(newTime - currentTime) > 1000) {
+                    updatedLastMessageTimes[user.id] = user.lastMessageTime;
+                    hasSignificantChanges = true;
+                }
             }
         });
 
-        // Only update if there are changes
-        if (Object.keys(updatedLastMessageTimes).length > 0) {
+        // Only update Firestore if there are significant changes
+        if (hasSignificantChanges) {
             await setDoc(doc(db, 'users', currentUser.uid), {
                 lastMessageTimes: updatedLastMessageTimes
             }, { merge: true });
@@ -471,7 +485,6 @@ async function loadUsers() {
         }
     } catch (error) {
         console.error('Error loading users:', error);
-        // Show error message in the sidebar
         const errorMessage = document.createElement('div');
         errorMessage.className = 'no-results';
         errorMessage.textContent = 'Error loading conversations. Please try again.';
@@ -1012,20 +1025,25 @@ async function sendMessage(content) {
         };
 
         // Add message to Firestore
-        const docRef = await addDoc(collection(db, 'messages'), messageData);
+        await addDoc(collection(db, 'messages'), messageData);
 
         // Update last message time for both users
-        await setDoc(doc(db, 'users', currentUser.uid), {
-            lastMessageTimes: {
-                [currentChatUser.id]: timestamp
-            }
-        }, { merge: true });
+        const batch = writeBatch(db);
+        
+        // Update sender's last message time
+        const senderRef = doc(db, 'users', currentUser.uid);
+        batch.update(senderRef, {
+            [`lastMessageTimes.${currentChatUser.id}`]: timestamp
+        });
 
-        await setDoc(doc(db, 'users', currentChatUser.id), {
-            lastMessageTimes: {
-                [currentUser.uid]: timestamp
-            }
-        }, { merge: true });
+        // Update receiver's last message time
+        const receiverRef = doc(db, 'users', currentChatUser.id);
+        batch.update(receiverRef, {
+            [`lastMessageTimes.${currentUser.uid}`]: timestamp
+        });
+
+        // Commit the batch
+        await batch.commit();
 
         // Reload users to update the sidebar order
         loadUsers();
