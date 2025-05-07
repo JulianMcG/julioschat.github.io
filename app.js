@@ -366,7 +366,8 @@ async function loadUsers() {
         // Get all messages where current user is a participant
         const messagesQuery = query(
             collection(db, 'messages'),
-            where('participants', 'array-contains', currentUser.uid)
+            where('participants', 'array-contains', currentUser.uid),
+            orderBy('timestamp', 'desc')
         );
         
         const messagesSnapshot = await getDocs(messagesQuery);
@@ -384,7 +385,8 @@ async function loadUsers() {
             if (!currentLatest || message.timestamp > currentLatest.timestamp) {
                 latestMessages.set(otherUserId, {
                     timestamp: message.timestamp,
-                    content: message.content
+                    content: message.content,
+                    isUnread: !lastReadTimes[otherUserId] || message.timestamp > lastReadTimes[otherUserId]
                 });
             }
         });
@@ -405,10 +407,6 @@ async function loadUsers() {
                 if (!userDoc.exists()) continue;
 
                 const userData = userDoc.data();
-                const lastReadTime = lastReadTimes[userId] ? new Date(lastReadTimes[userId]) : new Date(0);
-                const messageTime = messageData.timestamp.toDate();
-                const hasUnread = messageTime > lastReadTime;
-
                 users.push({
                     id: userId,
                     username: userData.username || 'Unknown User',
@@ -417,7 +415,7 @@ async function loadUsers() {
                     isPinned: pinnedConversations.includes(userId),
                     lastMessageTime: messageData.timestamp,
                     lastMessage: messageData.content,
-                    hasUnread: hasUnread
+                    hasUnread: messageData.isUnread
                 });
             } catch (error) {
                 console.error(`Error loading user ${userId}:`, error);
@@ -438,6 +436,13 @@ async function loadUsers() {
         users.forEach(user => {
             const userElement = createUserElement(user);
             userElement.dataset.uid = user.id;
+            
+            if (user.hasUnread) {
+                const unreadIndicator = userElement.querySelector('.unread-indicator');
+                if (unreadIndicator) {
+                    unreadIndicator.style.display = 'block';
+                }
+            }
             
             if (user.isPinned) {
                 userElement.classList.add('pinned');
@@ -481,7 +486,7 @@ function createUserElement(user) {
     const userElement = document.createElement('div');
     userElement.className = 'user-item';
     userElement.innerHTML = `
-        <div class="unread-indicator" style="display: ${user.hasUnread ? 'block' : 'none'}"></div>
+        <div class="unread-indicator"></div>
         <div class="profile-picture-container">
             <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.username}" class="profile-picture">
             <div class="online-status"></div>
@@ -546,26 +551,20 @@ async function startChat(userId, username) {
     
     // Update last read time in Firestore
     try {
-        const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
-        const currentUserData = currentUserDoc.data();
-        const lastReadTimes = currentUserData?.lastReadTimes || {};
-        
-        lastReadTimes[userId] = new Date().toISOString();
-        
         await setDoc(doc(db, 'users', currentUser.uid), {
-            lastReadTimes: lastReadTimes
+            [`lastReadTimes.${userId}`]: serverTimestamp()
         }, { merge: true });
-        
-        // Clear unread indicator
-        const userElement = document.querySelector(`.user-item[data-uid="${userId}"]`);
-        if (userElement) {
-            const unreadIndicator = userElement.querySelector('.unread-indicator');
-            if (unreadIndicator) {
-                unreadIndicator.style.display = 'none';
-            }
-        }
     } catch (error) {
         console.error('Error updating last read time:', error);
+    }
+    
+    // Clear unread indicator for this user
+    const userElement = document.querySelector(`.user-item[data-uid="${userId}"]`);
+    if (userElement) {
+        const unreadIndicator = userElement.querySelector('.unread-indicator');
+        if (unreadIndicator) {
+            unreadIndicator.style.display = 'none';
+        }
     }
     
     // Check if user is already in sidebar
@@ -764,7 +763,6 @@ async function loadMessages() {
         const currentUserData = currentUserDoc.data();
         const blockedUsers = currentUserData?.blockedUsers || [];
 
-        // Mark all messages from this user as read
         const messagesQuery = query(
             collection(db, 'messages'),
             where('participants', 'array-contains', currentUser.uid),
@@ -844,17 +842,12 @@ async function loadMessages() {
                         playNotificationSound();
                     }
 
-                    // Show unread indicator for the sender only if the message is newer than the last time we opened their chat
+                    // Show unread indicator for the sender
                     const userElement = document.querySelector(`.user-item[data-uid="${message.senderId}"]`);
                     if (userElement) {
-                        const lastReadTime = userElement.dataset.lastReadTime ? new Date(userElement.dataset.lastReadTime) : new Date(0);
-                        const messageTime = message.timestamp.toDate();
-                        
-                        if (messageTime > lastReadTime) {
-                            const unreadIndicator = userElement.querySelector('.unread-indicator');
-                            if (unreadIndicator) {
-                                unreadIndicator.style.display = 'block';
-                            }
+                        const unreadIndicator = userElement.querySelector('.unread-indicator');
+                        if (unreadIndicator) {
+                            unreadIndicator.style.display = 'block';
                         }
                     }
                 }
@@ -1341,3 +1334,432 @@ async function searchAllUsers(searchTerm) {
             const userElement = document.createElement('div');
             userElement.className = 'compose-user-item';
             userElement.innerHTML = `
+                <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.username}" class="user-avatar">
+                <span>${user.username}</span>
+            `;
+            userElement.onclick = () => {
+                startChat(user.id, user.username);
+                closeComposeModal();
+            };
+            composeResults.appendChild(userElement);
+        });
+
+        if (users.length === 0) {
+            const noResults = document.createElement('div');
+            noResults.className = 'no-results';
+            noResults.textContent = 'No users found';
+            composeResults.appendChild(noResults);
+        }
+    } catch (error) {
+        console.error('Error searching all users:', error);
+    }
+}
+
+// Add event listeners for search
+document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('search-user');
+    const clearSearch = document.querySelector('.clear-search');
+
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.trim();
+            if (searchTerm) {
+                searchUsers(searchTerm);
+            } else {
+                loadUsers(); // Reload all users when search is empty
+            }
+        });
+    }
+
+    if (clearSearch) {
+        clearSearch.addEventListener('click', () => {
+            if (searchInput) {
+                searchInput.value = '';
+                loadUsers(); // Reload all users when search is cleared
+            }
+        });
+    }
+});
+
+// Sign Out Button
+document.querySelector('.signout-button').addEventListener('click', async () => {
+    closeSettingsModal();
+    try {
+        await signOut(auth);
+        showAuthSection();
+    } catch (error) {
+        console.error('Error signing out:', error);
+        alert('Error signing out. Please try again.');
+    }
+});
+
+function updateChatHeader(user) {
+    const chatHeader = document.querySelector('.chat-header');
+    if (!chatHeader) return;
+    
+    chatHeader.innerHTML = `
+        <img src="${user.photoURL || 'default-avatar.png'}" alt="${user.username}" class="profile-picture">
+        <span class="username">${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
+    `;
+}
+
+// User Options Modal
+let currentSelectedUser = null;
+
+// Open user options modal
+function openUserOptionsModal(userId, username) {
+    currentSelectedUser = { id: userId, username };
+    const modal = document.getElementById('user-options-modal');
+    const aliasInput = document.getElementById('user-alias');
+    const blockButton = document.getElementById('block-user');
+    const unblockButton = document.getElementById('unblock-user');
+    
+    // Check if user is blocked
+    getDoc(doc(db, 'users', currentUser.uid)).then(userDoc => {
+        const userData = userDoc.data();
+        const blockedUsers = userData?.blockedUsers || [];
+        const userAliases = userData?.userAliases || {};
+        
+        // Set alias input value if exists
+        aliasInput.value = userAliases[userId] || '';
+        
+        // Show appropriate block/unblock button
+        if (blockedUsers.includes(userId)) {
+            blockButton.style.display = 'none';
+            unblockButton.style.display = 'block';
+        } else {
+            blockButton.style.display = 'block';
+            unblockButton.style.display = 'none';
+        }
+    });
+    
+    modal.style.display = 'block';
+}
+
+// Close user options modal
+function closeUserOptionsModal() {
+    const modal = document.getElementById('user-options-modal');
+    modal.style.display = 'none';
+    currentSelectedUser = null;
+}
+
+// Save user alias
+async function saveUserAlias() {
+    if (!currentSelectedUser) return;
+    
+    const aliasInput = document.getElementById('user-alias');
+    const alias = aliasInput.value.trim();
+    
+    try {
+        await setDoc(doc(db, 'users', currentUser.uid), {
+            userAliases: {
+                [currentSelectedUser.id]: alias
+            }
+        }, { merge: true });
+        
+        // Update username display if this is the current chat
+        if (currentChatUser && currentChatUser.id === currentSelectedUser.id) {
+            document.getElementById('active-chat-username').textContent = alias || currentSelectedUser.username;
+        }
+        
+        closeUserOptionsModal();
+    } catch (error) {
+        console.error('Error saving user alias:', error);
+    }
+}
+
+// Block user
+async function blockUser() {
+    if (!currentSelectedUser) return;
+    
+    try {
+        await setDoc(doc(db, 'users', currentUser.uid), {
+            blockedUsers: arrayUnion(currentSelectedUser.id)
+        }, { merge: true });
+        
+        // Close the chat if it's with the blocked user
+        if (currentChatUser && currentChatUser.id === currentSelectedUser.id) {
+            currentChatUser = null;
+            document.getElementById('active-chat-username').textContent = 'Select a chat';
+            document.getElementById('message-input').placeholder = 'Type a message...';
+            document.querySelector('.message-input').classList.remove('visible');
+        }
+        
+        closeUserOptionsModal();
+    } catch (error) {
+        console.error('Error blocking user:', error);
+    }
+}
+
+// Unblock user
+async function unblockUser() {
+    if (!currentSelectedUser) return;
+    
+    try {
+        await setDoc(doc(db, 'users', currentUser.uid), {
+            blockedUsers: arrayRemove(currentSelectedUser.id)
+        }, { merge: true });
+        
+        closeUserOptionsModal();
+    } catch (error) {
+        console.error('Error unblocking user:', error);
+    }
+}
+
+// Event Listeners
+document.addEventListener('DOMContentLoaded', () => {
+    // ... existing event listeners ...
+    
+    // User options modal event listeners
+    const userOptionsModal = document.getElementById('user-options-modal');
+    const closeUserOptionsBtn = userOptionsModal.querySelector('.close-modal');
+    const saveAliasBtn = document.getElementById('save-alias');
+    const blockUserBtn = document.getElementById('block-user');
+    const unblockUserBtn = document.getElementById('unblock-user');
+    
+    closeUserOptionsBtn.addEventListener('click', closeUserOptionsModal);
+    saveAliasBtn.addEventListener('click', saveUserAlias);
+    blockUserBtn.addEventListener('click', blockUser);
+    unblockUserBtn.addEventListener('click', unblockUser);
+    
+    // Add click handler for the user options icon
+    document.querySelector('.chat-header svg').addEventListener('click', () => {
+        if (currentChatUser) {
+            openUserOptionsModal(currentChatUser.id, currentChatUser.username);
+        }
+    });
+    
+    // Close modal when clicking outside
+    window.addEventListener('click', (e) => {
+        if (e.target === userOptionsModal) {
+            closeUserOptionsModal();
+        }
+    });
+});
+
+// Update typing status in Firestore
+async function updateTypingStatus(typing) {
+    if (!currentUser || !currentChatUser) return;
+    
+    console.log('Updating typing status:', {
+        typing,
+        currentUser: currentUser.uid,
+        currentChatUser: currentChatUser.id
+    });
+    
+    try {
+        const docRef = doc(db, 'typing', `${currentUser.uid}_${currentChatUser.id}`);
+        console.log('Document reference:', docRef.path);
+        
+        await setDoc(docRef, {
+            isTyping: typing,
+            userId: currentUser.uid,
+            otherUserId: currentChatUser.id,
+            timestamp: serverTimestamp()
+        }, { merge: true });
+        
+        console.log('Typing status updated successfully');
+    } catch (error) {
+        console.error('Error updating typing status:', error);
+    }
+}
+
+// Listen for typing status changes
+function setupTypingListener() {
+    if (!currentUser || !currentChatUser) return;
+    
+    console.log('Setting up typing listener:', {
+        currentUser: currentUser.uid,
+        currentChatUser: currentChatUser.id
+    });
+    
+    const typingRef = doc(db, 'typing', `${currentChatUser.id}_${currentUser.uid}`);
+    console.log('Listening to document:', typingRef.path);
+    
+    const unsubscribe = onSnapshot(typingRef, (doc) => {
+        console.log('Typing status changed:', doc.data());
+        
+        const data = doc.data();
+        const chatMessages = document.getElementById('chat-messages');
+        const existingIndicator = document.getElementById('typing-indicator');
+        
+        if (data?.isTyping) {
+            console.log('User is typing, adding indicator');
+            if (!existingIndicator) {
+                const typingIndicator = document.createElement('div');
+                typingIndicator.id = 'typing-indicator';
+                typingIndicator.className = 'typing-indicator';
+                typingIndicator.innerHTML = `
+                    <lord-icon
+                        src="https://cdn.lordicon.com/jpgpblwn.json"
+                        trigger="loop"
+                        state="loop-scale"
+                        colors="primary:#b6b8c8"
+                        style="width:24px;height:24px">
+                    </lord-icon>
+                `;
+                chatMessages.appendChild(typingIndicator);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        } else if (existingIndicator) {
+            console.log('User stopped typing, removing indicator');
+            existingIndicator.remove();
+        }
+    }, (error) => {
+        console.error('Error in typing listener:', error);
+    });
+    
+    return unsubscribe;
+}
+
+// Load user's notification sound preference
+async function loadNotificationSoundPreference() {
+    try {
+        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        const userData = userDoc.data();
+        const selectedSound = userData?.notificationSound || 'Birdy.mp3';
+        notificationsEnabled = userData?.notificationsEnabled ?? true;
+        
+        // Update select element
+        const soundSelect = document.getElementById('notification-sound');
+        soundSelect.value = selectedSound;
+        
+        // Update toggle
+        const notificationToggle = document.getElementById('notification-toggle');
+        notificationToggle.checked = notificationsEnabled;
+        
+        // Update audio source
+        notificationSound = new Audio(`NotifSounds/${selectedSound}`);
+        notificationSound.volume = 0.3; // Set volume to 30%
+    } catch (error) {
+        console.error('Error loading notification sound preference:', error);
+    }
+}
+
+// Save notification sound preference
+async function saveNotificationSoundPreference() {
+    const soundSelect = document.getElementById('notification-sound');
+    const selectedSound = soundSelect.value;
+    const notificationToggle = document.getElementById('notification-toggle');
+    notificationsEnabled = notificationToggle.checked;
+    
+    try {
+        await setDoc(doc(db, 'users', currentUser.uid), {
+            notificationSound: selectedSound,
+            notificationsEnabled: notificationsEnabled
+        }, { merge: true });
+        
+        // Update audio source and play preview
+        notificationSound = new Audio(`NotifSounds/${selectedSound}`);
+        notificationSound.volume = 0.3; // Set volume to 30%
+        notificationSound.play().catch(error => {
+            console.error('Error playing notification sound:', error);
+        });
+    } catch (error) {
+        console.error('Error saving notification sound preference:', error);
+    }
+}
+
+// Play notification sound
+function playNotificationSound() {
+    const now = Date.now();
+    if (!isTabFocused && notificationsEnabled && (now - lastSoundPlayTime) >= SOUND_COOLDOWN) {
+        lastSoundPlayTime = now;
+        // Create a new audio instance to allow multiple sounds to play
+        const sound = new Audio(notificationSound.src);
+        sound.volume = 0.3; // Set volume to 30%
+        sound.play().catch(error => {
+            console.error('Error playing notification sound:', error);
+        });
+        console.log('Playing notification sound:', {
+            isTabFocused,
+            notificationsEnabled,
+            timeSinceLastPlay: now - lastSoundPlayTime
+        });
+    }
+}
+
+// Tab focus detection
+document.addEventListener('visibilitychange', () => {
+    isTabFocused = document.visibilityState === 'visible';
+    console.log('Tab focus changed:', {
+        isTabFocused,
+        visibilityState: document.visibilityState
+    });
+});
+
+// Add event listeners for notification settings
+document.addEventListener('DOMContentLoaded', () => {
+    const soundSelect = document.getElementById('notification-sound');
+    const notificationToggle = document.getElementById('notification-toggle');
+    
+    soundSelect.addEventListener('change', saveNotificationSoundPreference);
+    notificationToggle.addEventListener('change', saveNotificationSoundPreference);
+    
+    // Log initial state
+    console.log('Initial notification state:', {
+        isTabFocused,
+        notificationsEnabled,
+        selectedSound: soundSelect.value
+    });
+});
+
+async function signInWithGoogle() {
+    try {
+        const provider = new GoogleAuthProvider();
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+
+        // Check if user document exists
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        
+        if (!userDoc.exists()) {
+            // Create new user document if it doesn't exist
+            await setDoc(doc(db, 'users', user.uid), {
+                username: user.displayName || user.email.split('@')[0],
+                email: user.email,
+                profilePicture: user.photoURL,
+                createdAt: serverTimestamp()
+            });
+        }
+
+        // Show chat section
+        showChatSection();
+    } catch (error) {
+        console.error('Google Sign-In error:', error);
+        alert(`Error signing in with Google: ${error.message}`);
+    }
+}
+
+// Add online status tracking with periodic checks
+function updateOnlineStatus(isOnline) {
+    if (currentUser) {
+        setDoc(doc(db, 'users', currentUser.uid), {
+            isOnline: isOnline,
+            lastSeen: serverTimestamp()
+        }, { merge: true });
+    }
+}
+
+// Function to check if a user is actually online
+function isUserActuallyOnline(lastSeen) {
+    if (!lastSeen) return false;
+    const lastSeenTime = lastSeen.toDate();
+    const now = new Date();
+    const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+    return lastSeenTime > fiveMinutesAgo;
+}
+
+// Update online status when user connects/disconnects
+window.addEventListener('online', () => updateOnlineStatus(true));
+window.addEventListener('offline', () => updateOnlineStatus(false));
+
+// Update online status when user closes the tab/window
+window.addEventListener('beforeunload', () => updateOnlineStatus(false));
+
+// Set up periodic online status check
+setInterval(() => {
+    if (currentUser) {
+        updateOnlineStatus(true);
+    }
+}, 4 * 60 * 1000); // Check every 4 minutes
