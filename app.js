@@ -401,7 +401,7 @@ async function loadUsers() {
         // Display users
         users.forEach(user => {
             const userElement = createUserElement(user);
-            userElement.dataset.userId = user.id;
+            userElement.dataset.uid = user.id;
             
             if (user.isPinned) {
                 userElement.classList.add('pinned');
@@ -439,86 +439,71 @@ async function loadUsers() {
 function createUserElement(user) {
     const userElement = document.createElement('div');
     userElement.className = 'user-item';
-    userElement.dataset.userId = user.id;
+    userElement.innerHTML = `
+        <div class="profile-picture-container">
+            <img src="${user.profilePicture || 'default-avatar.png'}" alt="${user.username}" class="profile-picture">
+            <div class="online-status"></div>
+        </div>
+        <span class="username">${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
+        <div class="user-actions">
+            <span class="material-symbols-outlined action-icon pin-icon">keep</span>
+            <span class="material-symbols-outlined action-icon close-icon">close</span>
+        </div>
+    `;
     
-    const profilePictureContainer = document.createElement('div');
-    profilePictureContainer.className = 'profile-picture-container';
-    
-    const unreadIndicator = document.createElement('span');
-    unreadIndicator.className = 'unread-indicator';
-    profilePictureContainer.appendChild(unreadIndicator);
-    
-    const profilePicture = document.createElement('img');
-    profilePicture.className = 'profile-picture';
-    profilePicture.src = user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
-    profilePicture.alt = user.username;
-    profilePictureContainer.appendChild(profilePicture);
-    
-    const userInfo = document.createElement('div');
-    userInfo.className = 'user-info';
-    
-    const username = document.createElement('div');
-    username.className = 'username';
-    username.textContent = user.alias || user.username;
-    
-    if (user.verified) {
-        const verifiedBadge = document.createElement('span');
-        verifiedBadge.className = 'material-symbols-outlined verified-badge';
-        verifiedBadge.textContent = 'verified';
-        username.appendChild(verifiedBadge);
-    }
-    
-    userInfo.appendChild(username);
-    
-    const userActions = document.createElement('div');
-    userActions.className = 'user-actions';
-    
-    const pinIcon = document.createElement('span');
-    pinIcon.className = 'material-symbols-outlined action-icon pin-icon';
-    pinIcon.textContent = 'push_pin';
-    userActions.appendChild(pinIcon);
-    
-    const moreIcon = document.createElement('span');
-    moreIcon.className = 'material-symbols-outlined action-icon';
-    moreIcon.textContent = 'more_vert';
-    userActions.appendChild(moreIcon);
-    
-    userElement.appendChild(profilePictureContainer);
-    userElement.appendChild(userInfo);
-    userElement.appendChild(userActions);
-    
-    // Add click event to start chat
-    userElement.addEventListener('click', () => {
-        startChat(user.id, user.username);
-        // Remove unread indicator when chat is opened
-        unreadIndicator.classList.remove('active');
-    });
-    
-    // Add click event to more icon
-    moreIcon.addEventListener('click', (e) => {
+    // Add click handler for pin icon
+    const pinIcon = userElement.querySelector('.pin-icon');
+    pinIcon.onclick = async (e) => {
         e.stopPropagation();
-        openUserOptionsModal(user.id, user.username);
+        const isPinned = userElement.classList.contains('pinned');
+        userElement.classList.toggle('pinned');
+        
+        if (!isPinned) {
+            const usersContainer = document.getElementById('users-container');
+            usersContainer.insertBefore(userElement, usersContainer.firstChild);
+        }
+        
+        try {
+            if (!isPinned) {
+                await setDoc(doc(db, 'users', currentUser.uid), {
+                    pinnedConversations: arrayUnion(user.id)
+                }, { merge: true });
+            } else {
+                await setDoc(doc(db, 'users', currentUser.uid), {
+                    pinnedConversations: arrayRemove(user.id)
+                }, { merge: true });
+            }
+        } catch (error) {
+            console.error('Error pinning conversation:', error);
+            // Revert UI changes if save fails
+            userElement.classList.toggle('pinned');
+            if (!isPinned) {
+                const usersContainer = document.getElementById('users-container');
+                usersContainer.appendChild(userElement);
+            }
+        }
+    };
+
+    // Set up online status listener
+    const onlineStatusRef = doc(db, 'users', user.id);
+    onSnapshot(onlineStatusRef, (doc) => {
+        const userData = doc.data();
+        const onlineStatus = userElement.querySelector('.online-status');
+        if (userData?.isOnline) {
+            onlineStatus.classList.add('active');
+        } else {
+            onlineStatus.classList.remove('active');
+        }
     });
     
     return userElement;
-}
-
-// Add function to handle unread messages
-function handleUnreadMessage(senderId) {
-    const userElement = document.querySelector(`.user-item[data-user-id="${senderId}"]`);
-    if (userElement && userElement !== document.querySelector('.user-item.active')) {
-        const unreadIndicator = userElement.querySelector('.unread-indicator');
-        if (unreadIndicator) {
-            unreadIndicator.classList.add('active');
-        }
-    }
 }
 
 async function startChat(userId, username) {
     currentChatUser = { id: userId, username: username };
     
     // Check if user is already in sidebar
-    const existingUser = document.querySelector(`.user-item[data-userId="${userId}"]`);
+    const existingUser = document.querySelector(`.user-item[data-uid="${userId}"]`);
     if (!existingUser) {
         // Get user's profile picture and verification status
         const userDoc = await getDoc(doc(db, 'users', userId));
@@ -529,7 +514,7 @@ async function startChat(userId, username) {
         // Create new user element
         const userElement = document.createElement('div');
         userElement.className = 'user-item';
-        userElement.dataset.userId = userId;
+        userElement.dataset.uid = userId;
         userElement.innerHTML = `
             <img src="${profilePicture}" alt="${username}" class="profile-picture">
             <span class="username">${username}${isVerified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
@@ -602,7 +587,7 @@ async function startChat(userId, username) {
     // Update active user in sidebar
     const userItems = document.querySelectorAll('.user-item');
     userItems.forEach(item => {
-        if (item.dataset.userId === userId) {
+        if (item.dataset.uid === userId) {
             item.classList.add('active');
         } else {
             item.classList.remove('active');
@@ -1014,7 +999,7 @@ function updateCurrentUserProfile(user) {
             // Update user items in the list
             const userItems = document.querySelectorAll('.user-item');
             userItems.forEach(item => {
-                if (item.dataset.userId === user.uid) {
+                if (item.dataset.uid === user.uid) {
                     item.querySelector('.username').innerHTML = `${user.displayName || 'Username'}${verifiedBadge}`;
                     item.querySelector('img').src = user.photoURL || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
                 }
@@ -1179,7 +1164,7 @@ document.querySelector('.save-button').addEventListener('click', async () => {
         // Update all user items in the list
         const userItems = document.querySelectorAll('.user-item');
         userItems.forEach(item => {
-            if (item.dataset.userId === currentUser.uid) {
+            if (item.dataset.uid === currentUser.uid) {
                 item.querySelector('span').textContent = newUsername;
                 item.querySelector('img').src = newProfilePicture;
             }
