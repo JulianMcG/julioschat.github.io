@@ -187,19 +187,12 @@ document.addEventListener('DOMContentLoaded', () => {
 // Check if username exists
 async function isUsernameTaken(username) {
     try {
-        // First check if the username matches the current user's username
-        if (currentUser && currentUser.displayName === username) {
-            return false;
-        }
-
-        // Then check if any other user has this username
         const usersQuery = query(collection(db, 'users'), where('username', '==', username));
         const usersSnapshot = await getDocs(usersQuery);
         return !usersSnapshot.empty;
     } catch (error) {
         console.error('Error checking username:', error);
-        // If we can't check, assume username is taken to be safe
-        return true;
+        return true; // Return true on error to be safe
     }
 }
 
@@ -1627,20 +1620,14 @@ async function signInWithGoogle() {
         if (!userDoc.exists()) {
             // Create new user document if it doesn't exist
             await setDoc(doc(db, 'users', user.uid), {
-                username: user.displayName || 'User' + Math.random().toString(36).substr(2, 9),
+                username: user.displayName || user.email.split('@')[0],
                 email: user.email,
                 profilePicture: user.photoURL,
-                createdAt: serverTimestamp(),
-                verified: false // Set initial verification status
-            });
-
-            // Update the profile
-            await updateProfile(user, {
-                displayName: user.displayName || 'User' + Math.random().toString(36).substr(2, 9),
-                photoURL: user.photoURL
+                createdAt: serverTimestamp()
             });
         }
 
+        // Show chat section
         showChatSection();
     } catch (error) {
         console.error('Google Sign-In error:', error);
