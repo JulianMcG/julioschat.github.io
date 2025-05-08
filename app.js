@@ -1095,6 +1095,9 @@ function openSettingsModal() {
     document.getElementById('settings-username').value = currentUsername;
     document.getElementById('settings-profile-picture').src = currentProfilePicture;
     
+    // Load notification preferences when opening settings
+    loadNotificationSoundPreference();
+    
     modal.style.display = 'block';
 }
 
@@ -1581,27 +1584,29 @@ function setupTypingListener() {
 
 // Load user's notification sound preference
 async function loadNotificationSoundPreference() {
+    if (!currentUser) return;
+    
     try {
         const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
         const userData = userDoc.data();
         const selectedSound = userData?.notificationSound || 'Birdy.mp3';
         notificationsEnabled = userData?.notificationsEnabled ?? true;
         
-        // Update select element
+        // Update audio source
+        notificationSound = new Audio(`NotifSounds/${selectedSound}`);
+        notificationSound.volume = 0.3; // Set volume to 30%
+        
+        // Update UI elements if they exist
         const soundSelect = document.getElementById('notification-sound');
+        const notificationToggle = document.getElementById('notification-toggle');
+        
         if (soundSelect) {
             soundSelect.value = selectedSound;
         }
         
-        // Update toggle
-        const notificationToggle = document.getElementById('notification-toggle');
         if (notificationToggle) {
             notificationToggle.checked = notificationsEnabled;
         }
-        
-        // Update audio source
-        notificationSound = new Audio(`NotifSounds/${selectedSound}`);
-        notificationSound.volume = 0.3; // Set volume to 30%
         
         console.log('Loaded notification preferences:', {
             selectedSound,
@@ -1619,9 +1624,17 @@ async function loadNotificationSoundPreference() {
 
 // Save notification sound preference
 async function saveNotificationSoundPreference() {
+    if (!currentUser) return;
+    
     const soundSelect = document.getElementById('notification-sound');
-    const selectedSound = soundSelect.value;
     const notificationToggle = document.getElementById('notification-toggle');
+    
+    if (!soundSelect || !notificationToggle) {
+        console.error('Notification UI elements not found');
+        return;
+    }
+    
+    const selectedSound = soundSelect.value;
     notificationsEnabled = notificationToggle.checked;
     
     try {
@@ -1679,15 +1692,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const soundSelect = document.getElementById('notification-sound');
     const notificationToggle = document.getElementById('notification-toggle');
     
-    soundSelect.addEventListener('change', saveNotificationSoundPreference);
-    notificationToggle.addEventListener('change', saveNotificationSoundPreference);
+    if (soundSelect && notificationToggle) {
+        soundSelect.addEventListener('change', saveNotificationSoundPreference);
+        notificationToggle.addEventListener('change', saveNotificationSoundPreference);
+    }
     
-    // Log initial state
-    console.log('Initial notification state:', {
-        isTabFocused,
-        notificationsEnabled,
-        selectedSound: soundSelect.value
-    });
+    // Load notification preferences when DOM is ready
+    if (currentUser) {
+        loadNotificationSoundPreference();
+    }
 });
 
 async function signInWithGoogle() {
