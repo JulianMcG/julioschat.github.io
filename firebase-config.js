@@ -120,6 +120,14 @@ service cloud.firestore {
         (request.auth.uid == request.resource.data.userId || 
          request.auth.uid == request.resource.data.otherUserId);
     }
+    match /groups/{groupId} {
+      allow read: if request.auth != null && 
+        request.auth.uid in resource.data.members;
+      allow create: if request.auth != null && 
+        request.auth.uid in request.resource.data.members;
+      allow update: if request.auth != null && 
+        request.auth.uid in resource.data.members;
+    }
   }
 }
 `;
