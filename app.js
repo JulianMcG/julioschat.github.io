@@ -769,19 +769,27 @@ async function addReaction(messageId, emoji) {
         // Initialize reactions if they don't exist
         const reactions = messageData.reactions || {};
         
-        // Remove any existing reaction from this user
-        Object.keys(reactions).forEach(existingEmoji => {
-            reactions[existingEmoji] = reactions[existingEmoji].filter(id => id !== currentUser.uid);
-            if (reactions[existingEmoji].length === 0) {
-                delete reactions[existingEmoji];
+        // If this emoji already has a reaction from this user, remove it
+        if (reactions[emoji] && reactions[emoji].includes(currentUser.uid)) {
+            reactions[emoji] = reactions[emoji].filter(id => id !== currentUser.uid);
+            if (reactions[emoji].length === 0) {
+                delete reactions[emoji];
             }
-        });
-        
-        // Add new reaction
-        if (!reactions[emoji]) {
-            reactions[emoji] = [];
+        } else {
+            // Remove any existing reaction from this user
+            Object.keys(reactions).forEach(existingEmoji => {
+                reactions[existingEmoji] = reactions[existingEmoji].filter(id => id !== currentUser.uid);
+                if (reactions[existingEmoji].length === 0) {
+                    delete reactions[existingEmoji];
+                }
+            });
+            
+            // Add new reaction
+            if (!reactions[emoji]) {
+                reactions[emoji] = [];
+            }
+            reactions[emoji].push(currentUser.uid);
         }
-        reactions[emoji].push(currentUser.uid);
         
         // Update message with new reactions
         await updateDoc(messageRef, { 
@@ -839,6 +847,11 @@ function formatReactions(reactions) {
         const reactionSpan = document.createElement('span');
         reactionSpan.className = 'reaction';
         reactionSpan.textContent = emoji;
+        reactionSpan.style.cursor = 'pointer';
+        reactionSpan.onclick = (e) => {
+            e.stopPropagation();
+            addReaction(doc.id, emoji);
+        };
         reactionDiv.appendChild(reactionSpan);
     });
     
@@ -942,6 +955,11 @@ async function loadMessages() {
                             const reaction = document.createElement('span');
                             reaction.className = 'reaction';
                             reaction.textContent = emoji;
+                            reaction.style.cursor = 'pointer';
+                            reaction.onclick = (e) => {
+                                e.stopPropagation();
+                                addReaction(doc.id, emoji);
+                            };
                             reactionsContainer.appendChild(reaction);
                         });
                     }
