@@ -728,10 +728,17 @@ async function addReaction(messageId, emoji) {
         const messageRef = doc(db, 'messages', messageId);
         const messageDoc = await getDoc(messageRef);
         
-        if (!messageDoc.exists()) return;
+        if (!messageDoc.exists()) {
+            console.error('Message does not exist:', messageId);
+            return;
+        }
         
         const messageData = messageDoc.data();
+        console.log('Current message data:', messageData);
+        
+        // Initialize reactions if they don't exist
         const reactions = messageData.reactions || {};
+        console.log('Current reactions:', reactions);
         
         // Initialize reaction if it doesn't exist
         if (!reactions[emoji]) {
@@ -740,26 +747,25 @@ async function addReaction(messageId, emoji) {
         
         // Toggle reaction
         if (reactions[emoji].includes(currentUser.uid)) {
+            console.log('Removing reaction:', emoji);
             reactions[emoji] = reactions[emoji].filter(id => id !== currentUser.uid);
             if (reactions[emoji].length === 0) {
                 delete reactions[emoji];
             }
         } else {
+            console.log('Adding reaction:', emoji);
             reactions[emoji].push(currentUser.uid);
         }
         
-        // Update message with new reactions using a transaction
-        await runTransaction(db, async (transaction) => {
-            const messageDoc = await transaction.get(messageRef);
-            if (!messageDoc.exists()) {
-                throw new Error("Message does not exist!");
-            }
-            
-            transaction.update(messageRef, { 
-                reactions: reactions,
-                lastUpdated: serverTimestamp()
-            });
+        console.log('Updated reactions:', reactions);
+        
+        // Update message with new reactions
+        await updateDoc(messageRef, { 
+            reactions: reactions,
+            lastUpdated: serverTimestamp()
         });
+        
+        console.log('Successfully updated reactions');
     } catch (error) {
         console.error('Error adding reaction:', error);
     }
@@ -863,6 +869,7 @@ async function loadMessages() {
             
             snapshot.forEach(doc => {
                 const message = doc.data();
+                console.log('Message data:', message); // Debug log
                 
                 // Only show messages if:
                 // 1. The message is between current user and current chat user
@@ -916,7 +923,11 @@ async function loadMessages() {
                     // Create reactions container
                     const reactionsContainer = document.createElement('div');
                     reactionsContainer.className = 'message-reactions';
-                    if (message.reactions) {
+                    
+                    // Debug log for reactions
+                    console.log('Message reactions:', message.reactions);
+                    
+                    if (message.reactions && Object.keys(message.reactions).length > 0) {
                         Object.entries(message.reactions).forEach(([emoji, users]) => {
                             const reaction = document.createElement('span');
                             reaction.className = 'reaction';
