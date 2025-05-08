@@ -930,8 +930,8 @@ function formatReactions(reactions) {
 
 // Modify the loadMessages function to include reactions
 async function loadMessages() {
-    if (!currentUser || !currentChatUser) {
-        console.log('No current user or chat user');
+    if (!currentUser || (!currentChatUser && !currentGroupChat)) {
+        console.log('No current user or chat');
         return;
     }
 
@@ -939,16 +939,20 @@ async function loadMessages() {
     chatMessages.innerHTML = '';
 
     try {
-        // Get current user's blocked users list
-        const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
-        const currentUserData = currentUserDoc.data();
-        const blockedUsers = currentUserData?.blockedUsers || [];
-
-        const messagesQuery = query(
-            collection(db, 'messages'),
-            where('participants', 'array-contains', currentUser.uid),
-            orderBy('timestamp', 'asc')
-        );
+        let messagesQuery;
+        if (currentGroupChat) {
+            messagesQuery = query(
+                collection(db, 'messages'),
+                where('groupId', '==', currentGroupChat.id),
+                orderBy('timestamp', 'asc')
+            );
+        } else {
+            messagesQuery = query(
+                collection(db, 'messages'),
+                where('participants', 'array-contains', currentUser.uid),
+                orderBy('timestamp', 'asc')
+            );
+        }
 
         if (window.currentMessageUnsubscribe) {
             window.currentMessageUnsubscribe();
@@ -961,108 +965,49 @@ async function loadMessages() {
             
             snapshot.forEach(doc => {
                 const message = doc.data();
-                console.log('Message data:', message); // Debug log
                 
-                // Only show messages if:
-                // 1. The message is between current user and current chat user
-                // 2. The sender is not blocked
-                if (message.participants.includes(currentChatUser.id) && 
-                    message.participants.includes(currentUser.uid) &&
-                    !blockedUsers.includes(message.senderId)) {
-                    
-                    const messageTime = message.timestamp.toDate();
-                    
-                    // Add timestamp or gap if needed
-                    if (lastMessageTime) {
-                        const timeDiff = messageTime - lastMessageTime;
-                        const twentyMinutes = 20 * 60 * 1000; // 20 minutes in milliseconds
-                        
-                        if (timeDiff > twentyMinutes) {
-                            // Add date separator
-                            const dateSeparator = document.createElement('div');
-                            dateSeparator.className = 'date-separator';
-                            const today = new Date();
-                            const messageDate = messageTime;
-                            
-                            let dateText;
-                            if (messageDate.toDateString() === today.toDateString()) {
-                                dateText = `Today ${messageDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
-                            } else if (messageDate.toDateString() === new Date(today - 86400000).toDateString()) {
-                                dateText = `Yesterday ${messageDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
-                            } else {
-                                dateText = messageDate.toLocaleDateString([], { 
-                                    month: 'short', 
-                                    day: 'numeric',
-                                    hour: 'numeric',
-                                    minute: '2-digit'
-                                });
-                            }
-                            
-                            dateSeparator.textContent = dateText;
-                            chatMessages.appendChild(dateSeparator);
-                        }
-                    }
-                    
-                    const messageElement = document.createElement('div');
-                    messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
-                    messageElement.dataset.messageId = doc.id;
-                    
-                    // Create message content container
-                    const contentContainer = document.createElement('div');
-                    contentContainer.className = 'content';
-                    contentContainer.innerHTML = formatMessageContent(message.content);
-                    
-                    // Create reactions container
-                    const reactionsContainer = document.createElement('div');
-                    reactionsContainer.className = 'message-reactions';
-                    
-                    // Debug log for reactions
-                    console.log('Message reactions:', message.reactions);
-                    
-                    if (message.reactions && Object.keys(message.reactions).length > 0) {
-                        reactionsContainer.classList.add('has-reactions');
-                        Object.keys(message.reactions).forEach(emoji => {
-                            const reaction = document.createElement('span');
-                            reaction.className = 'reaction';
-                            reaction.textContent = emoji;
-                            // Add click handler to remove reaction
-                            reaction.onclick = (e) => {
-                                e.stopPropagation();
-                                addReaction(doc.id, emoji);
-                            };
-                            reactionsContainer.appendChild(reaction);
-                        });
-                    }
-                    
-                    // Create reaction button only for received messages
-                    if (message.senderId !== currentUser.uid) {
-                        const reactionButton = document.createElement('div');
-                        reactionButton.className = 'reaction-button';
-                        reactionButton.innerHTML = '<span class="material-symbols-outlined">add_reaction</span>';
-                        reactionButton.onclick = (e) => {
-                            e.stopPropagation();
-                            showReactionPicker(e, doc.id);
-                        };
-                        messageElement.appendChild(reactionButton);
-                    }
-                    
-                    // Append all elements
-                    messageElement.appendChild(contentContainer);
-                    messageElement.appendChild(reactionsContainer);
-                    
-                    chatMessages.appendChild(messageElement);
-                    
-                    lastMessageTime = messageTime;
-                    lastMessageSenderId = message.senderId;
+                // For direct messages, only show messages between current user and chat user
+                if (!currentGroupChat && 
+                    (!message.participants.includes(currentChatUser.id) || 
+                     !message.participants.includes(currentUser.uid))) {
+                    return;
                 }
+                
+                // For group messages, only show messages for current group
+                if (currentGroupChat && message.groupId !== currentGroupChat.id) {
+                    return;
+                }
+                
+                const messageTime = message.timestamp.toDate();
+                
+                // Add date separator if needed
+                if (lastMessageTime && !isSameDay(messageTime, lastMessageTime)) {
+                    const dateSeparator = document.createElement('div');
+                    dateSeparator.className = 'date-separator';
+                    dateSeparator.textContent = formatDate(messageTime);
+                    chatMessages.appendChild(dateSeparator);
+                }
+                
+                // Create message element
+                const messageElement = createMessageElement(message, message.senderId === currentUser.uid);
+                
+                // Add consecutive message styling
+                if (lastMessageSenderId === message.senderId) {
+                    messageElement.classList.add('consecutive');
+                }
+                
+                chatMessages.appendChild(messageElement);
+                
+                lastMessageTime = messageTime;
+                lastMessageSenderId = message.senderId;
             });
             
+            // Scroll to bottom
             chatMessages.scrollTop = chatMessages.scrollHeight;
-        }, (error) => {
-            console.error('Error in message snapshot:', error);
         });
-
+        
         window.currentMessageUnsubscribe = unsubscribe;
+        
     } catch (error) {
         console.error('Error loading messages:', error);
     }
@@ -2095,6 +2040,9 @@ async function createGroupChat() {
         selectedGroupMembers.clear();
         document.getElementById('group-members').innerHTML = '';
         updateCreateGroupButton();
+        
+        // Reload users to show the new group in sidebar
+        loadUsers();
         
     } catch (error) {
         console.error('Error creating group chat:', error);
