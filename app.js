@@ -937,11 +937,11 @@ async function loadMessages() {
                     console.log('Message reactions:', message.reactions);
                     
                     if (message.reactions && Object.keys(message.reactions).length > 0) {
-                        Object.entries(message.reactions).forEach(([emoji, users]) => {
+                        reactionsContainer.classList.add('has-reactions');
+                        Object.keys(message.reactions).forEach(emoji => {
                             const reaction = document.createElement('span');
                             reaction.className = 'reaction';
-                            reaction.dataset.emoji = emoji;
-                            reaction.textContent = `${emoji} ${users.length}`;
+                            reaction.textContent = emoji;
                             reactionsContainer.appendChild(reaction);
                         });
                     }
@@ -964,12 +964,6 @@ async function loadMessages() {
                     
                     lastMessageTime = messageTime;
                     lastMessageSenderId = message.senderId;
-                } else if (message.senderId !== currentUser.uid && !blockedUsers.includes(message.senderId)) {
-                    // Message is from someone other than current chat user
-                    // Play notification sound if tab is not focused
-                    if (!isTabFocused) {
-                        playNotificationSound();
-                    }
                 }
             });
             
