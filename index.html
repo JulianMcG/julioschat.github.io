@@ -127,30 +127,11 @@
                 <span class="material-symbols-outlined close-modal">close</span>
             </div>
             <div class="modal-body">
-                <div class="compose-tabs">
-                    <button class="tab-button active" data-tab="direct">Direct Message</button>
-                    <button class="tab-button" data-tab="group">Group Chat</button>
+                <div class="search-container">
+                    <span class="material-symbols-outlined search-icon">search</span>
+                    <input type="text" id="compose-search" placeholder="Search users...">
                 </div>
-                <div class="tab-content" id="direct-tab">
-                    <div class="search-container">
-                        <span class="material-symbols-outlined search-icon">search</span>
-                        <input type="text" id="compose-search" placeholder="Search users...">
-                    </div>
-                    <div id="compose-results" class="compose-results"></div>
-                </div>
-                <div class="tab-content" id="group-tab" style="display: none;">
-                    <div class="form-group">
-                        <label for="group-name">Group Name</label>
-                        <input type="text" id="group-name" placeholder="Enter group name">
-                    </div>
-                    <div class="search-container">
-                        <span class="material-symbols-outlined search-icon">search</span>
-                        <input type="text" id="group-search" placeholder="Search users to add...">
-                    </div>
-                    <div id="group-members" class="group-members"></div>
-                    <div id="group-results" class="compose-results"></div>
-                    <button id="create-group" class="create-group-button" disabled>Create Group</button>
-                </div>
+                <div id="compose-results" class="compose-results"></div>
             </div>
         </div>
     </div>
