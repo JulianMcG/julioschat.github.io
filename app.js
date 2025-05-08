@@ -2059,7 +2059,10 @@ function addGroupMember(user) {
 
 async function createGroupChat() {
     const groupName = document.getElementById('group-name').value.trim();
-    if (!groupName || selectedGroupMembers.size < 2) return;
+    if (!groupName || selectedGroupMembers.size < 2) {
+        console.log('Cannot create group: Invalid name or insufficient members');
+        return;
+    }
     
     try {
         const members = Array.from(selectedGroupMembers);
@@ -2074,7 +2077,10 @@ async function createGroupChat() {
             lastMessageTime: null
         };
         
+        console.log('Creating group with data:', groupData);
+        
         const groupRef = await addDoc(collection(db, 'groups'), groupData);
+        console.log('Group created with ID:', groupRef.id);
         
         // Add group to each member's groups list
         const batch = writeBatch(db);
@@ -2085,6 +2091,7 @@ async function createGroupChat() {
             });
         });
         await batch.commit();
+        console.log('Group added to members\' lists');
         
         // Start the group chat
         startGroupChat(groupRef.id, groupName);
@@ -2096,8 +2103,12 @@ async function createGroupChat() {
         document.getElementById('group-members').innerHTML = '';
         updateCreateGroupButton();
         
+        // Reload users to show the new group
+        loadUsers();
+        
     } catch (error) {
         console.error('Error creating group chat:', error);
+        alert('Error creating group chat. Please try again.');
     }
 }
 
@@ -2232,7 +2243,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Create group button
     const createGroupButton = document.getElementById('create-group');
     if (createGroupButton) {
-        createGroupButton.addEventListener('click', createGroupChat);
+        createGroupButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('Create group button clicked');
+            createGroupChat();
+        });
     }
 });
 
