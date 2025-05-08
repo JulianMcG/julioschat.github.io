@@ -846,7 +846,21 @@ async function loadMessages() {
         }
 
         const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
-            chatMessages.innerHTML = '';
+            // Keep track of existing messages to avoid recreating them
+            const existingMessages = new Map();
+            chatMessages.querySelectorAll('.message').forEach(message => {
+                existingMessages.set(message.dataset.messageId, message);
+            });
+
+            // Clear only date separators and messages that are no longer needed
+            chatMessages.querySelectorAll('.date-separator, .message').forEach(el => {
+                if (el.classList.contains('message') && !existingMessages.has(el.dataset.messageId)) {
+                    el.remove();
+                } else if (el.classList.contains('date-separator')) {
+                    el.remove();
+                }
+            });
+
             let lastMessageTime = null;
             let lastMessageSenderId = null;
             
@@ -893,15 +907,34 @@ async function loadMessages() {
                         }
                     }
                     
-                    const messageElement = document.createElement('div');
-                    messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
-                    messageElement.dataset.messageId = doc.id;
+                    let messageElement = existingMessages.get(doc.id);
+                    
+                    if (!messageElement) {
+                        // Create new message element if it doesn't exist
+                        messageElement = document.createElement('div');
+                        messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
+                        messageElement.dataset.messageId = doc.id;
+                        
+                        // Add reaction button
+                        const reactionButton = document.createElement('div');
+                        reactionButton.className = 'reaction-button';
+                        reactionButton.innerHTML = '<span class="material-symbols-outlined">add_reaction</span>';
+                        reactionButton.onclick = (e) => {
+                            e.stopPropagation();
+                            showReactionPicker(e, doc.id);
+                        };
+                        messageElement.appendChild(reactionButton);
+                        
+                        chatMessages.appendChild(messageElement);
+                    }
+                    
+                    // Update message content and reactions
                     messageElement.innerHTML = `
                         <div class="content">${formatMessageContent(message.content)}</div>
                         ${formatReactions(message.reactions)}
                     `;
                     
-                    // Add reaction button
+                    // Re-add reaction button
                     const reactionButton = document.createElement('div');
                     reactionButton.className = 'reaction-button';
                     reactionButton.innerHTML = '<span class="material-symbols-outlined">add_reaction</span>';
@@ -910,8 +943,6 @@ async function loadMessages() {
                         showReactionPicker(e, doc.id);
                     };
                     messageElement.appendChild(reactionButton);
-                    
-                    chatMessages.appendChild(messageElement);
                     
                     lastMessageTime = messageTime;
                     lastMessageSenderId = message.senderId;
