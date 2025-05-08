@@ -1657,4 +1657,153 @@ input:checked + .slider:before {
     color: #ECEBF7;
     line-height: 1;
     transform: translateY(1px);
+}
+
+.group-icon {
+    color: #B6B8C8;
+    cursor: pointer;
+    font-size: 24px;
+    transition: color 0.3s;
+}
+
+.group-icon:hover {
+    color: #ECEBF7;
+}
+
+.selected-users {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 10px 0;
+    padding: 10px;
+    background-color: #13161F;
+    border-radius: 8px;
+    min-height: 50px;
+}
+
+.selected-user {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    background-color: #1F49C7;
+    border-radius: 15px;
+    font-size: 14px;
+}
+
+.selected-user .remove-user {
+    cursor: pointer;
+    font-size: 18px;
+    color: #ECEBF7;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+.selected-user .remove-user:hover {
+    opacity: 1;
+}
+
+#group-modal .modal-content {
+    background-color: #0c0e16;
+    border-radius: 15px;
+    width: 500px;
+    max-width: 90%;
+    margin: 10% auto;
+    padding: 20px;
+}
+
+#group-modal .form-group {
+    margin-bottom: 20px;
+}
+
+#group-modal .form-group label {
+    display: block;
+    color: #B6B8C8;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+#group-modal .form-group input {
+    width: 100%;
+    padding: 16px 15px;
+    border: 1.5px solid #1C1F28;
+    border-radius: 15px;
+    font-size: 16px;
+    background-color: #10121B;
+    color: #ECEBF7;
+    transition: border-color 0.3s;
+}
+
+#group-modal .form-group input:focus {
+    outline: none;
+    border-color: #1F49C7;
+}
+
+#group-modal .form-group input::placeholder {
+    color: #1C1F28;
+}
+
+#create-group {
+    width: 100%;
+    padding: 14px;
+    background-color: #1F49C7;
+    color: #ECEBF7;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+    transition: transform 0.1s ease;
+    box-shadow: 0 5px 0 #13296D;
+    margin-top: 20px;
+}
+
+#create-group:hover {
+    transform: translateY(-2px);
+}
+
+#create-group:active {
+    transform: translateY(5px);
+    box-shadow: 0 0 0 #13296D;
+}
+
+.group-chat-indicator {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #B6B8C8;
+    font-size: 14px;
+    margin-left: 5px;
+}
+
+.group-chat-indicator .material-symbols-outlined {
+    font-size: 18px;
+}
+
+.group-members {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-left: 10px;
+}
+
+.group-member-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #0c0e16;
+}
+
+.group-member-avatar:not(:first-child) {
+    margin-left: -10px;
+}
+
+.group-member-count {
+    background-color: #1C1F28;
+    color: #B6B8C8;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    margin-left: 5px;
 } 
