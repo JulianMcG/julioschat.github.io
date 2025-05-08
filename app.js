@@ -1245,17 +1245,18 @@ function updateCurrentUserProfile(user) {
         getDoc(doc(db, 'users', user.uid)).then(userDoc => {
             const userData = userDoc.data();
             const isVerified = userData?.verified || false;
+            const username = userData?.username || 'Unknown User';
             
             // Update username with verified badge if user is verified
             const verifiedBadge = isVerified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : '';
-            document.getElementById('current-username').innerHTML = `${user.displayName || 'Username'}${verifiedBadge}`;
+            document.getElementById('current-username').innerHTML = `${username}${verifiedBadge}`;
             document.getElementById('current-user-avatar').src = user.photoURL || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
 
             // Update user items in the list
             const userItems = document.querySelectorAll('.user-item');
             userItems.forEach(item => {
                 if (item.dataset.uid === user.uid) {
-                    item.querySelector('.username').innerHTML = `${user.displayName || 'Username'}${verifiedBadge}`;
+                    item.querySelector('.username').innerHTML = `${username}${verifiedBadge}`;
                     item.querySelector('img').src = user.photoURL || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
                 }
             });
