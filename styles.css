@@ -1731,33 +1731,25 @@ input:checked + .slider:before {
 }
 
 .create-group-button {
-    width: 100%;
-    padding: 14px;
-    background-color: #1F49C7;
-    color: #ECEBF7;
-    border: 3px solid rgba(255, 255, 255, 0.1);
-    border-radius: 15px;
+    background-color: #0084ff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 20px;
     cursor: pointer;
-    font-size: 16px;
     font-weight: 500;
-    transition: transform 0.1s ease;
-    box-shadow: 0 5px 0 #13296D;
-    margin-top: 20px;
+    margin-top: 15px;
+    width: 100%;
+    transition: background-color 0.2s;
+}
+
+.create-group-button:hover {
+    background-color: #0073e6;
 }
 
 .create-group-button:disabled {
-    background-color: #494C56;
+    background-color: #cccccc;
     cursor: not-allowed;
-    box-shadow: 0 5px 0 #31333A;
-}
-
-.create-group-button:not(:disabled):hover {
-    transform: translateY(-2px);
-}
-
-.create-group-button:not(:disabled):active {
-    transform: translateY(5px);
-    box-shadow: 0 0 0 #13296D;
 }
 
 /* Group Chat Item Styles */
