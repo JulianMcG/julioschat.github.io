@@ -272,7 +272,8 @@ body {
 .sidebar.collapsed .search-container,
 .sidebar.collapsed .username,
 .sidebar.collapsed .user-actions,
-.sidebar.collapsed .profile-info span {
+.sidebar.collapsed .profile-info span,
+.sidebar.collapsed .profile-info img {
     display: none;
 }
 
@@ -288,6 +289,18 @@ body {
 
 .sidebar.collapsed .toggle-sidebar {
     transform: rotate(180deg);
+}
+
+.sidebar.collapsed .user-item:hover .user-actions {
+    display: none;
+}
+
+.sidebar.collapsed .profile-section {
+    justify-content: center;
+}
+
+.sidebar.collapsed .profile-info {
+    display: none;
 }
 
 .header-actions {
