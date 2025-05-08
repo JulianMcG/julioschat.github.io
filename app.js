@@ -34,7 +34,7 @@ let isTyping = false;
 const storage = getStorage();
 
 // Notification Sound
-let notificationSound = new Audio('NotifSounds/Birdy.mp3');
+let notificationSound = null;
 let isTabFocused = document.visibilityState === 'visible';
 let notificationsEnabled = true;
 let lastSoundPlayTime = 0;
@@ -1589,17 +1589,31 @@ async function loadNotificationSoundPreference() {
         
         // Update select element
         const soundSelect = document.getElementById('notification-sound');
-        soundSelect.value = selectedSound;
+        if (soundSelect) {
+            soundSelect.value = selectedSound;
+        }
         
         // Update toggle
         const notificationToggle = document.getElementById('notification-toggle');
-        notificationToggle.checked = notificationsEnabled;
+        if (notificationToggle) {
+            notificationToggle.checked = notificationsEnabled;
+        }
         
         // Update audio source
         notificationSound = new Audio(`NotifSounds/${selectedSound}`);
         notificationSound.volume = 0.3; // Set volume to 30%
+        
+        console.log('Loaded notification preferences:', {
+            selectedSound,
+            notificationsEnabled,
+            soundSelectValue: soundSelect?.value,
+            toggleChecked: notificationToggle?.checked
+        });
     } catch (error) {
         console.error('Error loading notification sound preference:', error);
+        // Set default values if there's an error
+        notificationSound = new Audio('NotifSounds/Birdy.mp3');
+        notificationSound.volume = 0.3;
     }
 }
 
@@ -1621,6 +1635,11 @@ async function saveNotificationSoundPreference() {
         notificationSound.volume = 0.3; // Set volume to 30%
         notificationSound.play().catch(error => {
             console.error('Error playing notification sound:', error);
+        });
+        
+        console.log('Saved notification preferences:', {
+            selectedSound,
+            notificationsEnabled
         });
     } catch (error) {
         console.error('Error saving notification sound preference:', error);
