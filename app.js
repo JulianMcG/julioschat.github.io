@@ -2058,9 +2058,29 @@ function addGroupMember(user) {
 }
 
 async function createGroupChat() {
+    console.log('Starting group creation process...');
+    
+    // Check Firebase connection
+    if (!db) {
+        console.error('Firebase database is not initialized');
+        alert('Error: Database connection not available');
+        return;
+    }
+
+    // Check if user is authenticated
+    if (!currentUser) {
+        console.error('No authenticated user found');
+        alert('Error: You must be logged in to create a group');
+        return;
+    }
+
     const groupName = document.getElementById('group-name').value.trim();
+    console.log('Group name:', groupName);
+    console.log('Selected members:', Array.from(selectedGroupMembers));
+
     if (!groupName || selectedGroupMembers.size < 2) {
         console.log('Cannot create group: Invalid name or insufficient members');
+        alert('Please enter a group name and add at least 2 members');
         return;
     }
     
@@ -2079,10 +2099,11 @@ async function createGroupChat() {
         
         console.log('Creating group with data:', groupData);
         
+        // First, try to create the group document
         const groupRef = await addDoc(collection(db, 'groups'), groupData);
         console.log('Group created with ID:', groupRef.id);
         
-        // Add group to each member's groups list
+        // Then, update each member's groups list
         const batch = writeBatch(db);
         members.forEach(memberId => {
             const userRef = doc(db, 'users', memberId);
@@ -2090,6 +2111,8 @@ async function createGroupChat() {
                 groups: arrayUnion(groupRef.id)
             });
         });
+
+        console.log('Committing batch update...');
         await batch.commit();
         console.log('Group added to members\' lists');
         
@@ -2106,9 +2129,13 @@ async function createGroupChat() {
         // Reload users to show the new group
         loadUsers();
         
+        console.log('Group creation completed successfully');
+        
     } catch (error) {
-        console.error('Error creating group chat:', error);
-        alert('Error creating group chat. Please try again.');
+        console.error('Detailed error creating group chat:', error);
+        console.error('Error code:', error.code);
+        console.error('Error message:', error.message);
+        alert(`Error creating group chat: ${error.message}`);
     }
 }
 
@@ -2224,7 +2251,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Group name input
     const groupNameInput = document.getElementById('group-name');
     if (groupNameInput) {
-        groupNameInput.addEventListener('input', updateCreateGroupButton);
+        groupNameInput.addEventListener('input', () => {
+            console.log('Group name input changed');
+            updateCreateGroupButton();
+        });
     }
     
     // Group search
@@ -2232,6 +2262,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (groupSearchInput) {
         groupSearchInput.addEventListener('input', (e) => {
             const searchTerm = e.target.value.trim();
+            console.log('Group search input:', searchTerm);
             if (searchTerm) {
                 searchUsersForGroup(searchTerm);
             } else {
@@ -2243,11 +2274,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Create group button
     const createGroupButton = document.getElementById('create-group');
     if (createGroupButton) {
+        console.log('Setting up create group button listener');
         createGroupButton.addEventListener('click', (e) => {
             e.preventDefault();
             console.log('Create group button clicked');
             createGroupChat();
         });
+    } else {
+        console.error('Create group button not found in DOM');
     }
 });
 
@@ -2310,4 +2344,48 @@ async function searchUsersForGroup(searchTerm) {
         errorElement.textContent = 'Error searching users. Please try again.';
         groupResults.appendChild(errorElement);
     }
+}
+
+// Update the addGroupMember function to include logging
+function addGroupMember(user) {
+    console.log('Adding group member:', user);
+    if (selectedGroupMembers.has(user.id)) {
+        console.log('User already in group');
+        return;
+    }
+    
+    selectedGroupMembers.add(user.id);
+    const membersContainer = document.getElementById('group-members');
+    
+    const memberElement = document.createElement('div');
+    memberElement.className = 'group-member';
+    memberElement.innerHTML = `
+        <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.username}">
+        <span>${user.username}</span>
+        <span class="material-symbols-outlined remove-member">close</span>
+    `;
+    
+    memberElement.querySelector('.remove-member').onclick = () => {
+        console.log('Removing member:', user.username);
+        selectedGroupMembers.delete(user.id);
+        memberElement.remove();
+        updateCreateGroupButton();
+    };
+    
+    membersContainer.appendChild(memberElement);
+    updateCreateGroupButton();
+    console.log('Current group members:', Array.from(selectedGroupMembers));
+}
+
+// Update the updateCreateGroupButton function to include logging
+function updateCreateGroupButton() {
+    const groupName = document.getElementById('group-name').value.trim();
+    const createButton = document.getElementById('create-group');
+    const isValid = groupName && selectedGroupMembers.size >= 2;
+    console.log('Updating create group button:', {
+        groupName,
+        memberCount: selectedGroupMembers.size,
+        isValid
+    });
+    createButton.disabled = !isValid;
 }
