@@ -1027,6 +1027,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // Message input event listener
     const messageInput = document.getElementById('message-input');
     if (messageInput) {
+        // Prevent pasting images
+        messageInput.addEventListener('paste', (e) => {
+            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) {
+                    e.preventDefault();
+                    return;
+                }
+            }
+        });
+
         messageInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -1163,6 +1174,11 @@ async function sendMessage(content) {
     if (!content) {
         return;
     }
+
+    // Strip out any image-related content
+    content = content.replace(/<img[^>]*>/g, ''); // Remove img tags
+    content = content.replace(/!\[.*?\]\(.*?\)/g, ''); // Remove markdown images
+    content = content.replace(/https?:\/\/.*?\.(jpg|jpeg|png|gif|webp)/gi, ''); // Remove image URLs
 
     try {
         // Get receiver's blocked users list
