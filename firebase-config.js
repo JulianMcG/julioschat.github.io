@@ -99,6 +99,14 @@ service cloud.firestore {
         (request.auth.uid in resource.data.participants);
       allow create: if request.auth != null && 
         request.auth.uid in request.resource.data.participants;
+      allow update: if request.auth != null && 
+        request.auth.uid in resource.data.participants &&
+        (
+          // Allow updating reactions
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions', 'lastUpdated'])) ||
+          // Allow updating other fields if they haven't changed
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly([]))
+        );
     }
     match /users/{user} {
       allow read: if request.auth != null;
