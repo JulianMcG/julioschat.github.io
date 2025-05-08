@@ -1526,7 +1526,7 @@ input:checked + .slider:before {
     color: #B6B8C8;
 }
 
-.message:hover .reaction-button {
+.message.received:hover .reaction-button {
     opacity: 1;
 }
 
