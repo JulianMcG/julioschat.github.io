@@ -515,6 +515,7 @@ async function loadUsers() {
 function createUserElement(user) {
     const userElement = document.createElement('div');
     userElement.className = 'user-item';
+    userElement.dataset.uid = user.id;
     userElement.innerHTML = `
         <div class="profile-picture-container">
             <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.username}" class="profile-picture">
@@ -527,6 +528,13 @@ function createUserElement(user) {
         </div>
     `;
     
+    // Add click handler for the entire user item
+    userElement.onclick = (e) => {
+        if (!e.target.classList.contains('action-icon')) {
+            startChat(user.id, user.username);
+        }
+    };
+
     // Add click handler for pin icon
     const pinIcon = userElement.querySelector('.pin-icon');
     pinIcon.onclick = async (e) => {
@@ -560,7 +568,21 @@ function createUserElement(user) {
         }
     };
 
-    // Set up online status listener with improved logic
+    // Add click handler for close icon
+    const closeIcon = userElement.querySelector('.close-icon');
+    closeIcon.onclick = async (e) => {
+        e.stopPropagation();
+        userElement.remove();
+        try {
+            await setDoc(doc(db, 'users', currentUser.uid), {
+                hiddenConversations: arrayUnion(user.id)
+            }, { merge: true });
+        } catch (error) {
+            console.error('Error hiding conversation:', error);
+        }
+    };
+
+    // Set up online status listener
     const onlineStatusRef = doc(db, 'users', user.id);
     onSnapshot(onlineStatusRef, (doc) => {
         const userData = doc.data();
@@ -577,15 +599,176 @@ function createUserElement(user) {
 
 async function startChat(userId, username) {
     currentChatUser = { id: userId, username: username };
-    currentGroupChat = null; // Clear current group chat since we're in a direct message
     
-    // Update chat header
-    document.getElementById('active-chat-username').innerHTML = username;
+    // Check if user is already in sidebar
+    const existingUser = document.querySelector(`.user-item[data-uid="${userId}"]`);
+    if (!existingUser) {
+        // Get user's profile picture and verification status
+        const userDoc = await getDoc(doc(db, 'users', userId));
+        const userData = userDoc.data();
+        const profilePicture = userData?.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
+        const isVerified = userData?.verified || false;
+
+        // Create new user element
+        const userElement = document.createElement('div');
+        userElement.className = 'user-item';
+        userElement.dataset.uid = userId;
+        userElement.innerHTML = `
+            <div class="profile-picture-container">
+                <img src="${profilePicture}" alt="${username}" class="profile-picture">
+                <div class="online-status"></div>
+            </div>
+            <span class="username">${username}${isVerified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
+            <div class="user-actions">
+                <span class="material-symbols-outlined action-icon pin-icon">keep</span>
+                <span class="material-symbols-outlined action-icon close-icon">close</span>
+            </div>
+        `;
+
+        // Add click handler for the user item
+        userElement.onclick = (e) => {
+            if (!e.target.classList.contains('action-icon')) {
+                startChat(userId, username);
+            }
+        };
+
+        // Add click handler for close icon
+        const closeIcon = userElement.querySelector('.close-icon');
+        closeIcon.onclick = async (e) => {
+            e.stopPropagation();
+            userElement.remove();
+            try {
+                await setDoc(doc(db, 'users', currentUser.uid), {
+                    hiddenConversations: arrayUnion(userId)
+                }, { merge: true });
+            } catch (error) {
+                console.error('Error hiding conversation:', error);
+            }
+        };
+
+        // Add click handler for pin icon
+        const pinIcon = userElement.querySelector('.pin-icon');
+        pinIcon.onclick = async (e) => {
+            e.stopPropagation();
+            const isPinned = userElement.classList.contains('pinned');
+            userElement.classList.toggle('pinned');
+            
+            if (!isPinned) {
+                const usersContainer = document.getElementById('users-container');
+                usersContainer.insertBefore(userElement, usersContainer.firstChild);
+            }
+            
+            try {
+                const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+                const userData = userDoc.data();
+                const pinnedConversations = userData?.pinnedConversations || [];
+                
+                if (!isPinned) {
+                    if (!pinnedConversations.includes(userId)) {
+                        await setDoc(doc(db, 'users', currentUser.uid), {
+                            pinnedConversations: [...pinnedConversations, userId]
+                        }, { merge: true });
+                    }
+                } else {
+                    const updatedPinnedConversations = pinnedConversations.filter(id => id !== userId);
+                    await setDoc(doc(db, 'users', currentUser.uid), {
+                        pinnedConversations: updatedPinnedConversations
+                    }, { merge: true });
+                }
+            } catch (error) {
+                console.error('Error pinning conversation:', error);
+            }
+        };
+
+        // Add to sidebar
+        const usersContainer = document.getElementById('users-container');
+        usersContainer.appendChild(userElement);
+    }
     
-    // Show message input
+    // Update active user in sidebar
+    const userItems = document.querySelectorAll('.user-item');
+    userItems.forEach(item => {
+        if (item.dataset.uid === userId) {
+            item.classList.add('active');
+        } else {
+            item.classList.remove('active');
+        }
+    });
+
+    // Get user's verification status
+    const userDoc = await getDoc(doc(db, 'users', userId));
+    const userData = userDoc.data();
+    const isVerified = userData?.verified || false;
+
+    // Update chat header with verified badge if user is verified
+    const verifiedBadge = isVerified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : '';
+    document.getElementById('active-chat-username').innerHTML = `${username}${verifiedBadge}`;
+
+    // Show message input and user options icon
     const messageInput = document.querySelector('.message-input');
     messageInput.classList.add('visible');
-    
+    document.querySelector('.chat-header svg').style.display = 'block';
+
+    // Check if user is blocked
+    const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
+    const currentUserData = currentUserDoc.data();
+    const blockedUsers = currentUserData?.blockedUsers || [];
+
+    // Update message input state immediately
+    const messageInputField = document.getElementById('message-input');
+    if (blockedUsers.includes(userId)) {
+        // User is blocked, show blocked state
+        messageInput.classList.add('blocked');
+        messageInputField.placeholder = 'You cannot send messages to a user you have blocked.';
+        messageInputField.disabled = true;
+
+        // Add unblock button if it doesn't exist
+        if (!messageInput.querySelector('.unblock-button')) {
+            const unblockButton = document.createElement('button');
+            unblockButton.className = 'unblock-button';
+            unblockButton.textContent = 'Unblock';
+            unblockButton.onclick = async () => {
+                try {
+                    // Update UI immediately
+                    messageInput.classList.remove('blocked');
+                    messageInputField.placeholder = `Message ${username}`;
+                    messageInputField.disabled = false;
+                    unblockButton.remove();
+                    
+                    // Update Firestore
+                    await setDoc(doc(db, 'users', currentUser.uid), {
+                        blockedUsers: arrayRemove(userId)
+                    }, { merge: true });
+                } catch (error) {
+                    console.error('Error unblocking user:', error);
+                    // Revert UI changes if Firestore update fails
+                    messageInput.classList.add('blocked');
+                    messageInputField.placeholder = 'You cannot send messages to a user you have blocked.';
+                    messageInputField.disabled = true;
+                    messageInput.appendChild(unblockButton);
+                }
+            };
+            messageInput.appendChild(unblockButton);
+        }
+    } else {
+        // User is not blocked, show normal state
+        messageInput.classList.remove('blocked');
+        messageInputField.placeholder = `Message ${username}`;
+        messageInputField.disabled = false;
+        
+        // Remove unblock button if it exists
+        const unblockButton = messageInput.querySelector('.unblock-button');
+        if (unblockButton) {
+            unblockButton.remove();
+        }
+    }
+
+    // Set up typing listener
+    if (window.currentTypingUnsubscribe) {
+        window.currentTypingUnsubscribe();
+    }
+    window.currentTypingUnsubscribe = setupTypingListener();
+
     // Load messages
     loadMessages();
 }
@@ -1299,53 +1482,16 @@ document.querySelector('.save-button').addEventListener('click', async () => {
 // Search Functions
 async function searchUsers(searchTerm) {
     const usersContainer = document.getElementById('users-container');
-    usersContainer.innerHTML = '';
+    const userItems = usersContainer.querySelectorAll('.user-item');
     
-    try {
-        // Get all users except current user
-        const usersQuery = query(collection(db, 'users'));
-        const usersSnapshot = await getDocs(usersQuery);
-        const users = [];
-        
-        usersSnapshot.forEach(doc => {
-            if (doc.id !== currentUser.uid) {
-                const user = doc.data();
-                const username = user.username?.toLowerCase() || '';
-                
-                if (username.includes(searchTerm.toLowerCase())) {
-                    users.push({
-                        id: doc.id,
-                        username: user.username,
-                        profilePicture: user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
-                        verified: user.verified || false
-                    });
-                }
-            }
-        });
-
-        // Sort users by username
-        users.sort((a, b) => a.username.localeCompare(b.username));
-
-        // Display users
-        if (users.length > 0) {
-            users.forEach(user => {
-                const userElement = createUserElement(user);
-                userElement.dataset.uid = user.id;
-                usersContainer.appendChild(userElement);
-            });
+    userItems.forEach(userItem => {
+        const username = userItem.querySelector('.username').textContent.toLowerCase();
+        if (username.includes(searchTerm.toLowerCase())) {
+            userItem.style.display = 'flex';
         } else {
-            const noResults = document.createElement('div');
-            noResults.className = 'no-results';
-            noResults.textContent = 'No users found';
-            usersContainer.appendChild(noResults);
+            userItem.style.display = 'none';
         }
-    } catch (error) {
-        console.error('Error searching users:', error);
-        const errorElement = document.createElement('div');
-        errorElement.className = 'no-results';
-        errorElement.textContent = 'Error searching users. Please try again.';
-        usersContainer.appendChild(errorElement);
-    }
+    });
 }
 
 // Compose Modal Functions
@@ -2089,3 +2235,64 @@ document.addEventListener('DOMContentLoaded', () => {
         createGroupButton.addEventListener('click', createGroupChat);
     }
 });
+
+// Add this function after the searchUsers function
+async function searchUsersForGroup(searchTerm) {
+    const groupResults = document.getElementById('group-results');
+    groupResults.innerHTML = '';
+
+    try {
+        // Get all users except current user
+        const usersQuery = query(collection(db, 'users'));
+        const usersSnapshot = await getDocs(usersQuery);
+        const suggestions = [];
+        
+        usersSnapshot.forEach(doc => {
+            if (doc.id !== currentUser.uid) {
+                const user = doc.data();
+                const username = user.username?.toLowerCase() || '';
+                
+                if (username.includes(searchTerm.toLowerCase())) {
+                    suggestions.push({
+                        id: doc.id,
+                        username: user.username,
+                        profilePicture: user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
+                        verified: user.verified || false
+                    });
+                }
+            }
+        });
+
+        // Sort suggestions by username
+        suggestions.sort((a, b) => a.username.localeCompare(b.username));
+
+        // Display suggestions
+        if (suggestions.length > 0) {
+            suggestions.forEach(user => {
+                const userElement = document.createElement('div');
+                userElement.className = 'compose-user-item';
+                userElement.innerHTML = `
+                    <img src="${user.profilePicture}" alt="${user.username}" class="user-avatar">
+                    <span>${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
+                `;
+                userElement.onclick = () => {
+                    addGroupMember(user);
+                    document.getElementById('group-search').value = '';
+                    groupResults.innerHTML = '';
+                };
+                groupResults.appendChild(userElement);
+            });
+        } else {
+            const noResults = document.createElement('div');
+            noResults.className = 'no-results';
+            noResults.textContent = 'No users found';
+            groupResults.appendChild(noResults);
+        }
+    } catch (error) {
+        console.error('Error searching users for group:', error);
+        const errorElement = document.createElement('div');
+        errorElement.className = 'no-results';
+        errorElement.textContent = 'Error searching users. Please try again.';
+        groupResults.appendChild(errorElement);
+    }
+}
