@@ -965,19 +965,21 @@ async function loadMessages() {
                         });
                     }
                     
-                    // Create reaction button
-                    const reactionButton = document.createElement('div');
-                    reactionButton.className = 'reaction-button';
-                    reactionButton.innerHTML = '<span class="material-symbols-outlined">add_reaction</span>';
-                    reactionButton.onclick = (e) => {
-                        e.stopPropagation();
-                        showReactionPicker(e, doc.id);
-                    };
+                    // Create reaction button only for received messages
+                    if (message.senderId !== currentUser.uid) {
+                        const reactionButton = document.createElement('div');
+                        reactionButton.className = 'reaction-button';
+                        reactionButton.innerHTML = '<span class="material-symbols-outlined">add_reaction</span>';
+                        reactionButton.onclick = (e) => {
+                            e.stopPropagation();
+                            showReactionPicker(e, doc.id);
+                        };
+                        messageElement.appendChild(reactionButton);
+                    }
                     
                     // Append all elements
                     messageElement.appendChild(contentContainer);
                     messageElement.appendChild(reactionsContainer);
-                    messageElement.appendChild(reactionButton);
                     
                     chatMessages.appendChild(messageElement);
                     
