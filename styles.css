@@ -260,6 +260,50 @@ body {
     position: relative;
     height: 100vh;
     overflow: hidden;
+    transition: width 0.3s ease;
+}
+
+.sidebar.collapsed {
+    width: 80px;
+    padding: 20px 10px;
+}
+
+.sidebar.collapsed .sidebar-header h3,
+.sidebar.collapsed .search-container,
+.sidebar.collapsed .username,
+.sidebar.collapsed .user-actions,
+.sidebar.collapsed .profile-info span {
+    display: none;
+}
+
+.sidebar.collapsed .profile-picture-container,
+.sidebar.collapsed .profile-info img {
+    margin-right: 0;
+}
+
+.sidebar.collapsed .user-item {
+    justify-content: center;
+    padding: 10px 0;
+}
+
+.sidebar.collapsed .toggle-sidebar {
+    transform: rotate(180deg);
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.toggle-sidebar {
+    cursor: pointer;
+    color: #B6B8C8;
+    transition: transform 0.3s ease;
+}
+
+.toggle-sidebar:hover {
+    color: #ECEBF7;
 }
 
 .sidebar-header {
