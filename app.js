@@ -399,16 +399,7 @@ async function loadUsers() {
             if (!message.participants) return;
 
             const otherUserId = message.participants.find(id => id !== currentUser.uid);
-            if (!otherUserId) return;
-
-            // Only include hidden conversations if there's a new message after they were hidden
-            if (hiddenConversations.includes(otherUserId)) {
-                const userDoc = currentUserData;
-                const hiddenTimestamp = userDoc.hiddenTimestamps?.[otherUserId] || new Date(0);
-                if (message.timestamp.toDate() <= hiddenTimestamp) {
-                    return;
-                }
-            }
+            if (!otherUserId || hiddenConversations.includes(otherUserId)) return;
 
             const currentLatest = latestMessages.get(otherUserId);
             if (!currentLatest || message.timestamp > currentLatest.timestamp) {
@@ -484,13 +475,8 @@ async function loadUsers() {
                 e.stopPropagation();
                 userElement.remove();
                 try {
-                    // Store the timestamp when the conversation was hidden
-                    const hiddenTimestamps = currentUserData.hiddenTimestamps || {};
-                    hiddenTimestamps[user.id] = new Date();
-                    
                     await setDoc(doc(db, 'users', currentUser.uid), {
-                        hiddenConversations: arrayUnion(user.id),
-                        hiddenTimestamps: hiddenTimestamps
+                        hiddenConversations: arrayUnion(user.id)
                     }, { merge: true });
                 } catch (error) {
                     console.error('Error hiding conversation:', error);
