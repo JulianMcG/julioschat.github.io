@@ -720,7 +720,32 @@ function formatMessageContent(content) {
         .replace(/~~(.*?)~~/g, '<s>$1</s>'); // Strikethrough
 }
 
-// Add reaction to message
+// Create reaction picker
+function createReactionPicker(messageId) {
+    const picker = document.createElement('div');
+    picker.className = 'reaction-picker';
+    picker.innerHTML = `
+        <div class="reaction-option" data-emoji="❤️">❤️</div>
+        <div class="reaction-option" data-emoji="🔥">🔥</div>
+        <div class="reaction-option" data-emoji="👍">👍</div>
+        <div class="reaction-option" data-emoji="👎">👎</div>
+        <div class="reaction-option" data-emoji="😂">😂</div>
+        <div class="reaction-option" data-emoji="😱">😱</div>
+        <div class="reaction-option" data-emoji="🤔">🤔</div>
+    `;
+    
+    // Add click handlers for reactions
+    picker.querySelectorAll('.reaction-option').forEach(option => {
+        option.addEventListener('click', () => {
+            const emoji = option.dataset.emoji;
+            addReaction(messageId, emoji);
+            picker.remove();
+        });
+    });
+    
+    return picker;
+}
+
 async function addReaction(messageId, emoji) {
     if (!currentUser || !currentChatUser) return;
     
@@ -734,30 +759,29 @@ async function addReaction(messageId, emoji) {
         }
         
         const messageData = messageDoc.data();
-        console.log('Current message data:', messageData);
+        
+        // Only allow reactions on other people's messages
+        if (messageData.senderId === currentUser.uid) {
+            console.log('Cannot react to your own message');
+            return;
+        }
         
         // Initialize reactions if they don't exist
         const reactions = messageData.reactions || {};
-        console.log('Current reactions:', reactions);
         
-        // Initialize reaction if it doesn't exist
+        // Remove any existing reaction from this user
+        Object.keys(reactions).forEach(existingEmoji => {
+            reactions[existingEmoji] = reactions[existingEmoji].filter(id => id !== currentUser.uid);
+            if (reactions[existingEmoji].length === 0) {
+                delete reactions[existingEmoji];
+            }
+        });
+        
+        // Add new reaction
         if (!reactions[emoji]) {
             reactions[emoji] = [];
         }
-        
-        // Toggle reaction
-        if (reactions[emoji].includes(currentUser.uid)) {
-            console.log('Removing reaction:', emoji);
-            reactions[emoji] = reactions[emoji].filter(id => id !== currentUser.uid);
-            if (reactions[emoji].length === 0) {
-                delete reactions[emoji];
-            }
-        } else {
-            console.log('Adding reaction:', emoji);
-            reactions[emoji].push(currentUser.uid);
-        }
-        
-        console.log('Updated reactions:', reactions);
+        reactions[emoji].push(currentUser.uid);
         
         // Update message with new reactions
         await updateDoc(messageRef, { 
@@ -765,35 +789,9 @@ async function addReaction(messageId, emoji) {
             lastUpdated: serverTimestamp()
         });
         
-        console.log('Successfully updated reactions');
     } catch (error) {
         console.error('Error adding reaction:', error);
     }
-}
-
-// Create reaction picker
-function createReactionPicker(messageId) {
-    const picker = document.createElement('div');
-    picker.className = 'reaction-picker';
-    picker.innerHTML = `
-        <div class="reaction-option" data-emoji="👍">👍</div>
-        <div class="reaction-option" data-emoji="❤️">❤️</div>
-        <div class="reaction-option" data-emoji="😂">😂</div>
-        <div class="reaction-option" data-emoji="😮">😮</div>
-        <div class="reaction-option" data-emoji="😢">😢</div>
-        <div class="reaction-option" data-emoji="🙏">🙏</div>
-    `;
-    
-    // Add click handlers for reactions
-    picker.querySelectorAll('.reaction-option').forEach(option => {
-        option.addEventListener('click', () => {
-            const emoji = option.dataset.emoji;
-            addReaction(messageId, emoji);
-            picker.remove();
-        });
-    });
-    
-    return picker;
 }
 
 // Show reaction picker
