@@ -433,7 +433,12 @@ async function loadUsers() {
         
         // Load group chats
         const groupsData = [];
+        const processedGroups = new Set(); // Track processed groups to prevent duplicates
+        
         for (const groupId of groups) {
+            if (processedGroups.has(groupId)) continue; // Skip if already processed
+            processedGroups.add(groupId);
+            
             const groupDoc = await getDoc(doc(db, 'groups', groupId));
             if (!groupDoc.exists()) continue;
             
@@ -1104,8 +1109,11 @@ async function sendMessage(content) {
         
         if (currentGroupChat) {
             messageData.groupId = currentGroupChat.id;
-        } else {
+        } else if (currentChatUser) {
             messageData.participants = [currentUser.uid, currentChatUser.id];
+        } else {
+            console.error('No valid chat context');
+            return;
         }
         
         await addDoc(collection(db, 'messages'), messageData);
@@ -1964,6 +1972,16 @@ async function startGroupChat(groupId, groupName) {
     currentGroupChat = { id: groupId, name: groupName };
     currentChatUser = null; // Clear current chat user since we're in a group
     
+    // Update active chat in sidebar
+    const userItems = document.querySelectorAll('.user-item');
+    userItems.forEach(item => {
+        if (item.dataset.groupId === groupId) {
+            item.classList.add('active');
+        } else {
+            item.classList.remove('active');
+        }
+    });
+    
     // Update chat header
     document.getElementById('active-chat-username').innerHTML = `
         <div class="group-info">
@@ -1975,9 +1993,10 @@ async function startGroupChat(groupId, groupName) {
     // Show message input
     const messageInput = document.querySelector('.message-input');
     messageInput.classList.add('visible');
+    document.getElementById('message-input').placeholder = `Message ${groupName}`;
     
     // Load group messages
-    loadGroupMessages();
+    loadMessages();
 }
 
 async function loadGroupMessages() {
@@ -2047,7 +2066,6 @@ function createGroupElement(group) {
     groupElement.innerHTML = `
         <div class="profile-picture-container">
             <img src="https://i.ibb.co/0Vz513DW/gcpfp.png" alt="${group.name}" class="profile-picture">
-            <span class="material-symbols-outlined group-icon">groups</span>
         </div>
         <span class="username">${group.name}</span>
         <div class="user-actions">
