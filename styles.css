@@ -1523,6 +1523,7 @@ input:checked + .slider:before {
     cursor: pointer;
     color: #B6B8C8;
     display: none;
+    z-index: 2;
 }
 
 .message:hover .reaction-button {
@@ -1537,14 +1538,22 @@ input:checked + .slider:before {
     background: #1C1F28;
     border: 4px solid #13161F;
     border-radius: 50px;
-    z-index: 2;
+    z-index: 3;
+    top: -50px;
+    left: 50%;
+    transform: translateX(-50%);
 }
 
 .reaction-option {
     cursor: pointer;
-    padding: 4px;
+    padding: 8px;
     border-radius: 50%;
     transition: background-color 0.2s;
+    font-size: 18px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .reaction-option:hover {
