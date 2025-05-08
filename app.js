@@ -1297,6 +1297,8 @@ function updateCurrentUserProfile(user) {
 
 // Auth State Listener
 onAuthStateChanged(auth, (user) => {
+    console.log("Auth state changed:", user ? "User logged in" : "No user");
+    
     if (user) {
         currentUser = user;
         updateCurrentUserProfile(user);
