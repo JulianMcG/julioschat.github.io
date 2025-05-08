@@ -528,13 +528,13 @@ function createUserElement(user) {
         </div>
     `;
     
-    // Add click handler for the entire user item
+    // Add click handler for the user item
     userElement.onclick = (e) => {
         if (!e.target.classList.contains('action-icon')) {
             startChat(user.id, user.username);
         }
     };
-
+    
     // Add click handler for pin icon
     const pinIcon = userElement.querySelector('.pin-icon');
     pinIcon.onclick = async (e) => {
@@ -582,7 +582,7 @@ function createUserElement(user) {
         }
     };
 
-    // Set up online status listener
+    // Set up online status listener with improved logic
     const onlineStatusRef = doc(db, 'users', user.id);
     onSnapshot(onlineStatusRef, (doc) => {
         const userData = doc.data();
@@ -2236,7 +2236,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Add this function after the searchUsers function
+// Add the searchUsersForGroup function
 async function searchUsersForGroup(searchTerm) {
     const groupResults = document.getElementById('group-results');
     groupResults.innerHTML = '';
@@ -2273,7 +2273,7 @@ async function searchUsersForGroup(searchTerm) {
                 userElement.className = 'compose-user-item';
                 userElement.innerHTML = `
                     <img src="${user.profilePicture}" alt="${user.username}" class="user-avatar">
-                    <span>${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
+                    <span>${user.username}</span>
                 `;
                 userElement.onclick = () => {
                     addGroupMember(user);
