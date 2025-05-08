@@ -824,14 +824,25 @@ function showReactionPicker(event, messageId) {
 
 // Format reactions for display
 function formatReactions(reactions) {
-    if (!reactions) return '';
+    if (!reactions || Object.keys(reactions).length === 0) return '';
     
-    const reactionElements = Object.entries(reactions).map(([emoji, users]) => {
-        const count = users.length;
-        return `<span class="reaction" data-emoji="${emoji}">${emoji} ${count}</span>`;
+    const reactionDiv = document.createElement('div');
+    reactionDiv.className = 'message-reactions';
+    
+    // Add has-reactions class if there are any reactions
+    if (Object.keys(reactions).length > 0) {
+        reactionDiv.classList.add('has-reactions');
+    }
+    
+    // Just show the emoji without count
+    Object.keys(reactions).forEach(emoji => {
+        const reactionSpan = document.createElement('span');
+        reactionSpan.className = 'reaction';
+        reactionSpan.textContent = emoji;
+        reactionDiv.appendChild(reactionSpan);
     });
     
-    return `<div class="message-reactions">${reactionElements.join('')}</div>`;
+    return reactionDiv;
 }
 
 // Modify the loadMessages function to include reactions
