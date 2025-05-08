@@ -1520,14 +1520,13 @@ input:checked + .slider:before {
     right: -30px;
     top: 50%;
     transform: translateY(-50%);
-    opacity: 0;
-    transition: opacity 0.2s;
     cursor: pointer;
     color: #B6B8C8;
+    display: none;
 }
 
 .message:hover .reaction-button {
-    opacity: 1;
+    display: block;
 }
 
 .reaction-picker {
