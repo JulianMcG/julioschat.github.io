@@ -49,14 +49,24 @@ let auth;
 let db;
 let storage;
 
+// Initialize Firebase with error handling
 try {
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
     db = getFirestore(app);
     storage = getStorage(app);
+    
+    // Verify initialization
+    if (!app || !auth || !db || !storage) {
+        throw new Error('Firebase services failed to initialize properly');
+    }
+    
     console.log("Firebase initialized successfully");
 } catch (error) {
     console.error("Error initializing Firebase:", error);
+    // Show error to user
+    alert("Failed to initialize chat application. Please refresh the page or try again later.");
+    throw error; // Re-throw to prevent the app from continuing with uninitialized services
 }
 
 // Export Firebase services
