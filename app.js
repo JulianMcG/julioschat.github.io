@@ -553,7 +553,10 @@ async function startChat(userId, username) {
         userElement.className = 'user-item';
         userElement.dataset.uid = userId;
         userElement.innerHTML = `
-            <img src="${profilePicture}" alt="${username}" class="profile-picture">
+            <div class="profile-picture-container">
+                <img src="${profilePicture}" alt="${username}" class="profile-picture">
+                <div class="online-status"></div>
+            </div>
             <span class="username">${username}${isVerified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
             <div class="user-actions">
                 <span class="material-symbols-outlined action-icon pin-icon">keep</span>
