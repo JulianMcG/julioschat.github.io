@@ -25,8 +25,7 @@ import {
     arrayRemove,
     writeBatch,
     updateDoc,
-    runTransaction,
-    limit
+    runTransaction
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
@@ -43,8 +42,26 @@ let notificationsEnabled = true;
 let lastSoundPlayTime = 0;
 const SOUND_COOLDOWN = 1000; // 1 second cooldown
 
-// Group Chat Functions
-let selectedGroupUsers = new Set();
+// Group Chat Variables
+let selectedGroupMembers = new Set();
+let currentGroupChat = null;
+
+// Tab Switching
+document.querySelectorAll('.tab-button').forEach(button => {
+    button.addEventListener('click', () => {
+        document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
+        
+        button.classList.add('active');
+        document.getElementById(`${button.dataset.tab}-tab`).style.display = 'block';
+        
+        if (button.dataset.tab === 'group') {
+            document.getElementById('group-name').focus();
+        } else {
+            document.getElementById('compose-search').focus();
+        }
+    });
+});
 
 // Profile Picture Upload
 document.getElementById('profile-picture-preview').addEventListener('click', () => {
@@ -376,19 +393,20 @@ function showChatSection() {
 async function loadUsers() {
     const usersContainer = document.getElementById('users-container');
     usersContainer.innerHTML = '';
-
+    
     try {
         // Get current user's data
         const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
         if (!currentUserDoc.exists()) {
             throw new Error('User document not found');
         }
-
+        
         const currentUserData = currentUserDoc.data();
         const hiddenConversations = currentUserData?.hiddenConversations || [];
         const pinnedConversations = currentUserData?.pinnedConversations || [];
-
-        // Get all messages where current user is a participant
+        const groups = currentUserData?.groups || [];
+        
+        // Load direct messages
         const messagesQuery = query(
             collection(db, 'messages'),
             where('participants', 'array-contains', currentUser.uid)
@@ -396,15 +414,14 @@ async function loadUsers() {
         
         const messagesSnapshot = await getDocs(messagesQuery);
         const latestMessages = new Map();
-
-        // Find the latest message for each conversation
+        
         messagesSnapshot.forEach(doc => {
             const message = doc.data();
             if (!message.participants) return;
-
+            
             const otherUserId = message.participants.find(id => id !== currentUser.uid);
             if (!otherUserId || hiddenConversations.includes(otherUserId)) return;
-
+            
             const currentLatest = latestMessages.get(otherUserId);
             if (!currentLatest || message.timestamp > currentLatest.timestamp) {
                 latestMessages.set(otherUserId, {
@@ -413,84 +430,81 @@ async function loadUsers() {
                 });
             }
         });
-
-        // Get all groups where current user is a member
-        const groupsQuery = query(
-            collection(db, 'groups'),
-            where('members', 'array-contains', currentUser.uid)
-        );
-
-        const groupsSnapshot = await getDocs(groupsQuery);
-        const groupMessages = new Map();
-
-        // Get latest message for each group
-        for (const groupDoc of groupsSnapshot.docs) {
+        
+        // Load group chats
+        const groupsData = [];
+        for (const groupId of groups) {
+            const groupDoc = await getDoc(doc(db, 'groups', groupId));
+            if (!groupDoc.exists()) continue;
+            
             const groupData = groupDoc.data();
-            const groupMessagesQuery = query(
-                collection(db, 'messages'),
-                where('groupId', '==', groupDoc.id),
-                orderBy('timestamp', 'desc'),
-                limit(1)
-            );
-
-            const latestGroupMessage = await getDocs(groupMessagesQuery);
-            if (!latestGroupMessage.empty) {
-                const message = latestGroupMessage.docs[0].data();
-                groupMessages.set(groupDoc.id, {
-                    timestamp: message.timestamp,
-                    content: message.content,
-                    groupData: groupData
-                });
-            }
-        }
-
-        // Display individual chats
-        for (const [userId, messageData] of latestMessages) {
-            try {
-                const userDoc = await getDoc(doc(db, 'users', userId));
-                if (!userDoc.exists()) continue;
-
-                const userData = userDoc.data();
-                const userElement = createUserElement({
-                    id: userId,
-                    username: userData.username || 'Unknown User',
-                    profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
-                    verified: userData.verified || false,
-                    isPinned: pinnedConversations.includes(userId),
-                    lastMessageTime: messageData.timestamp,
-                    lastMessage: messageData.content
-                });
-
-                usersContainer.appendChild(userElement);
-            } catch (error) {
-                console.error(`Error loading user ${userId}:`, error);
-            }
-        }
-
-        // Display group chats
-        for (const [groupId, messageData] of groupMessages) {
-            const groupData = messageData.groupData;
-            const groupElement = createGroupElement({
+            groupsData.push({
                 id: groupId,
                 name: groupData.name,
-                members: groupData.members,
-                memberDetails: groupData.memberDetails,
-                lastMessageTime: messageData.timestamp,
-                lastMessage: messageData.content
+                lastMessage: groupData.lastMessage,
+                lastMessageTime: groupData.lastMessageTime,
+                isGroup: true
             });
-
-            usersContainer.appendChild(groupElement);
         }
-
-        if (usersContainer.children.length === 0) {
+        
+        // Combine and sort all conversations
+        const conversations = [
+            ...Array.from(latestMessages.entries()).map(([userId, messageData]) => ({
+                id: userId,
+                type: 'direct',
+                lastMessage: messageData.content,
+                lastMessageTime: messageData.timestamp
+            })),
+            ...groupsData.map(group => ({
+                id: group.id,
+                type: 'group',
+                name: group.name,
+                lastMessage: group.lastMessage,
+                lastMessageTime: group.lastMessageTime
+            }))
+        ];
+        
+        // Sort conversations by last message time
+        conversations.sort((a, b) => {
+            const timeA = a.lastMessageTime?.toDate?.() || new Date(0);
+            const timeB = b.lastMessageTime?.toDate?.() || new Date(0);
+            return timeB - timeA;
+        });
+        
+        // Display conversations
+        if (conversations.length === 0) {
             const noUsersMessage = document.createElement('div');
             noUsersMessage.className = 'no-results';
             noUsersMessage.textContent = 'No conversations yet. Start a new chat!';
             usersContainer.appendChild(noUsersMessage);
+            return;
         }
-
+        
+        for (const conversation of conversations) {
+            if (conversation.type === 'direct') {
+                const userDoc = await getDoc(doc(db, 'users', conversation.id));
+                if (!userDoc.exists()) continue;
+                
+                const userData = userDoc.data();
+                const userElement = createUserElement({
+                    id: conversation.id,
+                    username: userData.username || 'Unknown User',
+                    profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
+                    verified: userData.verified || false,
+                    isPinned: pinnedConversations.includes(conversation.id),
+                    lastMessage: conversation.lastMessage,
+                    lastMessageTime: conversation.lastMessageTime
+                });
+                
+                usersContainer.appendChild(userElement);
+            } else {
+                const groupElement = createGroupElement(conversation);
+                usersContainer.appendChild(groupElement);
+            }
+        }
+        
     } catch (error) {
-        console.error('Error loading users:', error);
+        console.error('Error loading conversations:', error);
         const errorMessage = document.createElement('div');
         errorMessage.className = 'no-results';
         errorMessage.textContent = 'Error loading conversations. Please try again.';
@@ -1196,68 +1210,39 @@ window.addEventListener('click', (event) => {
 
 // Send message
 async function sendMessage(content) {
-    if (!currentUser || !currentChatUser) {
-        console.log('No current user or chat user');
+    if (!currentUser || (!currentChatUser && !currentGroupChat)) {
+        console.log('No current user or chat');
         return;
     }
     
-    if (!content) {
-        return;
-    }
-
-    // Strip out any image-related content
-    content = content.replace(/<img[^>]*>/g, ''); // Remove img tags
-    content = content.replace(/!\[.*?\]\(.*?\)/g, ''); // Remove markdown images
-    content = content.replace(/https?:\/\/.*?\.(jpg|jpeg|png|gif|webp)/gi, ''); // Remove image URLs
-
     try {
-        // Get receiver's blocked users list
-        const receiverDoc = await getDoc(doc(db, 'users', currentChatUser.id));
-        const receiverData = receiverDoc.data();
-        const receiverBlockedUsers = receiverData?.blockedUsers || [];
-
-        if (receiverBlockedUsers.includes(currentUser.uid)) {
-            alert('You cannot send messages to this user as they have blocked you.');
-            return;
-        }
-
-        const timestamp = serverTimestamp();
-
-        // Create message data
         const messageData = {
             content: content,
+            timestamp: serverTimestamp(),
             senderId: currentUser.uid,
-            receiverId: currentChatUser.id,
-            participants: [currentUser.uid, currentChatUser.id],
-            timestamp: timestamp
+            senderName: currentUser.displayName || 'Unknown User',
+            senderProfilePicture: currentUser.photoURL || 'https://i.ibb.co/Gf9VD2MN/pfp.png'
         };
-
-        // Add message to Firestore
+        
+        if (currentGroupChat) {
+            messageData.groupId = currentGroupChat.id;
+        } else {
+            messageData.participants = [currentUser.uid, currentChatUser.id];
+        }
+        
         await addDoc(collection(db, 'messages'), messageData);
-
-        // Update last message time for both users
-        const batch = writeBatch(db);
         
-        // Update sender's last message time
-        const senderRef = doc(db, 'users', currentUser.uid);
-        batch.update(senderRef, {
-            [`conversations.${currentChatUser.id}.lastMessageTime`]: timestamp,
-            [`conversations.${currentChatUser.id}.lastMessage`]: content
-        });
-
-        // Update receiver's last message time
-        const receiverRef = doc(db, 'users', currentChatUser.id);
-        batch.update(receiverRef, {
-            [`conversations.${currentUser.uid}.lastMessageTime`]: timestamp,
-            [`conversations.${currentUser.uid}.lastMessage`]: content
-        });
-
-        // Commit the batch
-        await batch.commit();
+        // Update last message in group document if it's a group chat
+        if (currentGroupChat) {
+            await updateDoc(doc(db, 'groups', currentGroupChat.id), {
+                lastMessage: content,
+                lastMessageTime: serverTimestamp()
+            });
+        }
         
-        // Scroll to bottom
-        const chatMessages = document.getElementById('chat-messages');
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+        // Clear input
+        document.getElementById('message-input').value = '';
+        
     } catch (error) {
         console.error('Error sending message:', error);
     }
@@ -2020,445 +2005,211 @@ function setupMessageListener() {
 }
 
 // Group Chat Functions
-function openGroupModal() {
-    const modal = document.getElementById('group-modal');
-    modal.style.display = 'block';
-    selectedGroupUsers.clear();
-    updateSelectedUsers();
+function updateCreateGroupButton() {
+    const groupName = document.getElementById('group-name').value.trim();
+    const createButton = document.getElementById('create-group');
+    createButton.disabled = !groupName || selectedGroupMembers.size < 2;
 }
 
-function closeGroupModal() {
-    const modal = document.getElementById('group-modal');
-    modal.style.display = 'none';
-    selectedGroupUsers.clear();
-    updateSelectedUsers();
-}
-
-function updateSelectedUsers() {
-    const container = document.getElementById('group-selected-users');
-    container.innerHTML = '';
+function addGroupMember(user) {
+    if (selectedGroupMembers.has(user.id)) return;
     
-    selectedGroupUsers.forEach(user => {
-        const userElement = document.createElement('div');
-        userElement.className = 'selected-user';
-        userElement.innerHTML = `
-            <span>${user.username}</span>
-            <span class="material-symbols-outlined remove-user" onclick="removeSelectedUser('${user.id}')">close</span>
-        `;
-        container.appendChild(userElement);
-    });
-}
-
-function removeSelectedUser(userId) {
-    selectedGroupUsers.delete(Array.from(selectedGroupUsers).find(u => u.id === userId));
-    updateSelectedUsers();
-}
-
-async function searchGroupUsers(searchTerm) {
-    const composeResults = document.getElementById('group-results');
-    composeResults.innerHTML = '';
-
-    if (!searchTerm) {
-        return;
-    }
-
-    try {
-        const usersSnapshot = await getDocs(collection(db, 'users'));
-        const users = [];
-        
-        usersSnapshot.forEach(doc => {
-            if (doc.id !== currentUser.uid && !Array.from(selectedGroupUsers).some(u => u.id === doc.id)) {
-                const user = {
-                    id: doc.id,
-                    ...doc.data()
-                };
-                if (user.username.toLowerCase().includes(searchTerm.toLowerCase())) {
-                    users.push(user);
-                }
-            }
-        });
-
-        users.forEach(user => {
-            const userElement = document.createElement('div');
-            userElement.className = 'compose-user-item';
-            userElement.innerHTML = `
-                <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.username}" class="user-avatar">
-                <span>${user.username}</span>
-            `;
-            userElement.onclick = () => {
-                selectedGroupUsers.add(user);
-                updateSelectedUsers();
-                document.getElementById('group-search').value = '';
-                composeResults.innerHTML = '';
-            };
-            composeResults.appendChild(userElement);
-        });
-
-        if (users.length === 0) {
-            const noResults = document.createElement('div');
-            noResults.className = 'no-results';
-            noResults.textContent = 'No users found';
-            composeResults.appendChild(noResults);
-        }
-    } catch (error) {
-        console.error('Error searching users for group:', error);
-    }
+    selectedGroupMembers.add(user.id);
+    const membersContainer = document.getElementById('group-members');
+    
+    const memberElement = document.createElement('div');
+    memberElement.className = 'group-member';
+    memberElement.innerHTML = `
+        <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.username}">
+        <span>${user.username}</span>
+        <span class="material-symbols-outlined remove-member">close</span>
+    `;
+    
+    memberElement.querySelector('.remove-member').onclick = () => {
+        selectedGroupMembers.delete(user.id);
+        memberElement.remove();
+        updateCreateGroupButton();
+    };
+    
+    membersContainer.appendChild(memberElement);
+    updateCreateGroupButton();
 }
 
 async function createGroupChat() {
     const groupName = document.getElementById('group-name').value.trim();
-    if (!groupName) {
-        alert('Please enter a group name');
-        return;
-    }
-
-    if (selectedGroupUsers.size < 2) {
-        alert('Please select at least 2 users for the group');
-        return;
-    }
-
+    if (!groupName || selectedGroupMembers.size < 2) return;
+    
     try {
+        const members = Array.from(selectedGroupMembers);
+        members.push(currentUser.uid); // Add current user as member
+        
         const groupData = {
             name: groupName,
+            members: members,
             createdBy: currentUser.uid,
             createdAt: serverTimestamp(),
-            members: [currentUser.uid, ...Array.from(selectedGroupUsers).map(u => u.id)],
-            memberDetails: {
-                [currentUser.uid]: {
-                    username: currentUser.displayName || 'Unknown User',
-                    profilePicture: currentUser.photoURL || 'https://i.ibb.co/Gf9VD2MN/pfp.png'
-                }
-            }
+            lastMessage: null,
+            lastMessageTime: null
         };
-
-        // Add member details for selected users
-        Array.from(selectedGroupUsers).forEach(user => {
-            groupData.memberDetails[user.id] = {
-                username: user.username,
-                profilePicture: user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'
-            };
-        });
-
+        
         const groupRef = await addDoc(collection(db, 'groups'), groupData);
         
-        // Create initial group message
-        const messageData = {
-            content: `${currentUser.displayName || 'Unknown User'} created the group`,
-            senderId: currentUser.uid,
-            groupId: groupRef.id,
-            type: 'system',
-            timestamp: serverTimestamp()
-        };
-
-        await addDoc(collection(db, 'messages'), messageData);
-
-        closeGroupModal();
-        loadUsers(); // Refresh the chat list
+        // Add group to each member's groups list
+        const batch = writeBatch(db);
+        members.forEach(memberId => {
+            const userRef = doc(db, 'users', memberId);
+            batch.update(userRef, {
+                groups: arrayUnion(groupRef.id)
+            });
+        });
+        await batch.commit();
+        
+        // Start the group chat
+        startGroupChat(groupRef.id, groupName);
+        closeComposeModal();
+        
+        // Reset form
+        document.getElementById('group-name').value = '';
+        selectedGroupMembers.clear();
+        document.getElementById('group-members').innerHTML = '';
+        updateCreateGroupButton();
+        
     } catch (error) {
         console.error('Error creating group chat:', error);
-        alert('Error creating group chat. Please try again.');
     }
-}
-
-// Modify loadUsers function to include group chats
-async function loadUsers() {
-    const usersContainer = document.getElementById('users-container');
-    usersContainer.innerHTML = '';
-
-    try {
-        // Get current user's data
-        const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
-        if (!currentUserDoc.exists()) {
-            throw new Error('User document not found');
-        }
-
-        const currentUserData = currentUserDoc.data();
-        const hiddenConversations = currentUserData?.hiddenConversations || [];
-        const pinnedConversations = currentUserData?.pinnedConversations || [];
-
-        // Get all messages where current user is a participant
-        const messagesQuery = query(
-            collection(db, 'messages'),
-            where('participants', 'array-contains', currentUser.uid)
-        );
-        
-        const messagesSnapshot = await getDocs(messagesQuery);
-        const latestMessages = new Map();
-
-        // Find the latest message for each conversation
-        messagesSnapshot.forEach(doc => {
-            const message = doc.data();
-            if (!message.participants) return;
-
-            const otherUserId = message.participants.find(id => id !== currentUser.uid);
-            if (!otherUserId || hiddenConversations.includes(otherUserId)) return;
-
-            const currentLatest = latestMessages.get(otherUserId);
-            if (!currentLatest || message.timestamp > currentLatest.timestamp) {
-                latestMessages.set(otherUserId, {
-                    timestamp: message.timestamp,
-                    content: message.content
-                });
-            }
-        });
-
-        // Get all groups where current user is a member
-        const groupsQuery = query(
-            collection(db, 'groups'),
-            where('members', 'array-contains', currentUser.uid)
-        );
-
-        const groupsSnapshot = await getDocs(groupsQuery);
-        const groupMessages = new Map();
-
-        // Get latest message for each group
-        for (const groupDoc of groupsSnapshot.docs) {
-            const groupData = groupDoc.data();
-            const groupMessagesQuery = query(
-                collection(db, 'messages'),
-                where('groupId', '==', groupDoc.id),
-                orderBy('timestamp', 'desc'),
-                limit(1)
-            );
-
-            const latestGroupMessage = await getDocs(groupMessagesQuery);
-            if (!latestGroupMessage.empty) {
-                const message = latestGroupMessage.docs[0].data();
-                groupMessages.set(groupDoc.id, {
-                    timestamp: message.timestamp,
-                    content: message.content,
-                    groupData: groupData
-                });
-            }
-        }
-
-        // Display individual chats
-        for (const [userId, messageData] of latestMessages) {
-            try {
-                const userDoc = await getDoc(doc(db, 'users', userId));
-                if (!userDoc.exists()) continue;
-
-                const userData = userDoc.data();
-                const userElement = createUserElement({
-                    id: userId,
-                    username: userData.username || 'Unknown User',
-                    profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
-                    verified: userData.verified || false,
-                    isPinned: pinnedConversations.includes(userId),
-                    lastMessageTime: messageData.timestamp,
-                    lastMessage: messageData.content
-                });
-
-                usersContainer.appendChild(userElement);
-            } catch (error) {
-                console.error(`Error loading user ${userId}:`, error);
-            }
-        }
-
-        // Display group chats
-        for (const [groupId, messageData] of groupMessages) {
-            const groupData = messageData.groupData;
-            const groupElement = createGroupElement({
-                id: groupId,
-                name: groupData.name,
-                members: groupData.members,
-                memberDetails: groupData.memberDetails,
-                lastMessageTime: messageData.timestamp,
-                lastMessage: messageData.content
-            });
-
-            usersContainer.appendChild(groupElement);
-        }
-
-        if (usersContainer.children.length === 0) {
-            const noUsersMessage = document.createElement('div');
-            noUsersMessage.className = 'no-results';
-            noUsersMessage.textContent = 'No conversations yet. Start a new chat!';
-            usersContainer.appendChild(noUsersMessage);
-        }
-
-    } catch (error) {
-        console.error('Error loading users:', error);
-        const errorMessage = document.createElement('div');
-        errorMessage.className = 'no-results';
-        errorMessage.textContent = 'Error loading conversations. Please try again.';
-        usersContainer.appendChild(errorMessage);
-    }
-}
-
-function createGroupElement(group) {
-    const groupElement = document.createElement('div');
-    groupElement.className = 'user-item';
-    groupElement.dataset.groupId = group.id;
-
-    const memberAvatars = Object.values(group.memberDetails)
-        .slice(0, 3)
-        .map(member => `<img src="${member.profilePicture}" alt="${member.username}" class="group-member-avatar">`)
-        .join('');
-
-    const remainingMembers = Math.max(0, group.members.length - 3);
-
-    groupElement.innerHTML = `
-        <div class="profile-picture-container">
-            ${memberAvatars}
-            ${remainingMembers > 0 ? `<span class="group-member-count">+${remainingMembers}</span>` : ''}
-        </div>
-        <div class="username">
-            ${group.name}
-            <span class="group-chat-indicator">
-                <span class="material-symbols-outlined">group</span>
-            </span>
-        </div>
-        <div class="user-actions">
-            <span class="material-symbols-outlined action-icon pin-icon">push_pin</span>
-            <span class="material-symbols-outlined action-icon close-icon">close</span>
-        </div>
-    `;
-
-    groupElement.onclick = () => {
-        startGroupChat(group.id, group.name);
-    };
-
-    return groupElement;
 }
 
 async function startGroupChat(groupId, groupName) {
-    currentChatUser = { id: groupId, username: groupName, isGroup: true };
+    currentGroupChat = { id: groupId, name: groupName };
+    currentChatUser = null; // Clear current chat user since we're in a group
     
-    // Update active chat in sidebar
-    const userItems = document.querySelectorAll('.user-item');
-    userItems.forEach(item => {
-        if (item.dataset.groupId === groupId) {
-            item.classList.add('active');
-        } else {
-            item.classList.remove('active');
-        }
-    });
-
     // Update chat header
     document.getElementById('active-chat-username').innerHTML = `
-        ${groupName}
-        <span class="group-chat-indicator">
-            <span class="material-symbols-outlined">group</span>
-        </span>
+        <div class="group-info">
+            <span>${groupName}</span>
+            <span class="group-members-count">${selectedGroupMembers.size + 1} members</span>
+        </div>
     `;
-
+    
     // Show message input
     const messageInput = document.querySelector('.message-input');
     messageInput.classList.add('visible');
-    document.querySelector('.chat-header svg').style.display = 'block';
-
+    
     // Load group messages
-    loadGroupMessages(groupId);
+    loadGroupMessages();
 }
 
-async function loadGroupMessages(groupId) {
+async function loadGroupMessages() {
+    if (!currentUser || !currentGroupChat) return;
+    
     const chatMessages = document.getElementById('chat-messages');
     chatMessages.innerHTML = '';
-
+    
     try {
         const messagesQuery = query(
             collection(db, 'messages'),
-            where('groupId', '==', groupId),
+            where('groupId', '==', currentGroupChat.id),
             orderBy('timestamp', 'asc')
         );
-
+        
         if (window.currentMessageUnsubscribe) {
             window.currentMessageUnsubscribe();
         }
-
+        
         const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
             chatMessages.innerHTML = '';
             let lastMessageTime = null;
+            let lastMessageSenderId = null;
             
             snapshot.forEach(doc => {
                 const message = doc.data();
                 const messageTime = message.timestamp.toDate();
                 
-                // Add timestamp or gap if needed
-                if (lastMessageTime) {
-                    const timeDiff = messageTime - lastMessageTime;
-                    const twentyMinutes = 20 * 60 * 1000;
-                    
-                    if (timeDiff > twentyMinutes) {
-                        addDateSeparator(messageTime);
-                    }
+                // Add date separator if needed
+                if (lastMessageTime && !isSameDay(messageTime, lastMessageTime)) {
+                    const dateSeparator = document.createElement('div');
+                    dateSeparator.className = 'date-separator';
+                    dateSeparator.textContent = formatDate(messageTime);
+                    chatMessages.appendChild(dateSeparator);
                 }
                 
-                const messageElement = createMessageElement(message, doc.id);
+                // Create message element
+                const messageElement = createMessageElement(message, message.senderId === currentUser.uid);
+                
+                // Add consecutive message styling
+                if (lastMessageSenderId === message.senderId) {
+                    messageElement.classList.add('consecutive');
+                }
+                
                 chatMessages.appendChild(messageElement);
                 
                 lastMessageTime = messageTime;
+                lastMessageSenderId = message.senderId;
             });
             
+            // Scroll to bottom
             chatMessages.scrollTop = chatMessages.scrollHeight;
         });
-
+        
         window.currentMessageUnsubscribe = unsubscribe;
+        
     } catch (error) {
         console.error('Error loading group messages:', error);
     }
 }
 
-// Modify sendMessage function to support group messages
-async function sendMessage(content) {
-    if (!content.trim() || !currentUser || !currentChatUser) return;
-
-    try {
-        const timestamp = serverTimestamp();
-        let messageData;
-
-        if (currentChatUser.isGroup) {
-            // Group message
-            messageData = {
-                content: content,
-                senderId: currentUser.uid,
-                groupId: currentChatUser.id,
-                timestamp: timestamp
-            };
-        } else {
-            // Direct message
-            messageData = {
-                content: content,
-                senderId: currentUser.uid,
-                receiverId: currentChatUser.id,
-                participants: [currentUser.uid, currentChatUser.id],
-                timestamp: timestamp
-            };
+function createGroupElement(group) {
+    const groupElement = document.createElement('div');
+    groupElement.className = 'user-item group-chat';
+    groupElement.dataset.groupId = group.id;
+    
+    groupElement.innerHTML = `
+        <div class="profile-picture-container">
+            <img src="https://i.ibb.co/Gf9VD2MN/pfp.png" alt="${group.name}" class="profile-picture">
+            <span class="material-symbols-outlined group-icon">groups</span>
+        </div>
+        <span class="username">${group.name}</span>
+        <div class="user-actions">
+            <span class="material-symbols-outlined action-icon pin-icon">keep</span>
+            <span class="material-symbols-outlined action-icon close-icon">close</span>
+        </div>
+    `;
+    
+    groupElement.onclick = (e) => {
+        if (!e.target.classList.contains('action-icon')) {
+            startGroupChat(group.id, group.name);
         }
-
-        await addDoc(collection(db, 'messages'), messageData);
-        
-        // Scroll to bottom
-        const chatMessages = document.getElementById('chat-messages');
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    } catch (error) {
-        console.error('Error sending message:', error);
-    }
+    };
+    
+    return groupElement;
 }
 
 // Add event listeners for group chat functionality
 document.addEventListener('DOMContentLoaded', () => {
     // ... existing event listeners ...
-
-    // Group modal event listeners
-    const groupModal = document.getElementById('group-modal');
-    const closeGroupBtn = groupModal.querySelector('.close-modal');
-    const groupSearchInput = document.getElementById('group-search');
-    const createGroupBtn = document.getElementById('create-group');
-
-    closeGroupBtn.addEventListener('click', closeGroupModal);
     
-    groupSearchInput.addEventListener('input', (e) => {
-        searchGroupUsers(e.target.value.trim());
-    });
-
-    createGroupBtn.addEventListener('click', createGroupChat);
-
-    // Close group modal when clicking outside
-    window.addEventListener('click', (event) => {
-        if (event.target === groupModal) {
-            closeGroupModal();
-        }
-    });
+    // Group name input
+    const groupNameInput = document.getElementById('group-name');
+    if (groupNameInput) {
+        groupNameInput.addEventListener('input', updateCreateGroupButton);
+    }
+    
+    // Group search
+    const groupSearchInput = document.getElementById('group-search');
+    if (groupSearchInput) {
+        groupSearchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.trim();
+            if (searchTerm) {
+                searchUsersForGroup(searchTerm);
+            } else {
+                document.getElementById('group-results').innerHTML = '';
+            }
+        });
+    }
+    
+    // Create group button
+    const createGroupButton = document.getElementById('create-group');
+    if (createGroupButton) {
+        createGroupButton.addEventListener('click', createGroupChat);
+    }
 });
