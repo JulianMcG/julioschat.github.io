@@ -846,21 +846,7 @@ async function loadMessages() {
         }
 
         const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
-            // Keep track of existing messages to avoid recreating them
-            const existingMessages = new Map();
-            chatMessages.querySelectorAll('.message').forEach(message => {
-                existingMessages.set(message.dataset.messageId, message);
-            });
-
-            // Clear only date separators and messages that are no longer needed
-            chatMessages.querySelectorAll('.date-separator, .message').forEach(el => {
-                if (el.classList.contains('message') && !existingMessages.has(el.dataset.messageId)) {
-                    el.remove();
-                } else if (el.classList.contains('date-separator')) {
-                    el.remove();
-                }
-            });
-
+            chatMessages.innerHTML = '';
             let lastMessageTime = null;
             let lastMessageSenderId = null;
             
@@ -907,34 +893,29 @@ async function loadMessages() {
                         }
                     }
                     
-                    let messageElement = existingMessages.get(doc.id);
+                    const messageElement = document.createElement('div');
+                    messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
+                    messageElement.dataset.messageId = doc.id;
                     
-                    if (!messageElement) {
-                        // Create new message element if it doesn't exist
-                        messageElement = document.createElement('div');
-                        messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
-                        messageElement.dataset.messageId = doc.id;
-                        
-                        // Add reaction button
-                        const reactionButton = document.createElement('div');
-                        reactionButton.className = 'reaction-button';
-                        reactionButton.innerHTML = '<span class="material-symbols-outlined">add_reaction</span>';
-                        reactionButton.onclick = (e) => {
-                            e.stopPropagation();
-                            showReactionPicker(e, doc.id);
-                        };
-                        messageElement.appendChild(reactionButton);
-                        
-                        chatMessages.appendChild(messageElement);
+                    // Create message content container
+                    const contentContainer = document.createElement('div');
+                    contentContainer.className = 'content';
+                    contentContainer.innerHTML = formatMessageContent(message.content);
+                    
+                    // Create reactions container
+                    const reactionsContainer = document.createElement('div');
+                    reactionsContainer.className = 'message-reactions';
+                    if (message.reactions) {
+                        Object.entries(message.reactions).forEach(([emoji, users]) => {
+                            const reaction = document.createElement('span');
+                            reaction.className = 'reaction';
+                            reaction.dataset.emoji = emoji;
+                            reaction.textContent = `${emoji} ${users.length}`;
+                            reactionsContainer.appendChild(reaction);
+                        });
                     }
                     
-                    // Update message content and reactions
-                    messageElement.innerHTML = `
-                        <div class="content">${formatMessageContent(message.content)}</div>
-                        ${formatReactions(message.reactions)}
-                    `;
-                    
-                    // Re-add reaction button
+                    // Create reaction button
                     const reactionButton = document.createElement('div');
                     reactionButton.className = 'reaction-button';
                     reactionButton.innerHTML = '<span class="material-symbols-outlined">add_reaction</span>';
@@ -942,7 +923,13 @@ async function loadMessages() {
                         e.stopPropagation();
                         showReactionPicker(e, doc.id);
                     };
+                    
+                    // Append all elements
+                    messageElement.appendChild(contentContainer);
+                    messageElement.appendChild(reactionsContainer);
                     messageElement.appendChild(reactionButton);
+                    
+                    chatMessages.appendChild(messageElement);
                     
                     lastMessageTime = messageTime;
                     lastMessageSenderId = message.senderId;
