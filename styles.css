@@ -288,7 +288,7 @@ body {
 }
 
 .sidebar.collapsed .toggle-sidebar {
-    transform: rotate(180deg);
+    transform: none;
 }
 
 .sidebar.collapsed .user-item:hover .user-actions {
@@ -312,7 +312,7 @@ body {
 .toggle-sidebar {
     cursor: pointer;
     color: #B6B8C8;
-    transition: transform 0.3s ease;
+    transition: color 0.3s ease;
 }
 
 .toggle-sidebar:hover {
@@ -324,6 +324,12 @@ body {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .sidebar-header h3 {
