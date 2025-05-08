@@ -1575,15 +1575,15 @@ input:checked + .slider:before {
 
 .message.sent .message-reactions {
     top: -18px;
-    left: 0px;
-    border-radius: 50px 50px 50px 15px;
+    left: -12px;
+    border-radius: 50px 50px 50px 20px;
     background: #1C1F28;
 }
 
 .message.received .message-reactions {
     top: -18px;
-    right: 0px;
-    border-radius: 50px 50px 15px 50px;
+    right: -12px;
+    border-radius: 50px 50px 20px 50px;
     background: #1F49C7;
 }
 
