@@ -1762,7 +1762,15 @@ input:checked + .slider:before {
 
 /* Group Chat Item Styles */
 .user-item.group-chat {
-    background-color: rgba(31, 73, 199, 0.1);
+    background-color: transparent;
+}
+
+.user-item.group-chat:hover {
+    background-color: rgba(19, 22, 31, 0.5);
+}
+
+.user-item.group-chat.active {
+    background-color: #13161F;
 }
 
 .user-item.group-chat .profile-picture-container {
@@ -1770,23 +1778,11 @@ input:checked + .slider:before {
 }
 
 .user-item.group-chat .profile-picture-container::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(31, 73, 199, 0.2);
-    border-radius: 50%;
+    display: none;
 }
 
 .user-item.group-chat .group-icon {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: #1F49C7;
-    font-size: 20px;
+    display: none;
 }
 
 /* Group Chat Header Styles */
