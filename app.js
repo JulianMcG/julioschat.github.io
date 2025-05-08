@@ -769,8 +769,9 @@ async function addReaction(messageId, emoji) {
         // Initialize reactions if they don't exist
         const reactions = messageData.reactions || {};
         
-        // If this emoji already has a reaction from this user, remove it
-        if (reactions[emoji] && reactions[emoji].includes(currentUser.uid)) {
+        // Check if user already has this reaction
+        if (reactions[emoji]?.includes(currentUser.uid)) {
+            // Remove the reaction
             reactions[emoji] = reactions[emoji].filter(id => id !== currentUser.uid);
             if (reactions[emoji].length === 0) {
                 delete reactions[emoji];
@@ -798,7 +799,7 @@ async function addReaction(messageId, emoji) {
         });
         
     } catch (error) {
-        console.error('Error adding reaction:', error);
+        console.error('Error adding/removing reaction:', error);
     }
 }
 
@@ -847,7 +848,7 @@ function formatReactions(reactions) {
         const reactionSpan = document.createElement('span');
         reactionSpan.className = 'reaction';
         reactionSpan.textContent = emoji;
-        reactionSpan.style.cursor = 'pointer';
+        // Add click handler to remove reaction
         reactionSpan.onclick = (e) => {
             e.stopPropagation();
             addReaction(doc.id, emoji);
@@ -955,7 +956,7 @@ async function loadMessages() {
                             const reaction = document.createElement('span');
                             reaction.className = 'reaction';
                             reaction.textContent = emoji;
-                            reaction.style.cursor = 'pointer';
+                            // Add click handler to remove reaction
                             reaction.onclick = (e) => {
                                 e.stopPropagation();
                                 addReaction(doc.id, emoji);
