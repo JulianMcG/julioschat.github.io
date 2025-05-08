@@ -1566,7 +1566,7 @@ input:checked + .slider:before {
     z-index: 1;
     display: none;
     min-width: 40px;
-    height: 32px;
+    height: 40px;
 }
 
 .message-reactions.has-reactions {
@@ -1574,16 +1574,16 @@ input:checked + .slider:before {
 }
 
 .message.sent .message-reactions {
-    top: -16px;
+    top: -20px;
     left: -8px;
-    border-bottom-left-radius: 12px;
+    border-radius: 50px 50px 50px 5px;
     background: #1C1F28;
 }
 
 .message.received .message-reactions {
-    top: -16px;
+    top: -20px;
     right: -8px;
-    border-bottom-right-radius: 12px;
+    border-radius: 50px 50px 5px 50px;
     background: #1F49C7;
 }
 
@@ -1593,5 +1593,5 @@ input:checked + .slider:before {
     justify-content: center;
     color: #ECEBF7;
     line-height: 1;
-    transform: translateY(1px); /* Optical centering for emoji */
+    transform: translateY(1px);
 } 
