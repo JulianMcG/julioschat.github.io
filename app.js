@@ -863,6 +863,7 @@ async function loadMessages() {
                 orderBy('timestamp', 'asc')
             );
         } else {
+            // For direct messages, query messages between the two users
             messagesQuery = query(
                 collection(db, 'messages'),
                 where('participants', 'array-contains', currentUser.uid),
@@ -883,10 +884,11 @@ async function loadMessages() {
                 const message = doc.data();
                 
                 // For direct messages, only show messages between current user and chat user
-                if (!currentGroupChat && 
-                    (!message.participants?.includes(currentChatUser.id) || 
-                     !message.participants?.includes(currentUser.uid))) {
-                    return;
+                if (!currentGroupChat) {
+                    if (!message.participants?.includes(currentChatUser.id) || 
+                        !message.participants?.includes(currentUser.uid)) {
+                        return;
+                    }
                 }
                 
                 // For group messages, only show messages for current group
