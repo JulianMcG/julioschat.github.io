@@ -25,8 +25,7 @@ import {
     arrayRemove,
     writeBatch,
     updateDoc,
-    runTransaction,
-    deleteDoc
+    runTransaction
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
@@ -967,32 +966,6 @@ async function loadMessages() {
                     messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
                     messageElement.dataset.messageId = doc.id;
                     
-                    // Add message actions for sent messages
-                    if (message.senderId === currentUser.uid) {
-                        const messageActions = document.createElement('div');
-                        messageActions.className = 'message-actions';
-                        
-                        const editButton = document.createElement('span');
-                        editButton.className = 'message-action edit-action material-symbols-outlined';
-                        editButton.textContent = 'edit';
-                        editButton.onclick = (e) => {
-                            e.stopPropagation();
-                            editMessage(doc.id, message.content);
-                        };
-                        
-                        const deleteButton = document.createElement('span');
-                        deleteButton.className = 'message-action delete-action material-symbols-outlined';
-                        deleteButton.textContent = 'delete';
-                        deleteButton.onclick = (e) => {
-                            e.stopPropagation();
-                            deleteMessage(doc.id);
-                        };
-                        
-                        messageActions.appendChild(editButton);
-                        messageActions.appendChild(deleteButton);
-                        messageElement.appendChild(messageActions);
-                    }
-                    
                     // Create message content container
                     const contentContainer = document.createElement('div');
                     contentContainer.className = 'content';
@@ -1832,4 +1805,211 @@ function setupTypingListener() {
     return unsubscribe;
 }
 
-// ... existing code ...
+// Load user's notification sound preference
+async function loadNotificationSoundPreference() {
+    if (!currentUser) return;
+    
+    try {
+        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        const userData = userDoc.data();
+        const selectedSound = userData?.notificationSound || 'Birdy.mp3';
+        notificationsEnabled = userData?.notificationsEnabled ?? true;
+        
+        // Update audio source
+        notificationSound = new Audio(`NotifSounds/${selectedSound}`);
+        notificationSound.volume = 0.3; // Set volume to 30%
+        
+        // Update UI elements if they exist
+        const soundSelect = document.getElementById('notification-sound');
+        const notificationToggle = document.getElementById('notification-toggle');
+        
+        if (soundSelect) {
+            soundSelect.value = selectedSound;
+        }
+        
+        if (notificationToggle) {
+            notificationToggle.checked = notificationsEnabled;
+        }
+        
+        console.log('Loaded notification preferences:', {
+            selectedSound,
+            notificationsEnabled,
+            soundSelectValue: soundSelect?.value,
+            toggleChecked: notificationToggle?.checked
+        });
+    } catch (error) {
+        console.error('Error loading notification sound preference:', error);
+        // Set default values if there's an error
+        notificationSound = new Audio('NotifSounds/Birdy.mp3');
+        notificationSound.volume = 0.3;
+    }
+}
+
+// Save notification sound preference
+async function saveNotificationSoundPreference() {
+    if (!currentUser) return;
+    
+    const soundSelect = document.getElementById('notification-sound');
+    const notificationToggle = document.getElementById('notification-toggle');
+    
+    if (!soundSelect || !notificationToggle) {
+        console.error('Notification UI elements not found');
+        return;
+    }
+    
+    const selectedSound = soundSelect.value;
+    notificationsEnabled = notificationToggle.checked;
+    
+    try {
+        await setDoc(doc(db, 'users', currentUser.uid), {
+            notificationSound: selectedSound,
+            notificationsEnabled: notificationsEnabled
+        }, { merge: true });
+        
+        // Update audio source and play preview
+        notificationSound = new Audio(`NotifSounds/${selectedSound}`);
+        notificationSound.volume = 0.3; // Set volume to 30%
+        notificationSound.play().catch(error => {
+            console.error('Error playing notification sound:', error);
+        });
+        
+        console.log('Saved notification preferences:', {
+            selectedSound,
+            notificationsEnabled
+        });
+    } catch (error) {
+        console.error('Error saving notification sound preference:', error);
+    }
+}
+
+// Play notification sound
+function playNotificationSound() {
+    const now = Date.now();
+    if (!isTabFocused && notificationsEnabled && (now - lastSoundPlayTime) >= SOUND_COOLDOWN) {
+        lastSoundPlayTime = now;
+        // Create a new audio instance to allow multiple sounds to play
+        const sound = new Audio(notificationSound.src);
+        sound.volume = 0.3; // Set volume to 30%
+        sound.play().catch(error => {
+            console.error('Error playing notification sound:', error);
+        });
+        console.log('Playing notification sound:', {
+            isTabFocused,
+            notificationsEnabled,
+            timeSinceLastPlay: now - lastSoundPlayTime
+        });
+    }
+}
+
+// Tab focus detection
+document.addEventListener('visibilitychange', () => {
+    isTabFocused = document.visibilityState === 'visible';
+    console.log('Tab focus changed:', {
+        isTabFocused,
+        visibilityState: document.visibilityState
+    });
+});
+
+// Add event listeners for notification settings
+document.addEventListener('DOMContentLoaded', () => {
+    const soundSelect = document.getElementById('notification-sound');
+    const notificationToggle = document.getElementById('notification-toggle');
+    
+    if (soundSelect && notificationToggle) {
+        soundSelect.addEventListener('change', saveNotificationSoundPreference);
+        notificationToggle.addEventListener('change', saveNotificationSoundPreference);
+    }
+    
+    // Load notification preferences when DOM is ready
+    if (currentUser) {
+        loadNotificationSoundPreference();
+    }
+});
+
+async function signInWithGoogle() {
+    try {
+        const provider = new GoogleAuthProvider();
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+
+        // Check if user document exists
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        
+        if (!userDoc.exists()) {
+            // Create new user document if it doesn't exist
+            await setDoc(doc(db, 'users', user.uid), {
+                username: user.displayName || user.email.split('@')[0],
+                email: user.email,
+                profilePicture: user.photoURL,
+                createdAt: serverTimestamp()
+            });
+        }
+
+        // Show chat section
+        showChatSection();
+    } catch (error) {
+        console.error('Google Sign-In error:', error);
+        alert(`Error signing in with Google: ${error.message}`);
+    }
+}
+
+// Add online status tracking with periodic checks
+function updateOnlineStatus(isOnline) {
+    if (currentUser) {
+        setDoc(doc(db, 'users', currentUser.uid), {
+            isOnline: isOnline,
+            lastSeen: serverTimestamp()
+        }, { merge: true });
+    }
+}
+
+// Function to check if a user is actually online
+function isUserActuallyOnline(lastSeen) {
+    if (!lastSeen) return false;
+    const lastSeenTime = lastSeen.toDate();
+    const now = new Date();
+    const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+    return lastSeenTime > fiveMinutesAgo;
+}
+
+// Update online status when user connects/disconnects
+window.addEventListener('online', () => updateOnlineStatus(true));
+window.addEventListener('offline', () => updateOnlineStatus(false));
+
+// Update online status when user closes the tab/window
+window.addEventListener('beforeunload', () => updateOnlineStatus(false));
+
+// Set up periodic online status check
+setInterval(() => {
+    if (currentUser) {
+        updateOnlineStatus(true);
+    }
+}, 4 * 60 * 1000); // Check every 4 minutes
+
+// Add a new listener for all messages
+function setupMessageListener() {
+    if (!currentUser) return;
+
+    const messagesQuery = query(
+        collection(db, 'messages'),
+        where('participants', 'array-contains', currentUser.uid),
+        orderBy('timestamp', 'desc')
+    );
+
+    return onSnapshot(messagesQuery, (snapshot) => {
+        snapshot.docChanges().forEach(change => {
+            if (change.type === 'added') {
+                const message = change.doc.data();
+                
+                // Only play sound if:
+                // 1. Message is from someone else
+                // 2. Sender is not blocked
+                // 3. We're not currently in a chat with this person
+                if (message.senderId !== currentUser.uid && 
+                    !message.participants.includes(currentChatUser?.id)) {
+                    playNotificationSound();
+                }
+            }
+        });
+    });
+}
