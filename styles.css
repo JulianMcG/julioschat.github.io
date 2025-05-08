@@ -1512,4 +1512,67 @@ input:checked + .slider:before {
 .button-wrapper .google-button img {
     width: 18px;
     height: 18px;
+}
+
+/* Reaction Styles */
+.reaction-button {
+    position: absolute;
+    right: -30px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0;
+    transition: opacity 0.2s;
+    cursor: pointer;
+    color: #B6B8C8;
+}
+
+.message:hover .reaction-button {
+    opacity: 1;
+}
+
+.reaction-picker {
+    background-color: #1C1F28;
+    border-radius: 8px;
+    padding: 8px;
+    display: flex;
+    gap: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+}
+
+.reaction-option {
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+    font-size: 20px;
+}
+
+.reaction-option:hover {
+    background-color: #2A2D3A;
+}
+
+.message-reactions {
+    display: flex;
+    gap: 4px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+}
+
+.reaction {
+    background-color: #2A2D3A;
+    padding: 2px 6px;
+    border-radius: 12px;
+    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.message.sent .message-reactions {
+    justify-content: flex-end;
+}
+
+.message.received .message-reactions {
+    justify-content: flex-start;
 } 
