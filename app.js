@@ -455,13 +455,7 @@ async function loadUsers() {
                 lastMessage: messageData.content,
                 lastMessageTime: messageData.timestamp
             })),
-            ...groupsData.map(group => ({
-                id: group.id,
-                type: 'group',
-                name: group.name,
-                lastMessage: group.lastMessage,
-                lastMessageTime: group.lastMessageTime
-            }))
+            ...groupsData
         ];
         
         // Sort conversations by last message time
@@ -598,92 +592,9 @@ function createUserElement(user) {
 }
 
 async function startChat(userId, username) {
+    // Clear current group chat if switching to direct message
+    currentGroupChat = null;
     currentChatUser = { id: userId, username: username };
-    
-    // Check if user is already in sidebar
-    const existingUser = document.querySelector(`.user-item[data-uid="${userId}"]`);
-    if (!existingUser) {
-        // Get user's profile picture and verification status
-        const userDoc = await getDoc(doc(db, 'users', userId));
-        const userData = userDoc.data();
-        const profilePicture = userData?.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
-        const isVerified = userData?.verified || false;
-
-        // Create new user element
-        const userElement = document.createElement('div');
-        userElement.className = 'user-item';
-        userElement.dataset.uid = userId;
-        userElement.innerHTML = `
-            <div class="profile-picture-container">
-                <img src="${profilePicture}" alt="${username}" class="profile-picture">
-                <div class="online-status"></div>
-            </div>
-            <span class="username">${username}${isVerified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
-            <div class="user-actions">
-                <span class="material-symbols-outlined action-icon pin-icon">keep</span>
-                <span class="material-symbols-outlined action-icon close-icon">close</span>
-            </div>
-        `;
-
-        // Add click handler for the user item
-        userElement.onclick = (e) => {
-            if (!e.target.classList.contains('action-icon')) {
-                startChat(userId, username);
-            }
-        };
-
-        // Add click handler for close icon
-        const closeIcon = userElement.querySelector('.close-icon');
-        closeIcon.onclick = async (e) => {
-            e.stopPropagation();
-            userElement.remove();
-            try {
-                await setDoc(doc(db, 'users', currentUser.uid), {
-                    hiddenConversations: arrayUnion(userId)
-                }, { merge: true });
-            } catch (error) {
-                console.error('Error hiding conversation:', error);
-            }
-        };
-
-        // Add click handler for pin icon
-        const pinIcon = userElement.querySelector('.pin-icon');
-        pinIcon.onclick = async (e) => {
-            e.stopPropagation();
-            const isPinned = userElement.classList.contains('pinned');
-            userElement.classList.toggle('pinned');
-            
-            if (!isPinned) {
-                const usersContainer = document.getElementById('users-container');
-                usersContainer.insertBefore(userElement, usersContainer.firstChild);
-            }
-            
-            try {
-                const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-                const userData = userDoc.data();
-                const pinnedConversations = userData?.pinnedConversations || [];
-                
-                if (!isPinned) {
-                    if (!pinnedConversations.includes(userId)) {
-                        await setDoc(doc(db, 'users', currentUser.uid), {
-                            pinnedConversations: [...pinnedConversations, userId]
-                        }, { merge: true });
-                    }
-                } else {
-                    const updatedPinnedConversations = pinnedConversations.filter(id => id !== userId);
-                    await setDoc(doc(db, 'users', currentUser.uid), {
-                        pinnedConversations: updatedPinnedConversations
-                    }, { merge: true });
-                }
-            } catch (error) {
-                console.error('Error pinning conversation:', error);
-            }
-        };
-
-        // Add to sidebar
-        const usersContainer = document.getElementById('users-container');
-        usersContainer.appendChild(userElement);
-    }
     
     // Update active user in sidebar
     const userItems = document.querySelectorAll('.user-item');
@@ -968,8 +879,8 @@ async function loadMessages() {
                 
                 // For direct messages, only show messages between current user and chat user
                 if (!currentGroupChat && 
-                    (!message.participants.includes(currentChatUser.id) || 
-                     !message.participants.includes(currentUser.uid))) {
+                    (!message.participants?.includes(currentChatUser.id) || 
+                     !message.participants?.includes(currentUser.uid))) {
                     return;
                 }
                 
@@ -2135,7 +2046,7 @@ function createGroupElement(group) {
     
     groupElement.innerHTML = `
         <div class="profile-picture-container">
-            <img src="https://i.ibb.co/Gf9VD2MN/pfp.png" alt="${group.name}" class="profile-picture">
+            <img src="https://i.ibb.co/0Vz513DW/gcpfp.png" alt="${group.name}" class="profile-picture">
             <span class="material-symbols-outlined group-icon">groups</span>
         </div>
         <span class="username">${group.name}</span>
