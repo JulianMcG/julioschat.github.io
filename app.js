@@ -23,7 +23,8 @@ import {
     serverTimestamp,
     arrayUnion,
     arrayRemove,
-    writeBatch
+    writeBatch,
+    updateDoc
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
@@ -718,6 +719,107 @@ function formatMessageContent(content) {
         .replace(/~~(.*?)~~/g, '<s>$1</s>'); // Strikethrough
 }
 
+// Add reaction to message
+async function addReaction(messageId, emoji) {
+    if (!currentUser || !currentChatUser) return;
+    
+    try {
+        const messageRef = doc(db, 'messages', messageId);
+        const messageDoc = await getDoc(messageRef);
+        
+        if (!messageDoc.exists()) return;
+        
+        const messageData = messageDoc.data();
+        const reactions = messageData.reactions || {};
+        
+        // Initialize reaction if it doesn't exist
+        if (!reactions[emoji]) {
+            reactions[emoji] = [];
+        }
+        
+        // Toggle reaction
+        if (reactions[emoji].includes(currentUser.uid)) {
+            reactions[emoji] = reactions[emoji].filter(id => id !== currentUser.uid);
+            if (reactions[emoji].length === 0) {
+                delete reactions[emoji];
+            }
+        } else {
+            reactions[emoji].push(currentUser.uid);
+        }
+        
+        // Update message with new reactions
+        await updateDoc(messageRef, { reactions });
+    } catch (error) {
+        console.error('Error adding reaction:', error);
+    }
+}
+
+// Create reaction picker
+function createReactionPicker(messageId) {
+    const picker = document.createElement('div');
+    picker.className = 'reaction-picker';
+    picker.innerHTML = `
+        <div class="reaction-option" data-emoji="👍">👍</div>
+        <div class="reaction-option" data-emoji="❤️">❤️</div>
+        <div class="reaction-option" data-emoji="😂">😂</div>
+        <div class="reaction-option" data-emoji="😮">😮</div>
+        <div class="reaction-option" data-emoji="😢">😢</div>
+        <div class="reaction-option" data-emoji="🙏">🙏</div>
+    `;
+    
+    // Add click handlers for reactions
+    picker.querySelectorAll('.reaction-option').forEach(option => {
+        option.addEventListener('click', () => {
+            const emoji = option.dataset.emoji;
+            addReaction(messageId, emoji);
+            picker.remove();
+        });
+    });
+    
+    return picker;
+}
+
+// Show reaction picker
+function showReactionPicker(event, messageId) {
+    const picker = createReactionPicker(messageId);
+    const messageElement = event.currentTarget;
+    
+    // Position the picker
+    const rect = messageElement.getBoundingClientRect();
+    picker.style.position = 'absolute';
+    picker.style.top = `${rect.top - 50}px`;
+    picker.style.left = `${rect.left}px`;
+    
+    // Remove any existing picker
+    document.querySelectorAll('.reaction-picker').forEach(p => p.remove());
+    
+    // Add picker to document
+    document.body.appendChild(picker);
+    
+    // Close picker when clicking outside
+    const closePicker = (e) => {
+        if (!picker.contains(e.target) && e.target !== messageElement) {
+            picker.remove();
+            document.removeEventListener('click', closePicker);
+        }
+    };
+    
+    document.addEventListener('click', closePicker);
+}
+
+// Format reactions for display
+function formatReactions(reactions) {
+    if (!reactions) return '';
+    
+    const reactionElements = Object.entries(reactions).map(([emoji, users]) => {
+        const count = users.length;
+        return `<span class="reaction" data-emoji="${emoji}">${emoji} ${count}</span>`;
+    });
+    
+    return `<div class="message-reactions">${reactionElements.join('')}</div>`;
+}
+
+// Modify the loadMessages function to include reactions
 async function loadMessages() {
     if (!currentUser || !currentChatUser) {
         console.log('No current user or chat user');
@@ -793,9 +895,22 @@ async function loadMessages() {
                     
                     const messageElement = document.createElement('div');
                     messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
+                    messageElement.dataset.messageId = doc.id;
                     messageElement.innerHTML = `
                         <div class="content">${formatMessageContent(message.content)}</div>
+                        ${formatReactions(message.reactions)}
                     `;
+                    
+                    // Add reaction button
+                    const reactionButton = document.createElement('div');
+                    reactionButton.className = 'reaction-button';
+                    reactionButton.innerHTML = '<span class="material-symbols-outlined">add_reaction</span>';
+                    reactionButton.onclick = (e) => {
+                        e.stopPropagation();
+                        showReactionPicker(e, doc.id);
+                    };
+                    messageElement.appendChild(reactionButton);
+                    
                     chatMessages.appendChild(messageElement);
                     
                     lastMessageTime = messageTime;
