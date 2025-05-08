@@ -714,7 +714,12 @@ async function startChat(userId, username) {
 
 // Function to convert markdown-style formatting to HTML
 function formatMessageContent(content) {
-    // Replace markdown with HTML tags
+    // First strip out any image-related content
+    content = content.replace(/<img[^>]*>/g, ''); // Remove img tags
+    content = content.replace(/!\[.*?\]\(.*?\)/g, ''); // Remove markdown images
+    content = content.replace(/https?:\/\/.*?\.(jpg|jpeg|png|gif|webp)/gi, ''); // Remove image URLs
+
+    // Then apply markdown formatting
     return content
         .replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>') // Bold Italics
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
