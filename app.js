@@ -185,6 +185,26 @@ document.addEventListener('DOMContentLoaded', () => {
     if (googleSignupButton) {
         googleSignupButton.addEventListener('click', signInWithGoogle);
     }
+
+    // Add sidebar toggle functionality
+    const toggleSidebar = document.querySelector('.toggle-sidebar');
+    const sidebar = document.querySelector('.sidebar');
+    
+    if (toggleSidebar && sidebar) {
+        toggleSidebar.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+            
+            // Save sidebar state to localStorage
+            const isCollapsed = sidebar.classList.contains('collapsed');
+            localStorage.setItem('sidebarCollapsed', isCollapsed);
+        });
+        
+        // Load saved sidebar state
+        const savedState = localStorage.getItem('sidebarCollapsed');
+        if (savedState === 'true') {
+            sidebar.classList.add('collapsed');
+        }
+    }
 });
 
 // Check if username exists
