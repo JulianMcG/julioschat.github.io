@@ -104,14 +104,9 @@ service cloud.firestore {
         (
           // Allow updating reactions
           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions', 'lastUpdated'])) ||
-          // Allow updating content if user is the sender
-          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['content', 'lastUpdated']) && 
-           request.auth.uid == resource.data.senderId) ||
           // Allow updating other fields if they haven't changed
           (request.resource.data.diff(resource.data).affectedKeys().hasOnly([]))
         );
-      allow delete: if request.auth != null && 
-        request.auth.uid == resource.data.senderId;
     }
     match /users/{user} {
       allow read: if request.auth != null;
