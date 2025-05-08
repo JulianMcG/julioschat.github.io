@@ -24,7 +24,8 @@ import {
     arrayUnion,
     arrayRemove,
     writeBatch,
-    updateDoc
+    updateDoc,
+    runTransaction
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
@@ -747,8 +748,18 @@ async function addReaction(messageId, emoji) {
             reactions[emoji].push(currentUser.uid);
         }
         
-        // Update message with new reactions
-        await updateDoc(messageRef, { reactions });
+        // Update message with new reactions using a transaction
+        await runTransaction(db, async (transaction) => {
+            const messageDoc = await transaction.get(messageRef);
+            if (!messageDoc.exists()) {
+                throw new Error("Message does not exist!");
+            }
+            
+            transaction.update(messageRef, { 
+                reactions: reactions,
+                lastUpdated: serverTimestamp()
+            });
+        });
     } catch (error) {
         console.error('Error adding reaction:', error);
     }
