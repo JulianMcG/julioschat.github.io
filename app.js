@@ -1091,16 +1091,24 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 1000);
         });
 
-        // Add a check for selectionStart access
-        const originalGetSelectionStart = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'selectionStart').get;
-        Object.defineProperty(HTMLInputElement.prototype, 'selectionStart', {
-            get: function() {
-                if (!this || !this.isConnected) {
-                    return 0;
-                }
-                return originalGetSelectionStart.call(this);
+        // Add a safe wrapper for selectionStart
+        const safeGetSelectionStart = (element) => {
+            try {
+                if (!element || !element.isConnected) return 0;
+                return element.selectionStart || 0;
+            } catch (error) {
+                console.warn('Error accessing selectionStart:', error);
+                return 0;
             }
-        });
+        };
+
+        // Override the getPosition function if it exists
+        if (typeof window.getPosition === 'function') {
+            const originalGetPosition = window.getPosition;
+            window.getPosition = function(element) {
+                return safeGetSelectionStart(element);
+            };
+        }
     }
 
     // Compose icon event listener
