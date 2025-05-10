@@ -1090,6 +1090,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateTypingStatus(false);
             }, 1000);
         });
+
+        // Add a check for selectionStart access
+        const originalGetSelectionStart = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'selectionStart').get;
+        Object.defineProperty(HTMLInputElement.prototype, 'selectionStart', {
+            get: function() {
+                if (!this || !this.isConnected) {
+                    return 0;
+                }
+                return originalGetSelectionStart.call(this);
+            }
+        });
     }
 
     // Compose icon event listener
