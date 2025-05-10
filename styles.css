@@ -485,24 +485,44 @@ body {
 }
 
 .user-actions {
-    display: none;
     position: absolute;
-    right: 10px;
-    gap: 12px;
+    right: -80px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: none;
+    gap: 8px;
+    z-index: 1;
 }
 
-.user-item:hover .user-actions {
+.message:hover .user-actions {
     display: flex;
 }
 
-.action-icon {
-    color: #B6B8C8;
+.message-action {
     cursor: pointer;
     font-size: 20px;
+    transition: opacity 0.2s;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background-color: #1C1F28;
+    color: #B6B8C8;
 }
 
-.action-icon:hover {
+.message-action:hover {
+    background-color: #2A2D3A;
     color: #ECEBF7;
+}
+
+.delete-action {
+    color: #E85658;
+}
+
+.edit-action {
+    color: #B6B8C8;
 }
 
 .chat-area {
@@ -643,14 +663,15 @@ body {
 
 .message-actions {
     position: absolute;
-    left: -60px;
+    right: -80px;
     top: 50%;
     transform: translateY(-50%);
     display: none;
     gap: 8px;
+    z-index: 1;
 }
 
-.message.sent:hover .message-actions {
+.message:hover .message-actions {
     display: flex;
 }
 
@@ -658,10 +679,19 @@ body {
     cursor: pointer;
     font-size: 20px;
     transition: opacity 0.2s;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background-color: #1C1F28;
+    color: #B6B8C8;
 }
 
 .message-action:hover {
-    opacity: 0.8;
+    background-color: #2A2D3A;
+    color: #ECEBF7;
 }
 
 .delete-action {
@@ -1579,31 +1609,7 @@ input:checked + .slider:before {
 
 /* Reaction Styles */
 .reaction-button {
-    position: absolute;
-    right: -30px;
-    top: 50%;
-    transform: translateY(-50%);
-    opacity: 0;
-    transition: opacity 0.2s;
-    cursor: pointer;
-    color: #B6B8C8;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background-color: #1C1F28;
-    z-index: 1;
-}
-
-.message:hover .reaction-button {
-    opacity: 1;
-}
-
-.reaction-button:hover {
-    background-color: #2A2D3A;
-    color: #ECEBF7;
+    display: none;
 }
 
 .reaction-picker {
