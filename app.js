@@ -2076,51 +2076,33 @@ window.findUsernameByEmail = async function(email) {
     try {
         console.log('Searching for email:', email);
         
-        // First try exact match
-        let usersQuery = query(collection(db, 'users'), where('email', '==', email));
-        let usersSnapshot = await getDocs(usersQuery);
+        // Get all users and search through them
+        const allUsers = await getDocs(collection(db, 'users'));
+        console.log('Total users in database:', allUsers.size);
         
-        console.log('Initial query results:', usersSnapshot.size, 'documents found');
-        
-        if (usersSnapshot.empty) {
-            // Try case-insensitive search
-            const allUsers = await getDocs(collection(db, 'users'));
-            const matchingUser = allUsers.docs.find(doc => {
-                const userData = doc.data();
-                // Check both email and providerData for Google signups
-                return userData.email?.toLowerCase() === email.toLowerCase() ||
-                       userData.providerData?.some(provider => 
-                           provider.providerId === 'google.com' && 
-                           provider.email?.toLowerCase() === email.toLowerCase()
-                       );
+        // Try to find user with matching email
+        const matchingUser = allUsers.docs.find(doc => {
+            const userData = doc.data();
+            const userEmail = userData.email?.toLowerCase();
+            const searchEmail = email.toLowerCase();
+            
+            console.log('Checking user:', {
+                uid: doc.id,
+                email: userEmail,
+                username: userData.username
             });
             
-            if (matchingUser) {
-                console.log('Found user with different case or Google signup:', matchingUser.data());
-                return matchingUser.data().username;
-            }
-            
-            // If still not found, try to find by auth
-            try {
-                const userRecord = await auth.getUserByEmail(email);
-                if (userRecord) {
-                    const userDoc = await getDoc(doc(db, 'users', userRecord.uid));
-                    if (userDoc.exists()) {
-                        console.log('Found user through auth:', userDoc.data());
-                        return userDoc.data().username;
-                    }
-                }
-            } catch (authError) {
-                console.log('No user found in auth:', authError);
-            }
-            
-            return null; // No user found with this email
+            return userEmail === searchEmail;
+        });
+        
+        if (matchingUser) {
+            const userData = matchingUser.data();
+            console.log('Found matching user:', userData);
+            return userData.username;
         }
         
-        const userDoc = usersSnapshot.docs[0];
-        const userData = userDoc.data();
-        console.log('Found user data:', userData);
-        return userData.username;
+        console.log('No matching user found');
+        return null;
     } catch (error) {
         console.error('Error finding username by email:', error);
         throw error;
