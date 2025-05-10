@@ -2076,7 +2076,7 @@ function createMessageElement(message, isSent) {
     // Add reply button
     const replyButton = document.createElement('div');
     replyButton.className = 'reaction-button';
-    replyButton.innerHTML = '<span class="material-symbols-rounded">reply</span>';
+    replyButton.innerHTML = '<span class="material-symbols-rounded" style="font-size: 18px;">reply</span>';
     replyButton.addEventListener('click', (e) => {
         e.stopPropagation();
         startReply(message);
