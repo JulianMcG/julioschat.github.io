@@ -1587,10 +1587,23 @@ input:checked + .slider:before {
     transition: opacity 0.2s;
     cursor: pointer;
     color: #B6B8C8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: #1C1F28;
+    z-index: 1;
 }
 
-.message.received:hover .reaction-button {
+.message:hover .reaction-button {
     opacity: 1;
+}
+
+.reaction-button:hover {
+    background-color: #2A2D3A;
+    color: #ECEBF7;
 }
 
 .reaction-picker {
