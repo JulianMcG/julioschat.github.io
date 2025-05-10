@@ -2080,34 +2080,38 @@ window.findUsernameByEmail = async function(email) {
         const allUsers = await getDocs(collection(db, 'users'));
         console.log('Total users in database:', allUsers.size);
         
+        // Log the first few users to see their structure
+        console.log('Sample of first few users:');
+        allUsers.docs.slice(0, 3).forEach(doc => {
+            console.log('User document:', {
+                id: doc.id,
+                data: doc.data()
+            });
+        });
+        
         // Try to find user with matching email
         const matchingUser = allUsers.docs.find(doc => {
             const userData = doc.data();
-            const userEmail = userData.email?.toLowerCase();
             const searchEmail = email.toLowerCase();
             
-            // Check if this is a Google signup
-            const isGoogleUser = userData.providerId === 'google.com' || 
-                               userData.providerData?.some(p => p.providerId === 'google.com');
-            
-            console.log('Checking user:', {
-                uid: doc.id,
-                email: userEmail,
-                username: userData.username,
-                isGoogleUser: isGoogleUser,
-                providerData: userData.providerData
+            // Log the complete user data for debugging
+            console.log('Checking user complete data:', {
+                id: doc.id,
+                ...userData
             });
             
-            // For Google users, check their Google email
-            if (isGoogleUser) {
-                const googleEmail = userData.providerData?.find(p => p.providerId === 'google.com')?.email?.toLowerCase();
-                if (googleEmail === searchEmail) {
-                    return true;
-                }
-            }
+            // Check all possible email fields
+            const possibleEmails = [
+                userData.email?.toLowerCase(),
+                userData.providerData?.find(p => p.providerId === 'google.com')?.email?.toLowerCase(),
+                userData.providerData?.find(p => p.email)?.email?.toLowerCase(),
+                userData.googleEmail?.toLowerCase(),
+                userData.userEmail?.toLowerCase()
+            ].filter(Boolean); // Remove undefined/null values
             
-            // Check regular email
-            return userEmail === searchEmail;
+            console.log('Possible emails found:', possibleEmails);
+            
+            return possibleEmails.includes(searchEmail);
         });
         
         if (matchingUser) {
