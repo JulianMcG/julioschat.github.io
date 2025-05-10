@@ -7,7 +7,8 @@ import {
     onAuthStateChanged,
     updateProfile,
     GoogleAuthProvider,
-    signInWithPopup
+    signInWithPopup,
+    getAuth
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { 
     collection, 
@@ -2101,7 +2102,6 @@ window.findUsernameByEmail = async function(email) {
             
             // If still not found, try to find by auth
             try {
-                const auth = getAuth();
                 const userRecord = await auth.getUserByEmail(email);
                 if (userRecord) {
                     const userDoc = await getDoc(doc(db, 'users', userRecord.uid));
