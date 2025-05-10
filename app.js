@@ -2069,3 +2069,22 @@ function setupMessageListener() {
         });
     });
 }
+
+// Function to find username by email
+async function findUsernameByEmail(email) {
+    try {
+        const usersQuery = query(collection(db, 'users'), where('email', '==', email));
+        const usersSnapshot = await getDocs(usersQuery);
+        
+        if (usersSnapshot.empty) {
+            return null; // No user found with this email
+        }
+        
+        const userDoc = usersSnapshot.docs[0];
+        const userData = userDoc.data();
+        return userData.username;
+    } catch (error) {
+        console.error('Error finding username by email:', error);
+        throw error;
+    }
+}
