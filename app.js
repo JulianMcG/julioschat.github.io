@@ -209,9 +209,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Check if username exists
 async function isUsernameTaken(username) {
-    const usersQuery = query(collection(db, 'users'), where('username', '==', username));
-    const usersSnapshot = await getDocs(usersQuery);
-    return !usersSnapshot.empty;
+    try {
+        const usersQuery = query(collection(db, 'users'), where('username', '==', username));
+        const usersSnapshot = await getDocs(usersQuery);
+        return !usersSnapshot.empty;
+    } catch (error) {
+        console.error('Error checking username:', error);
+        // If there's a permissions error, assume the username is taken to be safe
+        if (error.code === 'permission-denied') {
+            return true;
+        }
+        throw error; // Re-throw other errors
+    }
 }
 
 async function signup() {
@@ -252,11 +261,13 @@ async function signup() {
         } catch (error) {
             console.error('Error checking username:', error);
             showError(document.getElementById('signup-username'), 'Error checking username availability. Please try again.');
+            signupButton.classList.remove('loading');
             return;
         }
         
         if (usernameTaken) {
             showError(document.getElementById('signup-username'), 'Username is already taken');
+            signupButton.classList.remove('loading');
             return;
         }
         
