@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Console</title>
+    <title>Admin Verification</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
     <style>
@@ -35,90 +35,6 @@
         .tab:not(.active):hover {
             color: #ECEBF7;
         }
-
-        .user-list {
-            margin-top: 20px;
-            max-height: 400px;
-            overflow-y: auto;
-            background-color: #1C1F28;
-            border-radius: 15px;
-            padding: 15px;
-        }
-
-        .user-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 10px;
-            border-bottom: 1px solid #2A2D3A;
-        }
-
-        .user-item:last-child {
-            border-bottom: none;
-        }
-
-        .user-info {
-            flex: 1;
-        }
-
-        .user-email {
-            color: #B6B8C8;
-            font-size: 14px;
-            margin-top: 4px;
-        }
-
-        .user-actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        .action-button {
-            padding: 6px 12px;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s;
-        }
-
-        .verify-button {
-            background-color: #1F49C7;
-            color: #ECEBF7;
-        }
-
-        .unverify-button {
-            background-color: #2A2D3A;
-            color: #B6B8C8;
-        }
-
-        .action-button:hover {
-            opacity: 0.9;
-        }
-
-        .search-container {
-            margin-bottom: 20px;
-        }
-
-        .search-input {
-            width: 100%;
-            padding: 12px;
-            border-radius: 12px;
-            border: none;
-            background-color: #1C1F28;
-            color: #ECEBF7;
-            font-size: 16px;
-            margin-bottom: 10px;
-        }
-
-        .search-input::placeholder {
-            color: #B6B8C8;
-        }
-
-        .verified-badge {
-            color: #1F49C7;
-            margin-left: 5px;
-            font-size: 16px;
-        }
     </style>
     <!-- Firebase SDK -->
     <script type="module" src="firebase-config.js"></script>
@@ -131,8 +47,7 @@
             query, 
             collection, 
             where, 
-            getDocs,
-            orderBy
+            getDocs
         } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
         // Admin password
@@ -144,123 +59,49 @@
             
             if (password === ADMIN_PASSWORD) {
                 document.getElementById('password-form').style.display = 'none';
-                document.getElementById('admin-console').style.display = 'block';
-                loadAllUsers();
+                document.getElementById('verify-form').style.display = 'block';
             } else {
                 errorMessage.textContent = 'Incorrect password';
                 errorMessage.style.display = 'block';
             }
         }
 
-        async function loadAllUsers() {
-            const userList = document.getElementById('user-list');
-            userList.innerHTML = '<div class="user-item">Loading users...</div>';
+        async function verifyUser() {
+            const username = document.getElementById('username').value.trim();
+            const verifyMessage = document.getElementById('verify-message');
+            const isGranting = document.querySelector('.tab.active').dataset.action === 'grant';
+            
+            if (!username) {
+                verifyMessage.textContent = 'Please enter a username';
+                verifyMessage.style.display = 'block';
+                return;
+            }
 
             try {
-                const usersQuery = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
+                // Search for user by username
+                const usersQuery = query(collection(db, 'users'), where('username', '==', username));
                 const usersSnapshot = await getDocs(usersQuery);
                 
                 if (usersSnapshot.empty) {
-                    userList.innerHTML = '<div class="user-item">No users found</div>';
+                    verifyMessage.textContent = 'User not found';
+                    verifyMessage.style.display = 'block';
                     return;
                 }
 
-                userList.innerHTML = '';
-                usersSnapshot.forEach(doc => {
-                    const user = doc.data();
-                    const userElement = createUserElement(doc.id, user);
-                    userList.appendChild(userElement);
-                });
-            } catch (error) {
-                console.error('Error loading users:', error);
-                userList.innerHTML = '<div class="user-item">Error loading users</div>';
-            }
-        }
-
-        function createUserElement(userId, user) {
-            const div = document.createElement('div');
-            div.className = 'user-item';
-            div.innerHTML = `
-                <div class="user-info">
-                    <div>
-                        ${user.username}
-                        ${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}
-                    </div>
-                    <div class="user-email">${user.email || 'No email'}</div>
-                </div>
-                <div class="user-actions">
-                    ${user.verified ? 
-                        `<button class="action-button unverify-button" onclick="window.unverifyUser('${userId}')">Unverify</button>` :
-                        `<button class="action-button verify-button" onclick="window.verifyUser('${userId}')">Verify</button>`
-                    }
-                </div>
-            `;
-            return div;
-        }
-
-        async function searchUsers() {
-            const searchTerm = document.getElementById('search-input').value.toLowerCase();
-            const userList = document.getElementById('user-list');
-            userList.innerHTML = '<div class="user-item">Searching...</div>';
-
-            try {
-                const usersQuery = query(collection(db, 'users'));
-                const usersSnapshot = await getDocs(usersQuery);
-                
-                if (usersSnapshot.empty) {
-                    userList.innerHTML = '<div class="user-item">No users found</div>';
-                    return;
-                }
-
-                userList.innerHTML = '';
-                let foundUsers = false;
-
-                usersSnapshot.forEach(doc => {
-                    const user = doc.data();
-                    if (user.email?.toLowerCase().includes(searchTerm) || 
-                        user.username?.toLowerCase().includes(searchTerm)) {
-                        const userElement = createUserElement(doc.id, user);
-                        userList.appendChild(userElement);
-                        foundUsers = true;
-                    }
-                });
-
-                if (!foundUsers) {
-                    userList.innerHTML = '<div class="user-item">No matching users found</div>';
-                }
-            } catch (error) {
-                console.error('Error searching users:', error);
-                userList.innerHTML = '<div class="user-item">Error searching users</div>';
-            }
-        }
-
-        async function verifyUser(userId) {
-            try {
-                await setDoc(doc(db, 'users', userId), {
-                    verified: true
+                const userDoc = usersSnapshot.docs[0];
+                await setDoc(doc(db, 'users', userDoc.id), {
+                    verified: isGranting
                 }, { merge: true });
-                loadAllUsers();
+
+                verifyMessage.textContent = `Successfully ${isGranting ? 'verified' : 'unverified'} ${username}`;
+                verifyMessage.style.color = '#4CAF50';
+                verifyMessage.style.display = 'block';
             } catch (error) {
-                console.error('Error verifying user:', error);
-                alert('Error verifying user. Please try again.');
+                console.error('Error updating verification status:', error);
+                verifyMessage.textContent = 'Error updating verification status. Please try again.';
+                verifyMessage.style.display = 'block';
             }
         }
-
-        async function unverifyUser(userId) {
-            try {
-                await setDoc(doc(db, 'users', userId), {
-                    verified: false
-                }, { merge: true });
-                loadAllUsers();
-            } catch (error) {
-                console.error('Error unverifying user:', error);
-                alert('Error unverifying user. Please try again.');
-            }
-        }
-
-        // Make functions available globally
-        window.verifyUser = verifyUser;
-        window.unverifyUser = unverifyUser;
 
         // Add event listeners when DOM is loaded
         document.addEventListener('DOMContentLoaded', () => {
@@ -274,12 +115,22 @@
                 }
             });
 
-            // Search input
-            const searchInput = document.getElementById('search-input');
-            let searchTimeout;
-            searchInput.addEventListener('input', () => {
-                clearTimeout(searchTimeout);
-                searchTimeout = setTimeout(searchUsers, 300);
+            // Verify form button
+            document.getElementById('verify-button').addEventListener('click', verifyUser);
+            
+            // Username input enter key
+            document.getElementById('username').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    verifyUser();
+                }
+            });
+
+            // Tab click handlers
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                });
             });
         });
     </script>
@@ -296,14 +147,17 @@
                 <p id="error-message" class="error-message"></p>
             </div>
 
-            <div id="admin-console" style="display: none;">
-                <h2>Admin Console</h2>
-                <div class="search-container">
-                    <input type="text" id="search-input" class="search-input" placeholder="Search by email or username...">
+            <div class="auth-form" id="verify-form" style="display: none;">
+                <h2>Manage Verification</h2>
+                <div class="form-group">
+                    <input type="text" id="username" placeholder="Enter username">
                 </div>
-                <div id="user-list" class="user-list">
-                    <!-- User list will be populated here -->
+                <div class="tab-container">
+                    <div class="tab active" data-action="grant">Grant</div>
+                    <div class="tab" data-action="revoke">Revoke</div>
                 </div>
+                <button id="verify-button">Update Verification</button>
+                <p id="verify-message" class="error-message"></p>
             </div>
         </div>
     </div>
