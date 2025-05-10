@@ -215,11 +215,8 @@ async function isUsernameTaken(username) {
         return !usersSnapshot.empty;
     } catch (error) {
         console.error('Error checking username:', error);
-        // If there's a permissions error, assume the username is taken to be safe
-        if (error.code === 'permission-denied') {
-            return true;
-        }
-        throw error; // Re-throw other errors
+        // Instead of assuming username is taken, throw the error to be handled by the caller
+        throw error;
     }
 }
 
@@ -260,9 +257,15 @@ async function signup() {
             usernameTaken = await isUsernameTaken(username);
         } catch (error) {
             console.error('Error checking username:', error);
-            showError(document.getElementById('signup-username'), 'Error checking username availability. Please try again.');
-            signupButton.classList.remove('loading');
-            return;
+            if (error.code === 'permission-denied') {
+                // If there's a permissions error, try to create the user anyway
+                // The Firestore rules will prevent duplicate usernames
+                usernameTaken = false;
+            } else {
+                showError(document.getElementById('signup-username'), 'Error checking username availability. Please try again.');
+                signupButton.classList.remove('loading');
+                return;
+            }
         }
         
         if (usernameTaken) {
