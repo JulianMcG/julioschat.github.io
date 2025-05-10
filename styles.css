@@ -1657,4 +1657,110 @@ input:checked + .slider:before {
     color: #ECEBF7;
     line-height: 1;
     transform: translateY(1px);
+}
+
+/* Message Reply Styles */
+.message-reply {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 8px;
+    padding: 8px 12px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.message-reply:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.reply-sender {
+    color: #1F49C7;
+    font-weight: 500;
+    margin-bottom: 2px;
+}
+
+.reply-content {
+    color: #B6B8C8;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 200px;
+}
+
+.reply-divider {
+    width: 2px;
+    background-color: #1F49C7;
+    margin: 0 8px;
+}
+
+.message.sent .message-reply {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.message.sent .reply-sender {
+    color: #ECEBF7;
+}
+
+.message.sent .reply-divider {
+    background-color: #ECEBF7;
+}
+
+.reply-close {
+    color: #B6B8C8;
+    cursor: pointer;
+    font-size: 16px;
+    margin-left: auto;
+    padding: 2px;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.reply-close:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.message-input.replying {
+    border: 1px solid #1F49C7;
+}
+
+.message-input .reply-preview {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background-color: rgba(31, 73, 199, 0.1);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    font-size: 13px;
+}
+
+.message-input .reply-preview .reply-sender {
+    color: #1F49C7;
+    font-weight: 500;
+}
+
+.message-input .reply-preview .reply-content {
+    color: #B6B8C8;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 200px;
+}
+
+.message-input .reply-preview .reply-close {
+    color: #B6B8C8;
+    cursor: pointer;
+    font-size: 16px;
+    margin-left: auto;
+    padding: 2px;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.message-input .reply-preview .reply-close:hover {
+    background-color: rgba(255, 255, 255, 0.1);
 } 
