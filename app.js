@@ -2073,15 +2073,33 @@ function createMessageElement(message, isSent) {
     messageDiv.appendChild(sender);
     messageDiv.appendChild(content);
 
+    // Create message actions container
+    const messageActions = document.createElement('div');
+    messageActions.className = 'message-actions';
+
     // Add reply button
     const replyButton = document.createElement('div');
-    replyButton.className = 'reaction-button';
+    replyButton.className = 'message-action';
     replyButton.innerHTML = '<span class="material-symbols-rounded" style="font-size: 18px;">reply</span>';
     replyButton.addEventListener('click', (e) => {
         e.stopPropagation();
         startReply(message);
     });
-    messageDiv.appendChild(replyButton);
+    messageActions.appendChild(replyButton);
+
+    // Add reaction button for received messages
+    if (!isSent) {
+        const reactionButton = document.createElement('div');
+        reactionButton.className = 'message-action';
+        reactionButton.innerHTML = '<span class="material-symbols-rounded" style="font-size: 18px;">add_reaction</span>';
+        reactionButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showReactionPicker(e, message.id);
+        });
+        messageActions.appendChild(reactionButton);
+    }
+
+    messageDiv.appendChild(messageActions);
 
     return messageDiv;
 }
