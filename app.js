@@ -2073,15 +2073,30 @@ function setupMessageListener() {
 // Function to find username by email
 window.findUsernameByEmail = async function(email) {
     try {
+        console.log('Searching for email:', email);
         const usersQuery = query(collection(db, 'users'), where('email', '==', email));
         const usersSnapshot = await getDocs(usersQuery);
         
+        console.log('Query results:', usersSnapshot.size, 'documents found');
+        
         if (usersSnapshot.empty) {
+            // Let's check if the email exists in a different case
+            const allUsers = await getDocs(collection(db, 'users'));
+            const matchingUser = allUsers.docs.find(doc => 
+                doc.data().email?.toLowerCase() === email.toLowerCase()
+            );
+            
+            if (matchingUser) {
+                console.log('Found user with different case:', matchingUser.data().email);
+                return matchingUser.data().username;
+            }
+            
             return null; // No user found with this email
         }
         
         const userDoc = usersSnapshot.docs[0];
         const userData = userDoc.data();
+        console.log('Found user data:', userData);
         return userData.username;
     } catch (error) {
         console.error('Error finding username by email:', error);
