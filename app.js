@@ -440,9 +440,26 @@ async function loadUsers() {
         for (const [userId, messageData] of latestMessages) {
             try {
                 const userDoc = await getDoc(doc(db, 'users', userId));
-                if (!userDoc.exists()) continue;
+                // Skip if user document doesn't exist or is deleted
+                if (!userDoc.exists()) {
+                    // Remove messages from deleted user
+                    const messagesToDelete = query(
+                        collection(db, 'messages'),
+                        where('participants', 'array-contains', userId)
+                    );
+                    const messagesSnapshot = await getDocs(messagesToDelete);
+                    const batch = writeBatch(db);
+                    messagesSnapshot.forEach(doc => {
+                        batch.delete(doc.ref);
+                    });
+                    await batch.commit();
+                    continue;
+                }
 
                 const userData = userDoc.data();
+                // Skip if user is marked as deleted
+                if (userData.deleted) continue;
+
                 users.push({
                     id: userId,
                     username: userData.username || 'Unknown User',
@@ -1155,6 +1172,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     usersSnapshot.forEach(doc => {
                         if (doc.id !== currentUser.uid) {
                             const user = doc.data();
+                            // Skip deleted users
+                            if (user.deleted) return;
+                            
                             const username = user.username?.toLowerCase() || '';
                             
                             if (username.includes(searchTerm)) {
