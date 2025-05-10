@@ -2071,7 +2071,7 @@ function setupMessageListener() {
 }
 
 // Function to find username by email
-async function findUsernameByEmail(email) {
+window.findUsernameByEmail = async function(email) {
     try {
         const usersQuery = query(collection(db, 'users'), where('email', '==', email));
         const usersSnapshot = await getDocs(usersQuery);
