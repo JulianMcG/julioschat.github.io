@@ -2086,12 +2086,27 @@ window.findUsernameByEmail = async function(email) {
             const userEmail = userData.email?.toLowerCase();
             const searchEmail = email.toLowerCase();
             
+            // Check if this is a Google signup
+            const isGoogleUser = userData.providerId === 'google.com' || 
+                               userData.providerData?.some(p => p.providerId === 'google.com');
+            
             console.log('Checking user:', {
                 uid: doc.id,
                 email: userEmail,
-                username: userData.username
+                username: userData.username,
+                isGoogleUser: isGoogleUser,
+                providerData: userData.providerData
             });
             
+            // For Google users, check their Google email
+            if (isGoogleUser) {
+                const googleEmail = userData.providerData?.find(p => p.providerId === 'google.com')?.email?.toLowerCase();
+                if (googleEmail === searchEmail) {
+                    return true;
+                }
+            }
+            
+            // Check regular email
             return userEmail === searchEmail;
         });
         
