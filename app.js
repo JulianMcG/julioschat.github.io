@@ -42,6 +42,9 @@ let notificationsEnabled = true;
 let lastSoundPlayTime = 0;
 const SOUND_COOLDOWN = 1000; // 1 second cooldown
 
+// Reply System Variables
+let currentReply = null;
+
 // Profile Picture Upload
 document.getElementById('profile-picture-preview').addEventListener('click', () => {
     document.getElementById('profile-picture-input').click();
@@ -1191,70 +1194,34 @@ window.addEventListener('click', (event) => {
 
 // Send message
 async function sendMessage(content) {
-    if (!currentUser || !currentChatUser) {
-        console.log('No current user or chat user');
-        return;
-    }
-    
-    if (!content) {
-        return;
-    }
+    if (!content.trim() || !currentUser || !currentChatUser) return;
 
-    // Strip out any image-related content
-    content = content.replace(/<img[^>]*>/g, ''); // Remove img tags
-    content = content.replace(/!\[.*?\]\(.*?\)/g, ''); // Remove markdown images
-    content = content.replace(/https?:\/\/.*?\.(jpg|jpeg|png|gif|webp)/gi, ''); // Remove image URLs
+    const messageData = {
+        content: content.trim(),
+        senderId: currentUser.uid,
+        senderName: currentUser.displayName,
+        timestamp: serverTimestamp(),
+        reactions: {}
+    };
+
+    // Add reply data if replying
+    if (currentReply) {
+        messageData.replyTo = {
+            messageId: currentReply.messageId,
+            senderName: currentReply.senderName,
+            content: currentReply.content
+        };
+    }
 
     try {
-        // Get receiver's blocked users list
-        const receiverDoc = await getDoc(doc(db, 'users', currentChatUser.id));
-        const receiverData = receiverDoc.data();
-        const receiverBlockedUsers = receiverData?.blockedUsers || [];
-
-        if (receiverBlockedUsers.includes(currentUser.uid)) {
-            alert('You cannot send messages to this user as they have blocked you.');
-            return;
-        }
-
-        const timestamp = serverTimestamp();
-
-        // Create message data
-        const messageData = {
-            content: content,
-            senderId: currentUser.uid,
-            receiverId: currentChatUser.id,
-            participants: [currentUser.uid, currentChatUser.id],
-            timestamp: timestamp
-        };
-
-        // Add message to Firestore
-        await addDoc(collection(db, 'messages'), messageData);
-
-        // Update last message time for both users
-        const batch = writeBatch(db);
+        const chatId = [currentUser.uid, currentChatUser.id].sort().join('_');
+        await addDoc(collection(db, 'chats', chatId, 'messages'), messageData);
         
-        // Update sender's last message time
-        const senderRef = doc(db, 'users', currentUser.uid);
-        batch.update(senderRef, {
-            [`conversations.${currentChatUser.id}.lastMessageTime`]: timestamp,
-            [`conversations.${currentChatUser.id}.lastMessage`]: content
-        });
-
-        // Update receiver's last message time
-        const receiverRef = doc(db, 'users', currentChatUser.id);
-        batch.update(receiverRef, {
-            [`conversations.${currentUser.uid}.lastMessageTime`]: timestamp,
-            [`conversations.${currentUser.uid}.lastMessage`]: content
-        });
-
-        // Commit the batch
-        await batch.commit();
-        
-        // Scroll to bottom
-        const chatMessages = document.getElementById('chat-messages');
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+        // Clear reply after sending
+        cancelReply();
     } catch (error) {
         console.error('Error sending message:', error);
+        alert('Error sending message. Please try again.');
     }
 }
 
@@ -2012,4 +1979,109 @@ function setupMessageListener() {
             }
         });
     });
+}
+
+// Start reply to a message
+function startReply(message) {
+    currentReply = {
+        messageId: message.id,
+        senderName: message.senderName,
+        content: message.content
+    };
+
+    const messageInput = document.querySelector('.message-input');
+    messageInput.classList.add('replying');
+
+    // Create or update reply preview
+    let replyPreview = messageInput.querySelector('.reply-preview');
+    if (!replyPreview) {
+        replyPreview = document.createElement('div');
+        replyPreview.className = 'reply-preview';
+        messageInput.insertBefore(replyPreview, messageInput.firstChild);
+    }
+
+    replyPreview.innerHTML = `
+        <div class="reply-sender">${message.senderName}</div>
+        <div class="reply-content">${message.content}</div>
+        <div class="reply-close material-symbols-rounded">close</div>
+    `;
+
+    // Add close button functionality
+    const closeButton = replyPreview.querySelector('.reply-close');
+    closeButton.addEventListener('click', cancelReply);
+
+    // Focus the input
+    const input = messageInput.querySelector('input');
+    input.focus();
+}
+
+// Cancel current reply
+function cancelReply() {
+    currentReply = null;
+    const messageInput = document.querySelector('.message-input');
+    messageInput.classList.remove('replying');
+    
+    const replyPreview = messageInput.querySelector('.reply-preview');
+    if (replyPreview) {
+        replyPreview.remove();
+    }
+}
+
+// Add event listener for escape key to cancel reply
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && currentReply) {
+        cancelReply();
+    }
+});
+
+function createMessageElement(message, isSent) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${isSent ? 'sent' : 'received'}`;
+    messageDiv.dataset.messageId = message.id;
+
+    // Add reply if exists
+    if (message.replyTo) {
+        const replyDiv = document.createElement('div');
+        replyDiv.className = 'message-reply';
+        
+        const replySender = document.createElement('div');
+        replySender.className = 'reply-sender';
+        replySender.textContent = message.replyTo.senderName;
+        
+        const replyDivider = document.createElement('div');
+        replyDivider.className = 'reply-divider';
+        
+        const replyContent = document.createElement('div');
+        replyContent.className = 'reply-content';
+        replyContent.textContent = message.replyTo.content;
+        
+        replyDiv.appendChild(replySender);
+        replyDiv.appendChild(replyDivider);
+        replyDiv.appendChild(replyContent);
+        
+        messageDiv.appendChild(replyDiv);
+    }
+
+    const sender = document.createElement('div');
+    sender.className = 'sender';
+    sender.textContent = message.senderName;
+
+    const content = document.createElement('div');
+    content.className = 'content';
+    content.innerHTML = formatMessageContent(message.content);
+
+    messageDiv.appendChild(sender);
+    messageDiv.appendChild(content);
+
+    // Add reply button
+    const replyButton = document.createElement('div');
+    replyButton.className = 'reaction-button';
+    replyButton.innerHTML = '<span class="material-symbols-rounded">reply</span>';
+    replyButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        startReply(message);
+    });
+    messageDiv.appendChild(replyButton);
+
+    return messageDiv;
 }
