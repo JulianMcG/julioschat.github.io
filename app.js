@@ -2077,6 +2077,22 @@ async function signInWithGoogle() {
                 displayName: username,
                 photoURL: user.photoURL
             });
+        } else {
+            // Update existing user's profile with latest Google data
+            const userData = userDoc.data();
+            await setDoc(doc(db, 'users', user.uid), {
+                email: user.email,
+                profilePicture: user.photoURL,
+                lastLogin: serverTimestamp()
+            }, { merge: true });
+
+            // Update Firebase Auth profile if needed
+            if (user.displayName !== userData.username) {
+                await updateProfile(user, {
+                    displayName: userData.username,
+                    photoURL: user.photoURL
+                });
+            }
         }
 
         // Show chat section
