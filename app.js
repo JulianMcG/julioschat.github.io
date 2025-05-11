@@ -1756,7 +1756,15 @@ async function saveUserAlias() {
         
         // Update username display if this is the current chat
         if (currentChatUser && currentChatUser.id === currentSelectedUser.id) {
-            document.getElementById('active-chat-username').textContent = alias || currentSelectedUser.username;
+            const chatHeader = document.querySelector('.chat-header');
+            if (chatHeader) {
+                const usernameSpan = chatHeader.querySelector('.username');
+                if (usernameSpan) {
+                    usernameSpan.textContent = alias || currentSelectedUser.username;
+                }
+            }
+            // Update currentChatUser to use the new alias
+            currentChatUser.username = alias || currentSelectedUser.username;
         }
         
         // Update the user item in the sidebar
@@ -1765,6 +1773,11 @@ async function saveUserAlias() {
             const usernameSpan = userItem.querySelector('.username');
             if (usernameSpan) {
                 usernameSpan.textContent = alias || currentSelectedUser.username;
+            }
+            // Update the profile picture alt text
+            const profilePicture = userItem.querySelector('.profile-picture');
+            if (profilePicture) {
+                profilePicture.alt = alias || currentSelectedUser.username;
             }
         }
         
