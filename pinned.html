@@ -28,7 +28,7 @@
         .pinned-contacts-row {
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             margin-bottom: 8px;
             padding: 0 20px;
             width: 100%;
@@ -37,7 +37,7 @@
         }
 
         .contact-circle {
-            width: min(calc((100vw - 280px) / 12), 80px);
+            width: min(calc((100vw - 200px) / 9), 80px);
             aspect-ratio: 1;
             border-radius: 50%;
             cursor: pointer;
@@ -67,7 +67,7 @@
 
         .contact-names {
             display: flex;
-            justify-content: center;
+            justify-content: flex-start;
             margin-top: 4px;
             padding: 0 20px;
             width: 100%;
@@ -76,7 +76,7 @@
         }
 
         .contact-name {
-            width: min(calc((100vw - 280px) / 12), 80px);
+            width: min(calc((100vw - 200px) / 9), 80px);
             text-align: center;
             font-size: 14px;
             color: #ECEBF7;
@@ -174,8 +174,8 @@
                         verified: userData.verified || false
                     });
 
-                    // Stop after getting 12 users
-                    if (recentUsers.length >= 12) break;
+                    // Stop after getting 9 users
+                    if (recentUsers.length >= 9) break;
                 }
 
                 // Clear existing contacts (except the add circle)
