@@ -1009,6 +1009,10 @@ body {
     top: 40%;
 }
 
+#compose-modal .modal-content.has-results {
+    top: 30%;
+}
+
 #compose-modal .search-container {
     background-color: #13161F;
     border-radius: 15px;
