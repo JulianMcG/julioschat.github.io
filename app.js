@@ -1355,35 +1355,32 @@ async function sendMessage(content) {
     }
 }
 
-// Update current user profile in sidebar
-function updateCurrentUserProfile(user) {
-    if (user) {
-        // Get user's verification status from Firestore
-        getDoc(doc(db, 'users', user.uid)).then(userDoc => {
-            const userData = userDoc.data();
-            const isVerified = userData?.verified || false;
-            
-            // Update username with verified badge if user is verified
-            const verifiedBadge = isVerified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : '';
-            document.getElementById('current-username').innerHTML = `${user.displayName || 'Username'}${verifiedBadge}`;
-            document.getElementById('current-user-avatar').src = user.photoURL || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
-
-            // Update user items in the list
-            const userItems = document.querySelectorAll('.user-item');
-            userItems.forEach(item => {
-                if (item.dataset.uid === user.uid) {
-                    item.querySelector('.username').innerHTML = `${user.displayName || 'Username'}${verifiedBadge}`;
-                    item.querySelector('img').src = user.photoURL || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
-                }
-            });
-        });
-    }
-}
-
 // Auth State Listener
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
     if (user) {
         currentUser = user;
+        
+        // Get or create user document
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (!userDoc.exists()) {
+            // Create new user document
+            await setDoc(doc(db, 'users', user.uid), {
+                username: user.displayName || user.email.split('@')[0],
+                email: user.email,
+                profilePicture: user.photoURL,
+                createdAt: serverTimestamp()
+            });
+        } else {
+            // Update Firebase Auth profile with Firestore data
+            const userData = userDoc.data();
+            if (user.displayName !== userData.username || user.photoURL !== userData.profilePicture) {
+                await updateProfile(user, {
+                    displayName: userData.username,
+                    photoURL: userData.profilePicture
+                });
+            }
+        }
+        
         updateCurrentUserProfile(user);
         showChatSection();
         loadNotificationSoundPreference();
@@ -1405,6 +1402,33 @@ onAuthStateChanged(auth, (user) => {
         }
     }
 });
+
+// Update current user profile in sidebar
+function updateCurrentUserProfile(user) {
+    if (user) {
+        // Get user's data from Firestore
+        getDoc(doc(db, 'users', user.uid)).then(userDoc => {
+            const userData = userDoc.data();
+            const isVerified = userData?.verified || false;
+            const username = userData?.username || user.displayName || 'Username';
+            const profilePicture = userData?.profilePicture || user.photoURL || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
+            
+            // Update username with verified badge if user is verified
+            const verifiedBadge = isVerified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : '';
+            document.getElementById('current-username').innerHTML = `${username}${verifiedBadge}`;
+            document.getElementById('current-user-avatar').src = profilePicture;
+
+            // Update user items in the list
+            const userItems = document.querySelectorAll('.user-item');
+            userItems.forEach(item => {
+                if (item.dataset.uid === user.uid) {
+                    item.querySelector('.username').innerHTML = `${username}${verifiedBadge}`;
+                    item.querySelector('img').src = profilePicture;
+                }
+            });
+        });
+    }
+}
 
 // Settings Modal Functions
 function openSettingsModal() {
