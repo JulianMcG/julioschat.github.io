@@ -147,8 +147,8 @@
                 const recentUsers = [];
 
                 // Get unique recent users
-                for (const doc of messagesSnapshot.docs) {
-                    const message = doc.data();
+                for (const messageDoc of messagesSnapshot.docs) {
+                    const message = messageDoc.data();
                     if (!message.participants) continue;
 
                     const otherUserId = message.participants.find(id => id !== currentUser.uid);
