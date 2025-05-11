@@ -401,6 +401,7 @@ async function loadUsers() {
         const currentUserData = currentUserDoc.data();
         const hiddenConversations = currentUserData?.hiddenConversations || [];
         const pinnedConversations = currentUserData?.pinnedConversations || [];
+        const userAliases = currentUserData?.userAliases || {};
 
         // Get all messages where current user is a participant
         const messagesQuery = query(
@@ -468,7 +469,8 @@ async function loadUsers() {
                     verified: userData.verified || false,
                     isPinned: pinnedConversations.includes(userId),
                     lastMessageTime: messageData.timestamp,
-                    lastMessage: messageData.content
+                    lastMessage: messageData.content,
+                    alias: userAliases[userId] || null
                 });
             } catch (error) {
                 console.error(`Error loading user ${userId}:`, error);
@@ -500,7 +502,7 @@ async function loadUsers() {
             // Add click handler for the user item
             userElement.onclick = (e) => {
                 if (!e.target.classList.contains('action-icon')) {
-                    startChat(user.id, user.username);
+                    startChat(user.id, user.alias || user.username);
                 }
             };
 
@@ -533,10 +535,10 @@ function createUserElement(user) {
     userElement.className = 'user-item';
     userElement.innerHTML = `
         <div class="profile-picture-container">
-            <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.username}" class="profile-picture">
+            <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.alias || user.username}" class="profile-picture">
             <div class="online-status"></div>
         </div>
-        <span class="username">${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
+        <span class="username">${user.alias || user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
         <div class="user-actions">
             <span class="material-symbols-outlined action-icon pin-icon">keep</span>
             <span class="material-symbols-outlined action-icon close-icon">close</span>
@@ -1739,6 +1741,15 @@ async function saveUserAlias() {
         // Update username display if this is the current chat
         if (currentChatUser && currentChatUser.id === currentSelectedUser.id) {
             document.getElementById('active-chat-username').textContent = alias || currentSelectedUser.username;
+        }
+        
+        // Update the user item in the sidebar
+        const userItem = document.querySelector(`.user-item[data-uid="${currentSelectedUser.id}"]`);
+        if (userItem) {
+            const usernameSpan = userItem.querySelector('.username');
+            if (usernameSpan) {
+                usernameSpan.textContent = alias || currentSelectedUser.username;
+            }
         }
         
         closeUserOptionsModal();
