@@ -103,6 +103,25 @@
             font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
             color: #1F49C7;
         }
+
+        .unread-message {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: #1C1F28;
+            color: #ECEBF7;
+            padding: 2px 6px;
+            border-radius: 15px 15px 15px 5px;
+            font-size: 12px;
+            font-weight: 500;
+            min-width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: translate(2px, -2px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
     </style>
 </head>
 <body>
@@ -151,14 +170,22 @@
                 const messagesSnapshot = await getDocs(messagesQuery);
                 const recentUserIds = new Set();
                 const recentUsers = [];
+                const unreadCounts = new Map();
 
-                // Get unique recent users
+                // Get unique recent users and count unread messages
                 for (const messageDoc of messagesSnapshot.docs) {
                     const message = messageDoc.data();
                     if (!message.participants) continue;
 
                     const otherUserId = message.participants.find(id => id !== currentUser.uid);
-                    if (!otherUserId || recentUserIds.has(otherUserId)) continue;
+                    if (!otherUserId) continue;
+
+                    // Count unread messages
+                    if (message.readBy && !message.readBy.includes(currentUser.uid)) {
+                        unreadCounts.set(otherUserId, (unreadCounts.get(otherUserId) || 0) + 1);
+                    }
+
+                    if (recentUserIds.has(otherUserId)) continue;
 
                     recentUserIds.add(otherUserId);
                     const userDoc = await getDoc(doc(db, 'users', otherUserId));
@@ -200,7 +227,10 @@
                     // Create contact circle
                     const contactCircle = document.createElement('div');
                     contactCircle.className = 'contact-circle';
-                    contactCircle.innerHTML = `<img src="${user.profilePicture}" alt="${user.username}">`;
+                    contactCircle.innerHTML = `
+                        <img src="${user.profilePicture}" alt="${user.username}">
+                        ${unreadCounts.get(user.id) ? `<div class="unread-message">${unreadCounts.get(user.id)}</div>` : ''}
+                    `;
                     contactCircle.onclick = () => window.open(`https://www.julios.games/chat?user=${user.id}`, '_blank');
                     pinnedContacts.insertBefore(contactCircle, addCircle);
 
