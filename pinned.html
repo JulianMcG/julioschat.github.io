@@ -28,16 +28,16 @@
         .pinned-contacts-row {
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content: center;
             margin-bottom: 8px;
             padding: 0 20px;
             width: 100%;
             box-sizing: border-box;
+            gap: 20px;
         }
 
         .contact-circle {
-            width: calc((100vw - 40px) / 13);
-            max-width: 80px;
+            width: min(calc((100vw - 280px) / 12), 80px);
             aspect-ratio: 1;
             border-radius: 50%;
             cursor: pointer;
@@ -67,16 +67,16 @@
 
         .contact-names {
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             margin-top: 4px;
             padding: 0 20px;
             width: 100%;
             box-sizing: border-box;
+            gap: 20px;
         }
 
         .contact-name {
-            width: calc((100vw - 40px) / 13);
-            max-width: 80px;
+            width: min(calc((100vw - 280px) / 12), 80px);
             text-align: center;
             font-size: 14px;
             color: #ECEBF7;
