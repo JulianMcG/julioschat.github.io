@@ -464,7 +464,7 @@ async function loadUsers() {
 
                 users.push({
                     id: userId,
-                    username: userData.username || userData.email?.split('@')[0] || 'Anonymous',
+                    username: userData.username,
                     profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
                     verified: userData.verified || false,
                     isPinned: pinnedConversations.includes(userId),
@@ -533,12 +533,13 @@ async function loadUsers() {
 function createUserElement(user) {
     const userElement = document.createElement('div');
     userElement.className = 'user-item';
+    const displayName = user.alias || user.username || 'Anonymous';
     userElement.innerHTML = `
         <div class="profile-picture-container">
-            <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.alias || user.username}" class="profile-picture">
+            <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${displayName}" class="profile-picture">
             <div class="online-status"></div>
         </div>
-        <span class="username">${user.alias || user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
+        <span class="username">${displayName}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
         <div class="user-actions">
             <span class="material-symbols-outlined action-icon pin-icon">keep</span>
             <span class="material-symbols-outlined action-icon close-icon">close</span>
