@@ -979,6 +979,9 @@ body {
     background-color: transparent;
     z-index: 1000;
     transition: background-color 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 #compose-modal.active {
@@ -989,22 +992,17 @@ body {
     background-color: transparent;
     width: 400px;
     max-width: 90%;
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) scale(0.9);
+    position: relative;
+    transform: scale(0.9);
     opacity: 0;
-    transition: all 0.3s ease;
+    transition: transform 0.3s ease, opacity 0.3s ease;
     padding: 0;
+    margin: 0;
 }
 
 #compose-modal.active .modal-content {
-    transform: translate(-50%, -50%) scale(1);
+    transform: scale(1);
     opacity: 1;
-}
-
-#compose-modal .modal-header {
-    display: none;
 }
 
 #compose-modal .search-container {
@@ -1015,6 +1013,7 @@ body {
     display: flex;
     align-items: center;
     transition: all 0.3s ease;
+    will-change: transform;
 }
 
 #compose-modal input {
@@ -1056,7 +1055,8 @@ body {
     padding: 10px;
     opacity: 0;
     transform: translateY(-10px);
-    transition: all 0.3s ease;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    will-change: transform, opacity;
 }
 
 .compose-results:has(.compose-user-item) {
