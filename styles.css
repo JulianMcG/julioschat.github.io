@@ -980,8 +980,9 @@ body {
     z-index: 1000;
     transition: background-color 0.3s ease;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
+    padding-top: 20vh;
 }
 
 #compose-modal.active {
@@ -1024,17 +1025,13 @@ body {
     padding: 12px;
     font-size: 16px;
     transition: all 0.3s ease;
+    -webkit-autofill: none;
+    -webkit-box-shadow: 0 0 0 30px #13161F inset !important;
+    -webkit-text-fill-color: #ECEBF7 !important;
 }
 
 #compose-modal input:focus {
     outline: none;
-}
-
-#compose-modal .search-icon {
-    color: #B6B8C8;
-    margin-right: 12px;
-    font-size: 20px;
-    transition: color 0.3s ease;
 }
 
 #compose-modal input::placeholder {
