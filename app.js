@@ -1185,6 +1185,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 modalContent.classList.add('has-text');
             } else {
                 modalContent.classList.remove('has-text');
+                modalContent.classList.remove('has-results');
             }
 
             if (searchTerm.length > 0) {
@@ -1218,6 +1219,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // Display suggestions
                     if (suggestions.length > 0) {
+                        modalContent.classList.add('has-results');
                         suggestions.forEach(user => {
                             const userElement = document.createElement('div');
                             userElement.className = 'compose-user-item';
@@ -1232,6 +1234,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             composeResults.appendChild(userElement);
                         });
                     } else {
+                        modalContent.classList.remove('has-results');
                         const noResults = document.createElement('div');
                         noResults.className = 'no-results';
                         noResults.textContent = 'No users found';
@@ -1239,6 +1242,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 } catch (error) {
                     console.error('Error searching users:', error);
+                    modalContent.classList.remove('has-results');
                     const errorElement = document.createElement('div');
                     errorElement.className = 'no-results';
                     errorElement.textContent = 'Error searching users. Please try again.';
