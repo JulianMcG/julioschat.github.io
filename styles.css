@@ -997,6 +997,7 @@ body {
     transition: transform 0.3s ease, opacity 0.3s ease, top 0.3s ease;
     padding: 0;
     margin: 0;
+    will-change: transform, opacity, top;
 }
 
 #compose-modal.active .modal-content {
@@ -1012,7 +1013,8 @@ body {
     display: flex;
     align-items: center;
     transition: all 0.3s ease;
-    will-change: transform;
+    will-change: transform, top;
+    position: relative;
 }
 
 #compose-modal input {
@@ -1059,13 +1061,14 @@ body {
     padding: 10px;
     opacity: 0;
     transform: translateY(-10px);
-    transition: transform 0.3s ease, opacity 0.3s ease;
-    will-change: transform, opacity;
+    transition: transform 0.3s ease, opacity 0.3s ease, margin-top 0.3s ease;
+    will-change: transform, opacity, margin-top;
 }
 
 .compose-results:has(.compose-user-item) {
     opacity: 1;
     transform: translateY(0);
+    margin-top: 10px;
 }
 
 .compose-user-item {
