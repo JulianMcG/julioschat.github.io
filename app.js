@@ -464,7 +464,7 @@ async function loadUsers() {
 
                 users.push({
                     id: userId,
-                    username: userData.username,
+                    username: userData.username || userData.email?.split('@')[0] || 'Anonymous',
                     profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
                     verified: userData.verified || false,
                     isPinned: pinnedConversations.includes(userId),
@@ -2063,11 +2063,18 @@ async function signInWithGoogle() {
         
         if (!userDoc.exists()) {
             // Create new user document if it doesn't exist
+            const username = user.displayName || user.email.split('@')[0];
             await setDoc(doc(db, 'users', user.uid), {
-                username: user.displayName || user.email.split('@')[0],
+                username: username,
                 email: user.email,
                 profilePicture: user.photoURL,
                 createdAt: serverTimestamp()
+            });
+
+            // Update Firebase Auth profile
+            await updateProfile(user, {
+                displayName: username,
+                photoURL: user.photoURL
             });
         }
 
