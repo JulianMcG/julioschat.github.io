@@ -15,7 +15,7 @@
             height: 100vh;
         }
 
-        .recent-contacts-container {
+        .pinned-contacts-container {
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -24,24 +24,26 @@
             padding: 0;
         }
 
-        .recent-contacts-row {
+        .pinned-contacts-row {
             display: flex;
             align-items: center;
-            justify-content: center;
             margin-bottom: 8px;
-            padding: 0 20px;
-            gap: 15px;
+            padding-left: 0;
         }
 
         .contact-circle {
-            width: 60px;
-            height: 60px;
+            width: 100px;
+            height: 100px;
             border-radius: 50%;
+            margin-right: 25px;
             cursor: pointer;
             overflow: hidden;
             position: relative;
             background-color: #13161F;
-            flex-shrink: 0;
+        }
+
+        .contact-circle:last-child {
+            margin-right: 0;
         }
 
         .contact-circle img {
@@ -59,31 +61,29 @@
 
         .add-circle .material-symbols-outlined {
             color: #B6B8C8;
-            font-size: 24px;
+            font-size: 40px;
         }
 
         .contact-names {
             display: flex;
-            justify-content: center;
             margin-top: 4px;
-            gap: 15px;
-            padding: 0 20px;
         }
 
         .contact-name {
-            width: 60px;
+            width: 100px;
+            margin-right: 25px;
             text-align: center;
-            font-size: 12px;
+            font-size: 14px;
             color: #ECEBF7;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 2px;
             cursor: pointer;
-            flex-shrink: 0;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+        }
+
+        .contact-name:last-child {
+            margin-right: 0;
         }
 
         .verified-badge {
@@ -93,15 +93,15 @@
         }
 
         .verified-badge .material-symbols-outlined {
-            font-size: 14px;
+            font-size: 16px;
             font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
             color: #1F49C7;
         }
     </style>
 </head>
 <body>
-    <div class="recent-contacts-container">
-        <div class="recent-contacts-row" id="recent-contacts">
+    <div class="pinned-contacts-container">
+        <div class="pinned-contacts-row" id="pinned-contacts">
             <!-- Recent contacts will be dynamically added here -->
         </div>
         <div class="contact-names" id="contact-names">
@@ -117,12 +117,12 @@
         let currentUser = null;
 
         // Add the plus circle
-        const recentContacts = document.getElementById('recent-contacts');
+        const pinnedContacts = document.getElementById('pinned-contacts');
         const addCircle = document.createElement('div');
         addCircle.className = 'contact-circle add-circle';
         addCircle.innerHTML = '<span class="material-symbols-outlined">add</span>';
         addCircle.onclick = () => window.open('https://www.julios.games/chat', '_blank');
-        recentContacts.appendChild(addCircle);
+        pinnedContacts.appendChild(addCircle);
 
         // Add empty space for the plus circle in names
         const contactNames = document.getElementById('contact-names');
@@ -169,8 +169,8 @@
                 }
 
                 // Clear existing contacts (except the add circle)
-                while (recentContacts.children.length > 1) {
-                    recentContacts.removeChild(recentContacts.lastChild);
+                while (pinnedContacts.children.length > 1) {
+                    pinnedContacts.removeChild(pinnedContacts.lastChild);
                 }
                 while (contactNames.children.length > 1) {
                     contactNames.removeChild(contactNames.lastChild);
@@ -183,7 +183,7 @@
                     contactCircle.className = 'contact-circle';
                     contactCircle.innerHTML = `<img src="${user.profilePicture}" alt="${user.username}">`;
                     contactCircle.onclick = () => window.open(`https://www.julios.games/chat?user=${user.id}`, '_blank');
-                    recentContacts.insertBefore(contactCircle, addCircle);
+                    pinnedContacts.insertBefore(contactCircle, addCircle);
 
                     // Create contact name
                     const contactName = document.createElement('div');
