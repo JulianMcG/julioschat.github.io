@@ -221,6 +221,58 @@ async function isUsernameTaken(username) {
     }
 }
 
+// Helper function to find Julio account and send welcome message
+async function sendWelcomeMessage(newUserId) {
+    try {
+        // Find Julio account
+        const julioQuery = query(collection(db, 'users'), where('username', '==', 'Julio'));
+        const julioSnapshot = await getDocs(julioQuery);
+        
+        if (julioSnapshot.empty) {
+            console.error('Julio account not found');
+            return;
+        }
+        
+        const julioDoc = julioSnapshot.docs[0];
+        const julioId = julioDoc.id;
+        
+        // Create welcome message
+        const welcomeMessage = {
+            content: "Hi there! Welcome to Julio's Chat. To begin, click the 'New Message' button at the top of the sidebar and search for users to chat with. If you need help, feel free to message me here.",
+            senderId: julioId,
+            receiverId: newUserId,
+            participants: [julioId, newUserId],
+            timestamp: serverTimestamp(),
+            readBy: [julioId]
+        };
+        
+        // Add message to Firestore
+        await addDoc(collection(db, 'messages'), welcomeMessage);
+        
+        // Update last message time for both users
+        const batch = writeBatch(db);
+        
+        // Update Julio's last message time
+        const julioRef = doc(db, 'users', julioId);
+        batch.update(julioRef, {
+            [`conversations.${newUserId}.lastMessageTime`]: welcomeMessage.timestamp,
+            [`conversations.${newUserId}.lastMessage`]: welcomeMessage.content
+        });
+        
+        // Update new user's last message time
+        const newUserRef = doc(db, 'users', newUserId);
+        batch.update(newUserRef, {
+            [`conversations.${julioId}.lastMessageTime`]: welcomeMessage.timestamp,
+            [`conversations.${julioId}.lastMessage`]: welcomeMessage.content
+        });
+        
+        // Commit the batch
+        await batch.commit();
+    } catch (error) {
+        console.error('Error sending welcome message:', error);
+    }
+}
+
 async function signup() {
     const username = document.getElementById('signup-username').value.trim();
     const email = document.getElementById('signup-email').value.trim();
@@ -291,6 +343,9 @@ async function signup() {
             displayName: username,
             photoURL: profilePicture
         });
+
+        // Send welcome message
+        await sendWelcomeMessage(userCredential.user.uid);
 
         // Show chat section
         showChatSection();
@@ -2069,6 +2124,9 @@ async function signInWithGoogle() {
                 profilePicture: user.photoURL,
                 createdAt: serverTimestamp()
             });
+
+            // Send welcome message for new Google sign-in users
+            await sendWelcomeMessage(user.uid);
         }
 
         // Show chat section
