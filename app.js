@@ -2091,34 +2091,36 @@ async function signInWithGoogle() {
         if (!userDoc.exists()) {
             // Create new user document if it doesn't exist
             const username = user.displayName || user.email.split('@')[0];
+            
+            // First update Firebase Auth profile
+            await updateProfile(user, {
+                displayName: username,
+                photoURL: user.photoURL
+            });
+
+            // Then create Firestore document
             await setDoc(doc(db, 'users', user.uid), {
                 username: username,
                 email: user.email,
                 profilePicture: user.photoURL,
                 createdAt: serverTimestamp()
             });
-
-            // Update Firebase Auth profile
-            await updateProfile(user, {
-                displayName: username,
-                photoURL: user.photoURL
-            });
         } else {
             // Update existing user's profile with latest Google data
             const userData = userDoc.data();
+            
+            // Update Firestore document
             await setDoc(doc(db, 'users', user.uid), {
                 email: user.email,
                 profilePicture: user.photoURL,
                 lastLogin: serverTimestamp()
             }, { merge: true });
 
-            // Update Firebase Auth profile if needed
-            if (user.displayName !== userData.username) {
-                await updateProfile(user, {
-                    displayName: userData.username,
-                    photoURL: user.photoURL
-                });
-            }
+            // Update Firebase Auth profile to match Firestore data
+            await updateProfile(user, {
+                displayName: userData.username,
+                photoURL: user.photoURL
+            });
         }
 
         // Show chat section
