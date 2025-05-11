@@ -29,17 +29,18 @@
             align-items: center;
             margin-bottom: 8px;
             padding-left: 0;
+            gap: 20px;
         }
 
         .contact-circle {
-            width: 100px;
-            height: 100px;
+            width: 80px;
+            height: 80px;
             border-radius: 50%;
-            margin-right: 25px;
             cursor: pointer;
             overflow: hidden;
             position: relative;
             background-color: #13161F;
+            flex-shrink: 0;
         }
 
         .contact-circle:last-child {
@@ -61,17 +62,17 @@
 
         .add-circle .material-symbols-outlined {
             color: #B6B8C8;
-            font-size: 40px;
+            font-size: 32px;
         }
 
         .contact-names {
             display: flex;
             margin-top: 4px;
+            gap: 20px;
         }
 
         .contact-name {
-            width: 100px;
-            margin-right: 25px;
+            width: 80px;
             text-align: center;
             font-size: 14px;
             color: #ECEBF7;
@@ -80,6 +81,10 @@
             justify-content: center;
             gap: 2px;
             cursor: pointer;
+            flex-shrink: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .contact-name:last-child {
@@ -88,13 +93,14 @@
 
         .verified-badge {
             color: #1F49C7;
-            display: flex;
+            display: inline-flex;
             align-items: center;
+            margin-left: 2px;
         }
 
         .verified-badge .material-symbols-outlined {
             font-size: 16px;
-            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
             color: #1F49C7;
         }
     </style>
@@ -168,8 +174,8 @@
                         verified: userData.verified || false
                     });
 
-                    // Stop after getting 14 users
-                    if (recentUsers.length >= 14) break;
+                    // Stop after getting 9 users
+                    if (recentUsers.length >= 9) break;
                 }
 
                 // Clear existing contacts (except the add circle)
@@ -194,7 +200,7 @@
                     contactName.className = 'contact-name';
                     contactName.innerHTML = `
                         ${user.username}
-                        ${user.verified ? '<span class="verified-badge"><span class="material-symbols-filled">verified</span></span>' : ''}
+                        ${user.verified ? '<span class="verified-badge"><span class="material-symbols-outlined">verified</span></span>' : ''}
                     `;
                     contactName.onclick = () => window.open(`https://www.julios.games/chat?user=${user.id}`, '_blank');
                     contactNames.insertBefore(contactName, emptyName);
