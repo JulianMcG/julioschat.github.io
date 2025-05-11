@@ -1732,10 +1732,20 @@ async function saveUserAlias() {
     const alias = aliasInput.value.trim();
     
     try {
+        // First get the current user's data to preserve existing aliases
+        const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        const currentUserData = currentUserDoc.data();
+        const existingAliases = currentUserData?.userAliases || {};
+        
+        // Create new aliases object with the updated alias
+        const updatedAliases = {
+            ...existingAliases,
+            [currentSelectedUser.id]: alias
+        };
+        
+        // Update Firestore with the merged aliases
         await setDoc(doc(db, 'users', currentUser.uid), {
-            userAliases: {
-                [currentSelectedUser.id]: alias
-            }
+            userAliases: updatedAliases
         }, { merge: true });
         
         // Update username display if this is the current chat
