@@ -533,7 +533,7 @@ async function loadUsers() {
 function createUserElement(user) {
     const userElement = document.createElement('div');
     userElement.className = 'user-item';
-    const displayName = user.alias || user.username || 'Anonymous';
+    const displayName = user.alias || user.username;
     userElement.innerHTML = `
         <div class="profile-picture-container">
             <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${displayName}" class="profile-picture">
