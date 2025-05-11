@@ -599,18 +599,20 @@ async function startChat(userId, username) {
     const currentUserDocRef = await getDoc(doc(db, 'users', currentUser.uid));
     const currentUserDataRef = currentUserDocRef.data();
     const userAliases = currentUserDataRef?.userAliases || {};
-    const alias = userAliases[userId] || username;
+    
+    // Get the other user's data
+    const otherUserDoc = await getDoc(doc(db, 'users', userId));
+    const otherUserData = otherUserDoc.data();
+    const actualUsername = otherUserData.username;
+    const alias = userAliases[userId] || actualUsername;
     
     currentChatUser = { id: userId, username: alias };
     
     // Check if user is already in sidebar
     const existingUser = document.querySelector(`.user-item[data-uid="${userId}"]`);
     if (!existingUser) {
-        // Get user's profile picture and verification status
-        const userDoc = await getDoc(doc(db, 'users', userId));
-        const userData = userDoc.data();
-        const profilePicture = userData?.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
-        const isVerified = userData?.verified || false;
+        const profilePicture = otherUserData?.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
+        const isVerified = otherUserData?.verified || false;
 
         // Create new user element
         const userElement = document.createElement('div');
