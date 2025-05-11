@@ -29,7 +29,7 @@
             display: flex;
             align-items: center;
             justify-content: flex-start;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
             padding: 0 20px;
             width: 100%;
             box-sizing: border-box;
@@ -54,7 +54,7 @@
         }
 
         .add-circle {
-            display: flex;
+            display: none;
             align-items: center;
             justify-content: center;
             background-color: #13161F;
@@ -68,7 +68,7 @@
         .contact-names {
             display: flex;
             justify-content: flex-start;
-            margin-top: 4px;
+            margin-top: 2px;
             padding: 0 20px;
             width: 100%;
             box-sizing: border-box;
@@ -78,7 +78,7 @@
         .contact-name {
             width: calc((100vw - 220px) / 10);
             text-align: center;
-            font-size: 14px;
+            font-size: 16px;
             color: #ECEBF7;
             display: flex;
             align-items: center;
@@ -184,6 +184,15 @@
                 }
                 while (contactNames.children.length > 1) {
                     contactNames.removeChild(contactNames.lastChild);
+                }
+
+                // Show/hide add circle based on number of contacts
+                if (recentUsers.length < 10) {
+                    addCircle.style.display = 'flex';
+                    emptyName.style.display = 'flex';
+                } else {
+                    addCircle.style.display = 'none';
+                    emptyName.style.display = 'none';
                 }
 
                 // Add recent contacts
