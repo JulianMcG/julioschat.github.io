@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pinned Contacts - Julio's Chat</title>
+    <title>Recent Contacts - Julio's Chat</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
@@ -15,7 +15,7 @@
             height: 100vh;
         }
 
-        .pinned-contacts-container {
+        .recent-contacts-container {
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -24,26 +24,24 @@
             padding: 0;
         }
 
-        .pinned-contacts-row {
+        .recent-contacts-row {
             display: flex;
             align-items: center;
+            justify-content: center;
             margin-bottom: 8px;
-            padding-left: 0;
+            padding: 0 20px;
+            gap: 15px;
         }
 
         .contact-circle {
-            width: 100px;
-            height: 100px;
+            width: 60px;
+            height: 60px;
             border-radius: 50%;
-            margin-right: 25px;
             cursor: pointer;
             overflow: hidden;
             position: relative;
             background-color: #13161F;
-        }
-
-        .contact-circle:last-child {
-            margin-right: 0;
+            flex-shrink: 0;
         }
 
         .contact-circle img {
@@ -61,29 +59,31 @@
 
         .add-circle .material-symbols-outlined {
             color: #B6B8C8;
-            font-size: 40px;
+            font-size: 24px;
         }
 
         .contact-names {
             display: flex;
+            justify-content: center;
             margin-top: 4px;
+            gap: 15px;
+            padding: 0 20px;
         }
 
         .contact-name {
-            width: 100px;
-            margin-right: 25px;
+            width: 60px;
             text-align: center;
-            font-size: 14px;
+            font-size: 12px;
             color: #ECEBF7;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 2px;
             cursor: pointer;
-        }
-
-        .contact-name:last-child {
-            margin-right: 0;
+            flex-shrink: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .verified-badge {
@@ -93,16 +93,16 @@
         }
 
         .verified-badge .material-symbols-outlined {
-            font-size: 16px;
+            font-size: 14px;
             font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
             color: #1F49C7;
         }
     </style>
 </head>
 <body>
-    <div class="pinned-contacts-container">
-        <div class="pinned-contacts-row" id="pinned-contacts">
-            <!-- Pinned contacts will be dynamically added here -->
+    <div class="recent-contacts-container">
+        <div class="recent-contacts-row" id="recent-contacts">
+            <!-- Recent contacts will be dynamically added here -->
         </div>
         <div class="contact-names" id="contact-names">
             <!-- Contact names will be dynamically added here -->
@@ -112,17 +112,17 @@
     <script type="module">
         import { auth, db } from './firebase-config.js';
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { doc, getDoc, collection, query, where, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         let currentUser = null;
 
         // Add the plus circle
-        const pinnedContacts = document.getElementById('pinned-contacts');
+        const recentContacts = document.getElementById('recent-contacts');
         const addCircle = document.createElement('div');
         addCircle.className = 'contact-circle add-circle';
         addCircle.innerHTML = '<span class="material-symbols-outlined">add</span>';
         addCircle.onclick = () => window.open('https://www.julios.games/chat', '_blank');
-        pinnedContacts.appendChild(addCircle);
+        recentContacts.appendChild(addCircle);
 
         // Add empty space for the plus circle in names
         const contactNames = document.getElementById('contact-names');
@@ -130,47 +130,73 @@
         emptyName.className = 'contact-name';
         contactNames.appendChild(emptyName);
 
-        // Load pinned contacts
-        async function loadPinnedContacts() {
+        // Load recent contacts
+        async function loadRecentContacts() {
             if (!currentUser) return;
 
             try {
-                const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-                const userData = userDoc.data();
-                const pinnedConversations = userData?.pinnedConversations || [];
+                // Get the 15 most recent messages
+                const messagesQuery = query(
+                    collection(db, 'messages'),
+                    where('participants', 'array-contains', currentUser.uid),
+                    orderBy('timestamp', 'desc'),
+                    limit(15)
+                );
+                
+                const messagesSnapshot = await getDocs(messagesQuery);
+                const recentUserIds = new Set();
+                const recentUsers = [];
+
+                // Get unique recent users
+                for (const doc of messagesSnapshot.docs) {
+                    const message = doc.data();
+                    const otherUserId = message.participants.find(id => id !== currentUser.uid);
+                    
+                    if (otherUserId && !recentUserIds.has(otherUserId)) {
+                        recentUserIds.add(otherUserId);
+                        const userDoc = await getDoc(doc(db, 'users', otherUserId));
+                        const userData = userDoc.data();
+                        
+                        if (userData && !userData.deleted) {
+                            recentUsers.push({
+                                id: otherUserId,
+                                username: userData.username,
+                                profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
+                                verified: userData.verified || false
+                            });
+                        }
+                    }
+                }
 
                 // Clear existing contacts (except the add circle)
-                while (pinnedContacts.children.length > 1) {
-                    pinnedContacts.removeChild(pinnedContacts.lastChild);
+                while (recentContacts.children.length > 1) {
+                    recentContacts.removeChild(recentContacts.lastChild);
                 }
                 while (contactNames.children.length > 1) {
                     contactNames.removeChild(contactNames.lastChild);
                 }
 
-                // Add pinned contacts
-                for (const userId of pinnedConversations) {
-                    const contactDoc = await getDoc(doc(db, 'users', userId));
-                    const contactData = contactDoc.data();
-
+                // Add recent contacts
+                for (const user of recentUsers) {
                     // Create contact circle
                     const contactCircle = document.createElement('div');
                     contactCircle.className = 'contact-circle';
-                    contactCircle.innerHTML = `<img src="${contactData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${contactData.username}">`;
-                    contactCircle.onclick = () => window.open(`https://www.julios.games/chat?user=${userId}`, '_blank');
-                    pinnedContacts.insertBefore(contactCircle, addCircle);
+                    contactCircle.innerHTML = `<img src="${user.profilePicture}" alt="${user.username}">`;
+                    contactCircle.onclick = () => window.open(`https://www.julios.games/chat?user=${user.id}`, '_blank');
+                    recentContacts.insertBefore(contactCircle, addCircle);
 
                     // Create contact name
                     const contactName = document.createElement('div');
                     contactName.className = 'contact-name';
                     contactName.innerHTML = `
-                        ${contactData.username}
-                        ${contactData.verified ? '<span class="verified-badge"><span class="material-symbols-filled">verified</span></span>' : ''}
+                        ${user.username}
+                        ${user.verified ? '<span class="verified-badge"><span class="material-symbols-filled">verified</span></span>' : ''}
                     `;
-                    contactName.onclick = () => window.open(`https://www.julios.games/chat?user=${userId}`, '_blank');
+                    contactName.onclick = () => window.open(`https://www.julios.games/chat?user=${user.id}`, '_blank');
                     contactNames.insertBefore(contactName, emptyName);
                 }
             } catch (error) {
-                console.error('Error loading pinned contacts:', error);
+                console.error('Error loading recent contacts:', error);
             }
         }
 
@@ -178,7 +204,7 @@
         onAuthStateChanged(auth, (user) => {
             currentUser = user;
             if (user) {
-                loadPinnedContacts();
+                loadRecentContacts();
             } else {
                 window.open('https://www.julios.games/chat', '_blank');
             }
