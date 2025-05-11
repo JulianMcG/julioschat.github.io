@@ -989,15 +989,15 @@ body {
     background-color: transparent;
     width: 400px;
     max-width: 90%;
-    position: absolute;
+    position: fixed;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%) scale(0.9);
     opacity: 0;
-    transition: transform 0.3s ease, opacity 0.3s ease, top 0.3s ease;
+    transition: transform 0.3s ease, opacity 0.3s ease;
     padding: 0;
     margin: 0;
-    will-change: transform, opacity, top;
+    will-change: transform, opacity;
 }
 
 #compose-modal.active .modal-content {
@@ -1013,8 +1013,7 @@ body {
     display: flex;
     align-items: center;
     transition: all 0.3s ease;
-    will-change: transform, top;
-    position: relative;
+    will-change: transform;
 }
 
 #compose-modal input {
@@ -1061,14 +1060,16 @@ body {
     padding: 10px;
     opacity: 0;
     transform: translateY(-10px);
-    transition: transform 0.3s ease, opacity 0.3s ease, margin-top 0.3s ease;
-    will-change: transform, opacity, margin-top;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    will-change: transform, opacity;
+    position: absolute;
+    width: 100%;
+    left: 0;
 }
 
 .compose-results:has(.compose-user-item) {
     opacity: 1;
     transform: translateY(0);
-    margin-top: 10px;
 }
 
 .compose-user-item {
