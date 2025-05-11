@@ -249,6 +249,7 @@ body {
     display: flex;
     height: 100vh;
     width: 100%;
+    min-width: 0;
 }
 
 .sidebar {
@@ -261,7 +262,7 @@ body {
     position: relative;
     height: 100vh;
     overflow: hidden;
-    transition: width 0.3s ease;
+    transition: all 0.3s ease;
 }
 
 .sidebar.collapsed {
@@ -509,6 +510,7 @@ body {
 
 .chat-area {
     flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     background-color: #13161F;
@@ -568,7 +570,7 @@ body {
 .message {
     margin-bottom: 8px;
     padding: 12px 20px;
-    max-width: 60%;
+    max-width: 80%;
     position: relative;
     line-height: 1.4;
     word-wrap: break-word;
@@ -576,7 +578,7 @@ body {
 }
 
 .message-bubble {
-    max-width: 60%;
+    max-width: 80%;
     padding: 10px 15px;
     margin: 5px 0;
     border-radius: 5px;
@@ -697,7 +699,7 @@ body {
     height: 48px;
     line-height: 1.4;
     word-wrap: break-word;
-    max-width: 60%;
+    max-width: 80%;
     position: relative;
     margin-bottom: 8px;
 }
@@ -1659,4 +1661,48 @@ input:checked + .slider:before {
     color: #ECEBF7;
     line-height: 1;
     transform: translateY(1px);
+}
+
+/* Media query for auto-collapse */
+@media screen and (max-width: 768px) {
+    .sidebar {
+        width: 80px;
+        min-width: 80px;
+        padding: 20px 10px;
+    }
+    
+    .sidebar .sidebar-header h3,
+    .sidebar .search-container,
+    .sidebar .username,
+    .sidebar .user-actions,
+    .sidebar .profile-info span,
+    .sidebar .profile-info img {
+        display: none;
+    }
+    
+    .sidebar .profile-picture-container,
+    .sidebar .profile-info img {
+        margin-right: 0;
+    }
+    
+    .sidebar .user-item {
+        justify-content: center;
+        padding: 10px 0;
+    }
+    
+    .sidebar .toggle-sidebar {
+        transform: none;
+    }
+    
+    .sidebar .user-item:hover .user-actions {
+        display: none;
+    }
+    
+    .sidebar .profile-section {
+        justify-content: center;
+    }
+    
+    .sidebar .profile-info {
+        display: none;
+    }
 } 
