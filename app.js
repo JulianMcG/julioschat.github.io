@@ -594,7 +594,13 @@ function createUserElement(user) {
 }
 
 async function startChat(userId, username) {
-    currentChatUser = { id: userId, username: username };
+    // Get current user's data to check for aliases
+    const currentUserDocRef = await getDoc(doc(db, 'users', currentUser.uid));
+    const currentUserDataRef = currentUserDocRef.data();
+    const userAliases = currentUserDataRef?.userAliases || {};
+    const alias = userAliases[userId] || username;
+    
+    currentChatUser = { id: userId, username: alias };
     
     // Check if user is already in sidebar
     const existingUser = document.querySelector(`.user-item[data-uid="${userId}"]`);
@@ -611,10 +617,10 @@ async function startChat(userId, username) {
         userElement.dataset.uid = userId;
         userElement.innerHTML = `
             <div class="profile-picture-container">
-                <img src="${profilePicture}" alt="${username}" class="profile-picture">
+                <img src="${profilePicture}" alt="${alias}" class="profile-picture">
                 <div class="online-status"></div>
             </div>
-            <span class="username">${username}${isVerified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
+            <span class="username">${alias}${isVerified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
             <div class="user-actions">
                 <span class="material-symbols-outlined action-icon pin-icon">keep</span>
                 <span class="material-symbols-outlined action-icon close-icon">close</span>
@@ -624,7 +630,7 @@ async function startChat(userId, username) {
         // Add click handler for the user item
         userElement.onclick = (e) => {
             if (!e.target.classList.contains('action-icon')) {
-                startChat(userId, username);
+                startChat(userId, alias);
             }
         };
 
@@ -655,9 +661,9 @@ async function startChat(userId, username) {
             }
             
             try {
-                const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-                const userData = userDoc.data();
-                const pinnedConversations = userData?.pinnedConversations || [];
+                const userDocRef = await getDoc(doc(db, 'users', currentUser.uid));
+                const userDataRef = userDocRef.data();
+                const pinnedConversations = userDataRef?.pinnedConversations || [];
                 
                 if (!isPinned) {
                     if (!pinnedConversations.includes(userId)) {
@@ -698,7 +704,7 @@ async function startChat(userId, username) {
 
     // Update chat header with verified badge if user is verified
     const verifiedBadge = isVerified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : '';
-    document.getElementById('active-chat-username').innerHTML = `${username}${verifiedBadge}`;
+    document.getElementById('active-chat-username').innerHTML = `${alias}${verifiedBadge}`;
 
     // Show message input and user options icon
     const messageInput = document.querySelector('.message-input');
@@ -706,9 +712,9 @@ async function startChat(userId, username) {
     document.querySelector('.chat-header svg').style.display = 'block';
 
     // Check if user is blocked
-    const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
-    const currentUserData = currentUserDoc.data();
-    const blockedUsers = currentUserData?.blockedUsers || [];
+    const currentUserDocRef2 = await getDoc(doc(db, 'users', currentUser.uid));
+    const currentUserDataRef2 = currentUserDocRef2.data();
+    const blockedUsers = currentUserDataRef2?.blockedUsers || [];
 
     // Update message input state immediately
     const messageInputField = document.getElementById('message-input');
@@ -727,7 +733,7 @@ async function startChat(userId, username) {
                 try {
                     // Update UI immediately
                     messageInput.classList.remove('blocked');
-                    messageInputField.placeholder = `Message ${username}`;
+                    messageInputField.placeholder = `Message ${alias}`;
                     messageInputField.disabled = false;
                     unblockButton.remove();
                     
@@ -749,7 +755,7 @@ async function startChat(userId, username) {
     } else {
         // User is not blocked, show normal state
         messageInput.classList.remove('blocked');
-        messageInputField.placeholder = `Message ${username}`;
+        messageInputField.placeholder = `Message ${alias}`;
         messageInputField.disabled = false;
         
         // Remove unblock button if it exists
