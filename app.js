@@ -1075,11 +1075,27 @@ function checkFirebaseConnection() {
 function openComposeModal() {
     const modal = document.getElementById('compose-modal');
     modal.style.display = 'block';
+    // Trigger reflow
+    modal.offsetHeight;
+    modal.classList.add('active');
+    // Focus the search input
+    const searchInput = document.getElementById('compose-search');
+    searchInput.focus();
 }
 
 function closeComposeModal() {
     const modal = document.getElementById('compose-modal');
-    modal.style.display = 'none';
+    modal.classList.remove('active');
+    // Wait for animation to complete before hiding
+    setTimeout(() => {
+        modal.style.display = 'none';
+        // Clear search results
+        const composeResults = document.getElementById('compose-results');
+        composeResults.innerHTML = '';
+        // Clear search input
+        const searchInput = document.getElementById('compose-search');
+        searchInput.value = '';
+    }, 300);
 }
 
 // Compose new message
@@ -1281,7 +1297,8 @@ async function sendMessage(content) {
             senderId: currentUser.uid,
             receiverId: currentChatUser.id,
             participants: [currentUser.uid, currentChatUser.id],
-            timestamp: timestamp
+            timestamp: timestamp,
+            readBy: [currentUser.uid] // Initialize readBy with sender's ID
         };
 
         // Add message to Firestore
