@@ -969,22 +969,56 @@ body {
 }
 
 /* Compose Modal Styles */
+#compose-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: transparent;
+    z-index: 1000;
+    transition: background-color 0.3s ease;
+}
+
+#compose-modal.active {
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
 #compose-modal .modal-content {
-    background-color: #0c0e16;
-    border-radius: 15px;
+    background-color: transparent;
     width: 400px;
     max-width: 90%;
-    margin: 10% auto;
-    padding: 20px;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    opacity: 0;
+    transition: all 0.3s ease;
+    padding: 0;
+}
+
+#compose-modal.active .modal-content {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+}
+
+#compose-modal .modal-header {
+    display: none;
 }
 
 #compose-modal .search-container {
-    background-color: #13161F;
-    border-radius: 8px;
-    padding: 10px;
-    margin-bottom: 10px;
+    background-color: transparent;
+    border-radius: 15px;
+    padding: 15px;
+    margin: 0;
     display: flex;
     align-items: center;
+    transition: all 0.3s ease;
+}
+
+#compose-modal .search-container:has(input:not(:placeholder-shown)) {
+    background-color: #13161F;
 }
 
 #compose-modal input {
@@ -992,8 +1026,9 @@ body {
     border: none;
     color: #ECEBF7;
     width: 100%;
-    padding: 8px;
-    font-size: 14px;
+    padding: 12px;
+    font-size: 16px;
+    transition: all 0.3s ease;
 }
 
 #compose-modal input:focus {
@@ -1002,8 +1037,9 @@ body {
 
 #compose-modal .search-icon {
     color: #B6B8C8;
-    margin-right: 8px;
-    font-size: 18px;
+    margin-right: 12px;
+    font-size: 20px;
+    transition: color 0.3s ease;
 }
 
 #compose-modal input::placeholder {
@@ -1019,10 +1055,17 @@ body {
     gap: 5px;
     scrollbar-width: none;
     -ms-overflow-style: none;
+    background-color: #13161F;
+    border-radius: 15px;
+    padding: 10px;
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
 }
 
-.compose-results::-webkit-scrollbar {
-    display: none;
+.compose-results:has(.compose-user-item) {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 .compose-user-item {
