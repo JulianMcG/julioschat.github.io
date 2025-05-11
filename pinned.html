@@ -37,7 +37,7 @@
         }
 
         .contact-circle {
-            width: min(calc((100vw - 200px) / 9), 80px);
+            width: calc((100vw - 220px) / 10);
             aspect-ratio: 1;
             border-radius: 50%;
             cursor: pointer;
@@ -76,7 +76,7 @@
         }
 
         .contact-name {
-            width: min(calc((100vw - 200px) / 9), 80px);
+            width: calc((100vw - 220px) / 10);
             text-align: center;
             font-size: 14px;
             color: #ECEBF7;
@@ -174,8 +174,8 @@
                         verified: userData.verified || false
                     });
 
-                    // Stop after getting 9 users
-                    if (recentUsers.length >= 9) break;
+                    // Stop after getting 10 users
+                    if (recentUsers.length >= 10) break;
                 }
 
                 // Clear existing contacts (except the add circle)
