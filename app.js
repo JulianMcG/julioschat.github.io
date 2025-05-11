@@ -1177,7 +1177,15 @@ document.addEventListener('DOMContentLoaded', () => {
         composeSearch.addEventListener('input', async (e) => {
             const searchTerm = e.target.value.toLowerCase();
             const composeResults = document.getElementById('compose-results');
+            const modalContent = document.querySelector('#compose-modal .modal-content');
             composeResults.innerHTML = '';
+
+            // Toggle has-text class based on input
+            if (searchTerm.length > 0) {
+                modalContent.classList.add('has-text');
+            } else {
+                modalContent.classList.remove('has-text');
+            }
 
             if (searchTerm.length > 0) {
                 try {
