@@ -209,7 +209,7 @@
                     contactName.className = 'contact-name';
                     contactName.innerHTML = `
                         ${user.username}
-                        ${user.verified ? '<span class="verified-badge"><span class="material-symbols-outlined">verified</span></span>' : ''}
+                        ${user.verified ? '<span class="verified-badge"><span class="material-symbols-outlined" style="font-variation-settings: \'FILL\' 1, \'wght\' 400, \'GRAD\' 0, \'opsz\' 24">verified</span></span>' : ''}
                     `;
                     contactName.onclick = () => window.open(`https://www.julios.games/chat?user=${user.id}`, '_blank');
                     contactNames.insertBefore(contactName, emptyName);
