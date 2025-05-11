@@ -1008,17 +1008,13 @@ body {
 }
 
 #compose-modal .search-container {
-    background-color: transparent;
+    background-color: #13161F;
     border-radius: 15px;
     padding: 15px;
     margin: 0;
     display: flex;
     align-items: center;
     transition: all 0.3s ease;
-}
-
-#compose-modal .search-container:has(input:not(:placeholder-shown)) {
-    background-color: #13161F;
 }
 
 #compose-modal input {
@@ -1055,7 +1051,7 @@ body {
     gap: 5px;
     scrollbar-width: none;
     -ms-overflow-style: none;
-    background-color: #13161F;
+    background-color: #10121B;
     border-radius: 15px;
     padding: 10px;
     opacity: 0;
