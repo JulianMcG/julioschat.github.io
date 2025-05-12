@@ -1455,6 +1455,8 @@ onAuthStateChanged(auth, async (user) => {
         }
         
         updateCurrentUserProfile(user);
+        // Load users before showing chat section
+        await loadUsers();
         showChatSection();
         loadNotificationSoundPreference();
         updateOnlineStatus(true);
