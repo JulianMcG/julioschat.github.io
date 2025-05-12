@@ -291,7 +291,13 @@ body {
 }
 
 .sidebar.collapsed .toggle-sidebar {
-    transform: none;
+    margin: 0 auto;
+    display: block;
+}
+
+.sidebar.collapsed .header-left {
+    width: 100%;
+    justify-content: center;
 }
 
 .sidebar.collapsed .user-item:hover .user-actions {
@@ -317,7 +323,7 @@ body {
     color: #B6B8C8;
     transition: color 0.3s ease;
     font-size: 20px;
-    font-variation-settings: 'FILL' 1;
+    font-variation-settings: 'FILL' 0;
 }
 
 .toggle-sidebar:hover {
