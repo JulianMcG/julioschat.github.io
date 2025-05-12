@@ -297,10 +297,7 @@ body {
 
 .sidebar.collapsed .header-left {
     width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
+    justify-content: center;
 }
 
 .sidebar.collapsed .user-item:hover .user-actions {
@@ -335,13 +332,12 @@ body {
 
 .sidebar-header {
     display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 20px;
-    border-bottom: 1px solid #1C1F28;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
 }
 
-.sidebar-header .header-left {
+.header-left {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -363,7 +359,6 @@ body {
     fill: #B6B8C8;
 }
 
-/* Base new message button styles */
 .new-message-button {
     display: flex;
     align-items: center;
@@ -397,48 +392,17 @@ body {
     color: #B6B8C8;
 }
 
-/* Collapsed state styles */
-.sidebar.collapsed .new-message-button:not(.collapsed) {
+.sidebar.collapsed .new-message-button {
     display: none;
 }
 
-.new-message-button.collapsed {
+.sidebar.collapsed .new-message-button .button-text {
     display: none;
-    width: 48px;
-    height: 48px;
-    padding: 0;
-    border-radius: 12px;
-    background-color: #13161F;
-    color: #B6B8C8;
-    margin: 0;
-    justify-content: center;
-    align-items: center;
 }
 
-.sidebar.collapsed .new-message-button.collapsed {
-    display: flex;
-    margin-top: 20px;
-}
-
-.new-message-button.collapsed:hover {
-    background-color: #1C1F28;
-}
-
-.new-message-button.collapsed .material-symbols-outlined {
-    font-size: 24px;
+.sidebar.collapsed .new-message-button .material-symbols-outlined {
     margin: 0;
     padding: 0;
-}
-
-/* Media query for auto-collapse */
-@media screen and (max-width: 768px) {
-    .sidebar .new-message-button:not(.collapsed) {
-        display: none;
-    }
-    
-    .sidebar .new-message-button.collapsed {
-        display: flex;
-    }
 }
 
 .search-container {
@@ -1827,33 +1791,6 @@ input:checked + .slider:before {
         display: none;
     }
     
-    .sidebar .header-left {
-        width: 100%;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 20px;
-    }
-    
-    .sidebar .new-message-button.collapsed {
-        display: flex;
-        width: 48px;
-        height: 48px;
-        padding: 0;
-        border-radius: 12px;
-        background-color: #13161F;
-        color: #B6B8C8;
-        margin: 0;
-        justify-content: center;
-        align-items: center;
-    }
-    
-    .sidebar .new-message-button.collapsed .material-symbols-outlined {
-        font-size: 24px;
-        margin: 0;
-        padding: 0;
-    }
-    
     .sidebar .profile-picture-container,
     .sidebar .profile-info img {
         margin-right: 0;
@@ -1867,6 +1804,11 @@ input:checked + .slider:before {
     .sidebar .toggle-sidebar {
         margin: 0 auto;
         display: block;
+    }
+    
+    .sidebar .header-left {
+        width: 100%;
+        justify-content: center;
     }
     
     .sidebar .user-item:hover .user-actions {
