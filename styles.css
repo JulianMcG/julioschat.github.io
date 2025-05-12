@@ -322,7 +322,7 @@ body {
     cursor: pointer;
     color: #B6B8C8;
     transition: color 0.3s ease;
-    font-size: 20px;
+    font-size: 22px;
     font-variation-settings: 'FILL' 0;
 }
 
@@ -348,6 +348,8 @@ body {
     display: flex;
     align-items: center;
     gap: 10px;
+    margin: 0;
+    padding: 0;
 }
 
 .sidebar-header svg {
@@ -372,6 +374,7 @@ body {
     transition: all 0.2s;
     text-transform: capitalize;
     width: fit-content;
+    margin: 0;
 }
 
 .new-message-button:hover {
@@ -839,7 +842,7 @@ body {
 .settings-icon {
     color: #B6B8C8;
     cursor: pointer;
-    font-size: 20px;
+    font-size: 22px;
     font-variation-settings: 'FILL' 1;
 }
 
