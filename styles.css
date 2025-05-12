@@ -316,6 +316,8 @@ body {
     cursor: pointer;
     color: #B6B8C8;
     transition: color 0.3s ease;
+    font-size: 20px;
+    font-variation-settings: 'FILL' 1;
 }
 
 .toggle-sidebar:hover {
@@ -343,9 +345,10 @@ body {
 }
 
 .sidebar-header svg {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
     cursor: pointer;
+    fill: #B6B8C8;
 }
 
 .new-message-button {
@@ -371,8 +374,9 @@ body {
 
 .new-message-button .material-symbols-outlined {
     font-size: 18px;
-    font-variation-settings: 'FILL' 0;
+    font-variation-settings: 'FILL' 1;
     padding: 1px;
+    color: #B6B8C8;
 }
 
 .new-message-button .button-text {
@@ -380,13 +384,7 @@ body {
 }
 
 .sidebar.collapsed .new-message-button {
-    width: 36px;
-    height: 36px;
-    padding: 0;
-    border-radius: 50%;
-    justify-content: center;
-    margin-top: 15px;
-    margin-left: 22px;
+    display: none;
 }
 
 .sidebar.collapsed .new-message-button .button-text {
@@ -412,6 +410,7 @@ body {
     color: #B6B8C8;
     margin-right: 8px;
     font-size: 18px;
+    font-variation-settings: 'FILL' 1;
 }
 
 #search-user {
@@ -435,7 +434,8 @@ body {
     right: 10px;
     color: #B6B8C8;
     cursor: pointer;
-    font-size: 20px;
+    font-size: 18px;
+    font-variation-settings: 'FILL' 1;
     display: none;
 }
 
@@ -545,7 +545,8 @@ body {
 .action-icon {
     color: #B6B8C8;
     cursor: pointer;
-    font-size: 20px;
+    font-size: 18px;
+    font-variation-settings: 'FILL' 1;
 }
 
 .action-icon:hover {
@@ -832,7 +833,8 @@ body {
 .settings-icon {
     color: #B6B8C8;
     cursor: pointer;
-    font-size: 24px;
+    font-size: 20px;
+    font-variation-settings: 'FILL' 1;
 }
 
 /* Modal Styles */
