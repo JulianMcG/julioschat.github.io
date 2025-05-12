@@ -362,6 +362,7 @@ body {
     fill: #B6B8C8;
 }
 
+/* Base new message button styles */
 .new-message-button {
     display: flex;
     align-items: center;
@@ -395,7 +396,8 @@ body {
     color: #B6B8C8;
 }
 
-.sidebar.collapsed .new-message-button {
+/* Collapsed state styles */
+.sidebar.collapsed .new-message-button:not(.collapsed) {
     display: none;
 }
 
@@ -426,13 +428,15 @@ body {
     padding: 0;
 }
 
-.sidebar.collapsed .new-message-button .button-text {
-    display: none;
-}
-
-.sidebar.collapsed .new-message-button .material-symbols-outlined {
-    margin: 0;
-    padding: 0;
+/* Media query for auto-collapse */
+@media screen and (max-width: 768px) {
+    .sidebar .new-message-button:not(.collapsed) {
+        display: none;
+    }
+    
+    .sidebar .new-message-button.collapsed {
+        display: flex;
+    }
 }
 
 .search-container {
