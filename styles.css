@@ -1242,12 +1242,12 @@ body {
     left: 50%;
     transform: translate(-50%, -50%) scale(0.9);
     opacity: 0;
-    transition: transform 0.3s ease, opacity 0.3s ease;
+    transition: transform 0.3s ease, opacity 0.3s ease, top 0.3s ease;
     padding: 30px;
     overflow-y: auto;
     scrollbar-width: none;
     -ms-overflow-style: none;
-    will-change: transform, opacity;
+    will-change: transform, opacity, top;
 }
 
 #settings-modal.active .modal-content {
