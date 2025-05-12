@@ -1233,10 +1233,8 @@ body {
 
 #settings-modal .modal-content {
     background-color: #10121B;
-    border-radius: 15px;
     width: 500px;
     max-width: 90%;
-    max-height: 90vh;
     position: fixed;
     top: 50%;
     left: 50%;
@@ -1244,9 +1242,7 @@ body {
     opacity: 0;
     transition: transform 0.3s ease, opacity 0.3s ease, top 0.3s ease;
     padding: 30px;
-    overflow-y: auto;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+    margin: 0;
     will-change: transform, opacity, top;
 }
 
