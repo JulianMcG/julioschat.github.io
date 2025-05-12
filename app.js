@@ -1518,10 +1518,18 @@ function openSettingsModal() {
     loadNotificationSoundPreference();
     
     modal.style.display = 'block';
+    // Trigger reflow
+    modal.offsetHeight;
+    modal.classList.add('active');
 }
 
 function closeSettingsModal() {
-    document.getElementById('settings-modal').style.display = 'none';
+    const modal = document.getElementById('settings-modal');
+    modal.classList.remove('active');
+    // Wait for animation to complete before hiding
+    setTimeout(() => {
+        modal.style.display = 'none';
+    }, 300);
 }
 
 // Settings Modal Event Listeners
