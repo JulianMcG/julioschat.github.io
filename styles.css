@@ -335,12 +335,13 @@ body {
 
 .sidebar-header {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
+    flex-direction: column;
+    gap: 10px;
+    padding: 20px;
+    border-bottom: 1px solid #1C1F28;
 }
 
-.header-left {
+.sidebar-header .header-left {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -416,6 +417,7 @@ body {
 
 .sidebar.collapsed .new-message-button.collapsed {
     display: flex;
+    margin-top: 20px;
 }
 
 .new-message-button.collapsed:hover {
