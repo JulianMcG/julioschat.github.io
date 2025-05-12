@@ -1786,7 +1786,8 @@ input:checked + .slider:before {
     .sidebar .username,
     .sidebar .user-actions,
     .sidebar .profile-info span,
-    .sidebar .profile-info img {
+    .sidebar .profile-info img,
+    .sidebar .new-message-button {
         display: none;
     }
     
