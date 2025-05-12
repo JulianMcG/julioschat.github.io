@@ -507,7 +507,53 @@ async function loadUsers() {
             
             userElement.dataset.uid = user.id;
             
+            // Add click handler for the user item
+            userElement.onclick = (e) => {
+                if (!e.target.classList.contains('action-icon')) {
+                    startChat(user.id, user.alias || user.username);
+                }
+            };
+
+            // Add click handler for close icon
+            const closeIcon = userElement.querySelector('.close-icon');
+            closeIcon.onclick = async (e) => {
+                e.stopPropagation();
+                userElement.remove();
+                try {
+                    await setDoc(doc(db, 'users', currentUser.uid), {
+                        hiddenConversations: arrayUnion(user.id)
+                    }, { merge: true });
+                } catch (error) {
+                    console.error('Error hiding conversation:', error);
+                }
+            };
+
+            // Add click handler for pin icon
+            const pinIcon = userElement.querySelector('.pin-icon');
+            pinIcon.onclick = async (e) => {
+                e.stopPropagation();
+                const isPinned = userElement.classList.contains('pinned');
+                userElement.classList.toggle('pinned');
+                
+                try {
+                    if (!isPinned) {
+                        await setDoc(doc(db, 'users', currentUser.uid), {
+                            pinnedConversations: arrayUnion(user.id)
+                        }, { merge: true });
+                    } else {
+                        await setDoc(doc(db, 'users', currentUser.uid), {
+                            pinnedConversations: arrayRemove(user.id)
+                        }, { merge: true });
+                    }
+                } catch (error) {
+                    console.error('Error pinning conversation:', error);
+                    // Revert UI changes if save fails
+                    userElement.classList.toggle('pinned');
+                }
+            };
+            
             if (user.isPinned) {
+                userElement.classList.add('pinned');
                 fragment.insertBefore(userElement, fragment.firstChild);
             } else {
                 fragment.appendChild(userElement);
