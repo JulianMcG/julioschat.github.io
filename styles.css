@@ -396,6 +396,33 @@ body {
     display: none;
 }
 
+.new-message-button.collapsed {
+    display: none;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: 12px;
+    background-color: #13161F;
+    color: #B6B8C8;
+    margin-top: 10px;
+    justify-content: center;
+    align-items: center;
+}
+
+.sidebar.collapsed .new-message-button.collapsed {
+    display: flex;
+}
+
+.new-message-button.collapsed:hover {
+    background-color: #1C1F28;
+}
+
+.new-message-button.collapsed .material-symbols-outlined {
+    font-size: 20px;
+    margin: 0;
+    padding: 0;
+}
+
 .sidebar.collapsed .new-message-button .button-text {
     display: none;
 }
