@@ -355,13 +355,14 @@ body {
     background-color: #13161F;
     border: none;
     border-radius: 50px;
-    padding: 8px 16px;
+    padding: 8px 12px;
     cursor: pointer;
     color: #B6B8C8;
     font-family: 'Montserrat', sans-serif;
     font-size: 13px;
     transition: all 0.2s;
     text-transform: capitalize;
+    width: fit-content;
 }
 
 .new-message-button:hover {
@@ -372,7 +373,10 @@ body {
     font-size: 18px;
     font-variation-settings: 'FILL' 0;
     padding: 1px;
-    margin-left: 1px;
+}
+
+.new-message-button .button-text {
+    color: #B6B8C8;
 }
 
 .sidebar.collapsed .new-message-button {
