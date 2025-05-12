@@ -1174,7 +1174,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Compose icon event listener
-    const composeIcon = document.querySelector('.compose-icon');
+    const composeIcon = document.querySelector('.new-message-button');
     if (composeIcon) {
         composeIcon.addEventListener('click', openComposeModal);
     }
@@ -1377,9 +1377,9 @@ onAuthStateChanged(auth, async (user) => {
             // Update Firestore document with latest Google data
             const userData = userDoc.data();
             await setDoc(doc(db, 'users', user.uid), {
-                username: user.displayName || userData.username,
                 email: user.email,
                 profilePicture: user.photoURL,
+                username: user.displayName || userData.username, // Keep existing username if no display name
                 lastLogin: serverTimestamp()
             }, { merge: true });
 
