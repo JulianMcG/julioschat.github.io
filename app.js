@@ -1374,14 +1374,20 @@ onAuthStateChanged(auth, async (user) => {
                 createdAt: serverTimestamp()
             });
         } else {
-            // Update Firebase Auth profile with Firestore data
+            // Update Firestore document with latest Google data
             const userData = userDoc.data();
-            if (user.displayName !== userData.username || user.photoURL !== userData.profilePicture) {
-                await updateProfile(user, {
-                    displayName: userData.username,
-                    photoURL: userData.profilePicture
-                });
-            }
+            await setDoc(doc(db, 'users', user.uid), {
+                username: user.displayName || userData.username,
+                email: user.email,
+                profilePicture: user.photoURL,
+                lastLogin: serverTimestamp()
+            }, { merge: true });
+
+            // Update Firebase Auth profile to match Firestore data
+            await updateProfile(user, {
+                displayName: user.displayName || userData.username,
+                photoURL: user.photoURL
+            });
         }
         
         updateCurrentUserProfile(user);
