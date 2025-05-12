@@ -389,7 +389,7 @@ function showChatSection() {
 // Chat Functions
 async function loadUsers() {
     const usersContainer = document.getElementById('users-container');
-    usersContainer.innerHTML = '';
+    // Don't clear the container immediately, we'll handle existing users
 
     try {
         // Get current user's data
@@ -430,6 +430,7 @@ async function loadUsers() {
         });
 
         if (latestMessages.size === 0) {
+            usersContainer.innerHTML = '';
             const noUsersMessage = document.createElement('div');
             noUsersMessage.className = 'no-results';
             noUsersMessage.textContent = 'No conversations yet. Start a new chat!';
@@ -491,9 +492,39 @@ async function loadUsers() {
             return timeB - timeA;
         });
 
+        // Create a map of existing user elements
+        const existingUsers = new Map();
+        usersContainer.querySelectorAll('.user-item').forEach(element => {
+            existingUsers.set(element.dataset.uid, element);
+        });
+
+        // Clear the container
+        usersContainer.innerHTML = '';
+
         // Display users
         users.forEach(user => {
-            const userElement = createUserElement(user);
+            let userElement;
+            
+            // Check if we already have this user in the DOM
+            if (existingUsers.has(user.id)) {
+                userElement = existingUsers.get(user.id);
+                // Update the existing element's content
+                const displayName = user.alias || user.username;
+                userElement.innerHTML = `
+                    <div class="profile-picture-container">
+                        <img src="${user.profilePicture}" alt="${displayName}" class="profile-picture">
+                        <div class="online-status"></div>
+                    </div>
+                    <span class="username">${displayName}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
+                    <div class="user-actions">
+                        <span class="material-symbols-outlined action-icon pin-icon">keep</span>
+                        <span class="material-symbols-outlined action-icon close-icon">close</span>
+                    </div>
+                `;
+            } else {
+                userElement = createUserElement(user);
+            }
+            
             userElement.dataset.uid = user.id;
             
             if (user.isPinned) {
@@ -527,6 +558,7 @@ async function loadUsers() {
 
     } catch (error) {
         console.error('Error loading users:', error);
+        usersContainer.innerHTML = '';
         const errorMessage = document.createElement('div');
         errorMessage.className = 'no-results';
         errorMessage.textContent = 'Error loading conversations. Please try again.';
