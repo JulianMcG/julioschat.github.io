@@ -464,16 +464,17 @@ async function loadUsers() {
 
                 // Get the username, falling back to email if username is not set
                 const username = userData.username || userData.email?.split('@')[0] || 'User';
+                const alias = userAliases[userId] || username;
 
                 users.push({
                     id: userId,
                     username: username,
+                    alias: alias,
                     profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
                     verified: userData.verified || false,
                     isPinned: pinnedConversations.includes(userId),
                     lastMessageTime: messageData.timestamp,
-                    lastMessage: messageData.content,
-                    alias: userAliases[userId] || null
+                    lastMessage: messageData.content
                 });
             } catch (error) {
                 console.error(`Error loading user ${userId}:`, error);
@@ -660,11 +661,6 @@ async function startChat(userId, username) {
             e.stopPropagation();
             const isPinned = userElement.classList.contains('pinned');
             userElement.classList.toggle('pinned');
-            
-            if (!isPinned) {
-                const usersContainer = document.getElementById('users-container');
-                usersContainer.insertBefore(userElement, usersContainer.firstChild);
-            }
             
             try {
                 const userDocRef = await getDoc(doc(db, 'users', currentUser.uid));
