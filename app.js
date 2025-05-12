@@ -1630,6 +1630,12 @@ async function searchUsers(searchTerm) {
     const usersContainer = document.getElementById('users-container');
     const userItems = usersContainer.querySelectorAll('.user-item');
     
+    if (!searchTerm) {
+        // If search is empty, reload all users
+        await loadUsers();
+        return;
+    }
+    
     userItems.forEach(userItem => {
         const username = userItem.querySelector('.username').textContent.toLowerCase();
         if (username.includes(searchTerm.toLowerCase())) {
@@ -1712,21 +1718,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const clearSearch = document.querySelector('.clear-search');
 
     if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
+        searchInput.addEventListener('input', async (e) => {
             const searchTerm = e.target.value.trim();
-            if (searchTerm) {
-                searchUsers(searchTerm);
-            } else {
-                loadUsers(); // Reload all users when search is empty
-            }
+            await searchUsers(searchTerm);
         });
     }
 
     if (clearSearch) {
-        clearSearch.addEventListener('click', () => {
+        clearSearch.addEventListener('click', async () => {
             if (searchInput) {
                 searchInput.value = '';
-                loadUsers(); // Reload all users when search is cleared
+                await loadUsers(); // Reload all users when search is cleared
             }
         });
     }
