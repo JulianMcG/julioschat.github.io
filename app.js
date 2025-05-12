@@ -462,9 +462,12 @@ async function loadUsers() {
                 // Skip if user is marked as deleted
                 if (userData.deleted) continue;
 
+                // Get the username, falling back to email if username is not set
+                const username = userData.username || userData.email?.split('@')[0] || 'User';
+
                 users.push({
                     id: userId,
-                    username: userData.username,
+                    username: username,
                     profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
                     verified: userData.verified || false,
                     isPinned: pinnedConversations.includes(userId),
@@ -2109,16 +2112,17 @@ async function signInWithGoogle() {
             // Update existing user's profile with latest Google data
             const userData = userDoc.data();
             
-            // Update Firestore document
+            // Update Firestore document with latest Google data
             await setDoc(doc(db, 'users', user.uid), {
                 email: user.email,
                 profilePicture: user.photoURL,
+                username: user.displayName || userData.username, // Keep existing username if no display name
                 lastLogin: serverTimestamp()
             }, { merge: true });
 
             // Update Firebase Auth profile to match Firestore data
             await updateProfile(user, {
-                displayName: userData.username,
+                displayName: user.displayName || userData.username,
                 photoURL: user.photoURL
             });
         }
