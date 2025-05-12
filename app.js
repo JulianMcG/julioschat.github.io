@@ -389,8 +389,10 @@ function showChatSection() {
 // Chat Functions
 async function loadUsers() {
     const usersContainer = document.getElementById('users-container');
-    // Don't clear the container immediately, we'll handle existing users
+    const searchInput = document.getElementById('search-user');
+    const searchTerm = searchInput ? searchInput.value.trim() : '';
 
+    // Don't clear the container immediately, we'll handle existing users
     try {
         // Get current user's data
         const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
@@ -555,6 +557,19 @@ async function loadUsers() {
                 }
             };
         });
+
+        // If there's a search term, filter the results
+        if (searchTerm) {
+            const userItems = usersContainer.querySelectorAll('.user-item');
+            userItems.forEach(userItem => {
+                const username = userItem.querySelector('.username').textContent.toLowerCase();
+                if (username.includes(searchTerm.toLowerCase())) {
+                    userItem.style.display = 'flex';
+                } else {
+                    userItem.style.display = 'none';
+                }
+            });
+        }
 
     } catch (error) {
         console.error('Error loading users:', error);
@@ -1297,12 +1312,33 @@ document.addEventListener('DOMContentLoaded', () => {
     // Search input event listener
     const searchInput = document.getElementById('search-user');
     if (searchInput) {
+        let searchTimeout;
         searchInput.addEventListener('input', (e) => {
             const searchTerm = e.target.value.trim();
-            if (searchTerm) {
-                searchUsers(searchTerm);
-            } else {
-                loadUsers(); // Load all users if search is empty
+            
+            // Clear any existing timeout
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+            
+            // Set a new timeout to debounce the search
+            searchTimeout = setTimeout(async () => {
+                if (!searchTerm) {
+                    // If search is empty, reload all users
+                    await loadUsers();
+                } else {
+                    await searchUsers(searchTerm);
+                }
+            }, 300); // 300ms debounce
+        });
+    }
+
+    if (clearSearch) {
+        clearSearch.addEventListener('click', async () => {
+            if (searchInput) {
+                searchInput.value = '';
+                // Force reload all users when clear button is clicked
+                await loadUsers();
             }
         });
     }
@@ -1718,9 +1754,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const clearSearch = document.querySelector('.clear-search');
 
     if (searchInput) {
-        searchInput.addEventListener('input', async (e) => {
+        let searchTimeout;
+        searchInput.addEventListener('input', (e) => {
             const searchTerm = e.target.value.trim();
-            await searchUsers(searchTerm);
+            
+            // Clear any existing timeout
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+            
+            // Set a new timeout to debounce the search
+            searchTimeout = setTimeout(async () => {
+                if (!searchTerm) {
+                    // If search is empty, reload all users
+                    await loadUsers();
+                } else {
+                    await searchUsers(searchTerm);
+                }
+            }, 300); // 300ms debounce
         });
     }
 
@@ -1728,7 +1779,8 @@ document.addEventListener('DOMContentLoaded', () => {
         clearSearch.addEventListener('click', async () => {
             if (searchInput) {
                 searchInput.value = '';
-                await loadUsers(); // Reload all users when search is cleared
+                // Force reload all users when clear button is clicked
+                await loadUsers();
             }
         });
     }
