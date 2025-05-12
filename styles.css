@@ -1802,7 +1802,13 @@ input:checked + .slider:before {
     }
     
     .sidebar .toggle-sidebar {
-        transform: none;
+        margin: 0 auto;
+        display: block;
+    }
+    
+    .sidebar .header-left {
+        width: 100%;
+        justify-content: center;
     }
     
     .sidebar .user-item:hover .user-actions {
