@@ -392,10 +392,16 @@ async function loadUsers() {
     const searchInput = document.getElementById('search-user');
     const searchTerm = searchInput ? searchInput.value.trim() : '';
 
-    // Don't clear the container immediately, we'll handle existing users
     try {
-        // Get current user's data
-        const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        // Get current user's data and all messages in parallel
+        const [currentUserDoc, messagesSnapshot] = await Promise.all([
+            getDoc(doc(db, 'users', currentUser.uid)),
+            getDocs(query(
+                collection(db, 'messages'),
+                where('participants', 'array-contains', currentUser.uid)
+            ))
+        ]);
+
         if (!currentUserDoc.exists()) {
             throw new Error('User document not found');
         }
@@ -405,16 +411,8 @@ async function loadUsers() {
         const pinnedConversations = currentUserData?.pinnedConversations || [];
         const userAliases = currentUserData?.userAliases || {};
 
-        // Get all messages where current user is a participant
-        const messagesQuery = query(
-            collection(db, 'messages'),
-            where('participants', 'array-contains', currentUser.uid)
-        );
-        
-        const messagesSnapshot = await getDocs(messagesQuery);
+        // Process messages to get latest conversations
         const latestMessages = new Map();
-
-        // Find the latest message for each conversation
         messagesSnapshot.forEach(doc => {
             const message = doc.data();
             if (!message.participants) return;
@@ -432,59 +430,38 @@ async function loadUsers() {
         });
 
         if (latestMessages.size === 0) {
-            usersContainer.innerHTML = '';
-            const noUsersMessage = document.createElement('div');
-            noUsersMessage.className = 'no-results';
-            noUsersMessage.textContent = 'No conversations yet. Start a new chat!';
-            usersContainer.appendChild(noUsersMessage);
+            usersContainer.innerHTML = '<div class="no-results">No conversations yet. Start a new chat!</div>';
             return;
         }
 
-        // Get user details for each conversation
-        const users = [];
-        for (const [userId, messageData] of latestMessages) {
-            try {
-                const userDoc = await getDoc(doc(db, 'users', userId));
-                // Skip if user document doesn't exist or is deleted
-                if (!userDoc.exists()) {
-                    // Remove messages from deleted user
-                    const messagesToDelete = query(
-                        collection(db, 'messages'),
-                        where('participants', 'array-contains', userId)
-                    );
-                    const messagesSnapshot = await getDocs(messagesToDelete);
-                    const batch = writeBatch(db);
-                    messagesSnapshot.forEach(doc => {
-                        batch.delete(doc.ref);
-                    });
-                    await batch.commit();
-                    continue;
-                }
+        // Get all user documents in a single batch
+        const userIds = Array.from(latestMessages.keys());
+        const userDocs = await Promise.all(
+            userIds.map(userId => getDoc(doc(db, 'users', userId)))
+        );
 
-                const userData = userDoc.data();
-                // Skip if user is marked as deleted
-                if (userData.deleted) continue;
-
-                // Get the username, falling back to email if username is not set
+        // Process users and create elements
+        const users = userDocs
+            .filter(doc => doc.exists() && !doc.data().deleted)
+            .map(doc => {
+                const userData = doc.data();
+                const messageData = latestMessages.get(doc.id);
                 const username = userData.username || userData.email?.split('@')[0] || 'User';
-                const alias = userAliases[userId] || username;
+                const alias = userAliases[doc.id] || username;
 
-                users.push({
-                    id: userId,
+                return {
+                    id: doc.id,
                     username: username,
                     alias: alias,
                     profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
                     verified: userData.verified || false,
-                    isPinned: pinnedConversations.includes(userId),
+                    isPinned: pinnedConversations.includes(doc.id),
                     lastMessageTime: messageData.timestamp,
                     lastMessage: messageData.content
-                });
-            } catch (error) {
-                console.error(`Error loading user ${userId}:`, error);
-            }
-        }
+                };
+            });
 
-        // Sort users: pinned first, then by last message time
+        // Sort users
         users.sort((a, b) => {
             if (a.isPinned && !b.isPinned) return -1;
             if (!a.isPinned && b.isPinned) return 1;
@@ -494,6 +471,9 @@ async function loadUsers() {
             return timeB - timeA;
         });
 
+        // Create a document fragment for better performance
+        const fragment = document.createDocumentFragment();
+        
         // Create a map of existing user elements
         const existingUsers = new Map();
         usersContainer.querySelectorAll('.user-item').forEach(element => {
@@ -503,14 +483,12 @@ async function loadUsers() {
         // Clear the container
         usersContainer.innerHTML = '';
 
-        // Display users
+        // Add users to fragment
         users.forEach(user => {
             let userElement;
             
-            // Check if we already have this user in the DOM
             if (existingUsers.has(user.id)) {
                 userElement = existingUsers.get(user.id);
-                // Update the existing element's content
                 const displayName = user.alias || user.username;
                 userElement.innerHTML = `
                     <div class="profile-picture-container">
@@ -530,54 +508,27 @@ async function loadUsers() {
             userElement.dataset.uid = user.id;
             
             if (user.isPinned) {
-                userElement.classList.add('pinned');
-                usersContainer.insertBefore(userElement, usersContainer.firstChild);
+                fragment.insertBefore(userElement, fragment.firstChild);
             } else {
-                usersContainer.appendChild(userElement);
+                fragment.appendChild(userElement);
             }
-            
-            // Add click handler for the user item
-            userElement.onclick = (e) => {
-                if (!e.target.classList.contains('action-icon')) {
-                    startChat(user.id, user.alias || user.username);
-                }
-            };
-
-            // Add click handler for close icon
-            const closeIcon = userElement.querySelector('.close-icon');
-            closeIcon.onclick = async (e) => {
-                e.stopPropagation();
-                userElement.remove();
-                try {
-                    await setDoc(doc(db, 'users', currentUser.uid), {
-                        hiddenConversations: arrayUnion(user.id)
-                    }, { merge: true });
-                } catch (error) {
-                    console.error('Error hiding conversation:', error);
-                }
-            };
         });
 
-        // If there's a search term, filter the results
+        // Add all users at once
+        usersContainer.appendChild(fragment);
+
+        // Apply search filter if needed
         if (searchTerm) {
             const userItems = usersContainer.querySelectorAll('.user-item');
             userItems.forEach(userItem => {
                 const username = userItem.querySelector('.username').textContent.toLowerCase();
-                if (username.includes(searchTerm.toLowerCase())) {
-                    userItem.style.display = 'flex';
-                } else {
-                    userItem.style.display = 'none';
-                }
+                userItem.style.display = username.includes(searchTerm.toLowerCase()) ? 'flex' : 'none';
             });
         }
 
     } catch (error) {
         console.error('Error loading users:', error);
-        usersContainer.innerHTML = '';
-        const errorMessage = document.createElement('div');
-        errorMessage.className = 'no-results';
-        errorMessage.textContent = 'Error loading conversations. Please try again.';
-        usersContainer.appendChild(errorMessage);
+        usersContainer.innerHTML = '<div class="no-results">Error loading conversations. Please try again.</div>';
     }
 }
 
@@ -1427,41 +1378,45 @@ onAuthStateChanged(auth, async (user) => {
     if (user) {
         currentUser = user;
         
-        // Get or create user document
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (!userDoc.exists()) {
-            // Create new user document
-            await setDoc(doc(db, 'users', user.uid), {
-                username: user.displayName || user.email.split('@')[0],
-                email: user.email,
-                profilePicture: user.photoURL,
-                createdAt: serverTimestamp()
-            });
-        } else {
-            // Update Firestore document with latest Google data
-            const userData = userDoc.data();
-            await setDoc(doc(db, 'users', user.uid), {
-                email: user.email,
-                profilePicture: user.photoURL,
-                username: user.displayName || userData.username, // Keep existing username if no display name
-                lastLogin: serverTimestamp()
-            }, { merge: true });
-
-            // Update Firebase Auth profile to match Firestore data
-            await updateProfile(user, {
-                displayName: user.displayName || userData.username,
-                photoURL: user.photoURL
-            });
-        }
-        
-        updateCurrentUserProfile(user);
-        // Load users before showing chat section
-        await loadUsers();
+        // Show chat section immediately to improve perceived performance
         showChatSection();
-        loadNotificationSoundPreference();
-        updateOnlineStatus(true);
         
-        // Set up the message listener
+        // Run these operations in parallel
+        await Promise.all([
+            // Get or create user document
+            (async () => {
+                const userDoc = await getDoc(doc(db, 'users', user.uid));
+                if (!userDoc.exists()) {
+                    await setDoc(doc(db, 'users', user.uid), {
+                        username: user.displayName || user.email.split('@')[0],
+                        email: user.email,
+                        profilePicture: user.photoURL,
+                        createdAt: serverTimestamp()
+                    });
+                } else {
+                    const userData = userDoc.data();
+                    await setDoc(doc(db, 'users', user.uid), {
+                        email: user.email,
+                        profilePicture: user.photoURL,
+                        username: user.displayName || userData.username,
+                        lastLogin: serverTimestamp()
+                    }, { merge: true });
+
+                    await updateProfile(user, {
+                        displayName: user.displayName || userData.username,
+                        photoURL: user.photoURL
+                    });
+                }
+            })(),
+            
+            // Load users and update profile in parallel
+            loadUsers(),
+            updateCurrentUserProfile(user),
+            loadNotificationSoundPreference(),
+            updateOnlineStatus(true)
+        ]);
+        
+        // Set up the message listener after everything else is loaded
         if (window.globalMessageUnsubscribe) {
             window.globalMessageUnsubscribe();
         }
@@ -1471,7 +1426,6 @@ onAuthStateChanged(auth, async (user) => {
         showAuthSection();
         updateOnlineStatus(false);
         
-        // Clean up the message listener
         if (window.globalMessageUnsubscribe) {
             window.globalMessageUnsubscribe();
         }
