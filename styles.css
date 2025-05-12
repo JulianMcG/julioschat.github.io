@@ -348,10 +348,28 @@ body {
     cursor: pointer;
 }
 
-.compose-icon {
-    color: #B6B8C8;
+.new-message-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: #13161F;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 16px;
     cursor: pointer;
-    font-size: 24px;
+    color: #B6B8C8;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.new-message-button:hover {
+    background-color: #1C1F28;
+}
+
+.new-message-button .material-symbols-outlined {
+    font-size: 20px;
+    font-variation-settings: 'FILL' 0;
 }
 
 .search-container {
