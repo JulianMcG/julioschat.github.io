@@ -536,7 +536,7 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 200px;
+    max-width: 280px;
 }
 
 .pin-icon {
@@ -1011,7 +1011,10 @@ body {
 }
 
 .chat-header .username {
-    color: #ECEBF7;
+    max-width: none;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
 }
 
 .verified-badge {
