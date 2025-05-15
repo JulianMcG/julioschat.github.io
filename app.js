@@ -520,11 +520,26 @@ async function loadUsers() {
                 e.stopPropagation();
                 userElement.remove();
                 try {
+                    // Add to hidden conversations
                     await setDoc(doc(db, 'users', currentUser.uid), {
                         hiddenConversations: arrayUnion(user.id)
                     }, { merge: true });
+                    
+                    // If this was the current chat, clear it
+                    if (currentChatUser && currentChatUser.id === user.id) {
+                        currentChatUser = null;
+                        document.getElementById('active-chat-username').textContent = 'Select a chat';
+                        document.getElementById('message-input').placeholder = 'Type a message...';
+                        document.querySelector('.message-input').classList.remove('visible');
+                    }
                 } catch (error) {
                     console.error('Error hiding conversation:', error);
+                    // If there's an error, add the element back
+                    if (user.isPinned) {
+                        fragment.insertBefore(userElement, fragment.firstChild);
+                    } else {
+                        fragment.appendChild(userElement);
+                    }
                 }
             };
 
