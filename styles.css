@@ -537,6 +537,9 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 280px;
+    position: relative;
+    mask-image: linear-gradient(to right, black 80%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, black 80%, transparent 100%);
 }
 
 .pin-icon {
@@ -1015,6 +1018,8 @@ body {
     white-space: normal;
     overflow: visible;
     text-overflow: clip;
+    mask-image: none;
+    -webkit-mask-image: none;
 }
 
 .verified-badge {
