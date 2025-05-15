@@ -538,8 +538,22 @@ body {
     text-overflow: ellipsis;
     max-width: 280px;
     position: relative;
+}
+
+/* Only apply gradient mask when text is overflowing */
+.username.truncated {
     mask-image: linear-gradient(to right, black 80%, transparent 100%);
     -webkit-mask-image: linear-gradient(to right, black 80%, transparent 100%);
+}
+
+/* Chat header username should not truncate */
+.chat-header .username {
+    max-width: none;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    mask-image: none;
+    -webkit-mask-image: none;
 }
 
 .pin-icon {
