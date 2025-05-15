@@ -659,10 +659,18 @@ function createUserElement(user) {
 }
 
 async function startChat(userId, username) {
-    // Get current user's data to check for aliases
+    // Get current user's data to check for aliases and hidden conversations
     const currentUserDocRef = await getDoc(doc(db, 'users', currentUser.uid));
     const currentUserDataRef = currentUserDocRef.data();
     const userAliases = currentUserDataRef?.userAliases || {};
+    const hiddenConversations = currentUserDataRef?.hiddenConversations || [];
+    
+    // If this conversation was hidden, remove it from hiddenConversations
+    if (hiddenConversations.includes(userId)) {
+        await setDoc(doc(db, 'users', currentUser.uid), {
+            hiddenConversations: arrayRemove(userId)
+        }, { merge: true });
+    }
     
     // Get the other user's data
     const otherUserDoc = await getDoc(doc(db, 'users', userId));
@@ -710,6 +718,14 @@ async function startChat(userId, username) {
                 await setDoc(doc(db, 'users', currentUser.uid), {
                     hiddenConversations: arrayUnion(userId)
                 }, { merge: true });
+                
+                // If this was the current chat, clear it
+                if (currentChatUser && currentChatUser.id === userId) {
+                    currentChatUser = null;
+                    document.getElementById('active-chat-username').textContent = 'Select a chat';
+                    document.getElementById('message-input').placeholder = 'Type a message...';
+                    document.querySelector('.message-input').classList.remove('visible');
+                }
             } catch (error) {
                 console.error('Error hiding conversation:', error);
             }
