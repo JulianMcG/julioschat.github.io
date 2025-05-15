@@ -572,6 +572,7 @@ async function loadUsers() {
             });
         }
 
+        checkUsernameOverflow();
     } catch (error) {
         console.error('Error loading users:', error);
         usersContainer.innerHTML = '<div class="no-results">Error loading conversations. Please try again.</div>';
@@ -2342,3 +2343,27 @@ window.findUsernameByEmail = async function(email) {
         throw error;
     }
 }
+
+// Add this function after your existing code
+function checkUsernameOverflow() {
+    const usernames = document.querySelectorAll('.username:not(.chat-header .username)');
+    usernames.forEach(username => {
+        // Remove truncated class first
+        username.classList.remove('truncated');
+        
+        // Check if text is overflowing
+        if (username.scrollWidth > username.clientWidth) {
+            username.classList.add('truncated');
+        }
+    });
+}
+
+// Add event listeners for window resize and after loading users
+window.addEventListener('resize', checkUsernameOverflow);
+
+// Modify your loadUsers function to call checkUsernameOverflow after loading
+const originalLoadUsers = loadUsers;
+loadUsers = async function() {
+    await originalLoadUsers();
+    checkUsernameOverflow();
+};
