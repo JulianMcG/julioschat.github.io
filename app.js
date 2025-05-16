@@ -2398,3 +2398,612 @@ loadUsers = async function() {
     await originalLoadUsers();
     checkUsernameOverflow();
 };
+
+// Group Chat Functions
+async function createGroupChat(name, selectedUsers) {
+    if (!currentUser || !name || !selectedUsers || selectedUsers.length === 0) return;
+    
+    try {
+        // Create group chat document
+        const groupData = {
+            name: name,
+            createdBy: currentUser.uid,
+            createdAt: serverTimestamp(),
+            participants: [currentUser.uid, ...selectedUsers],
+            admins: [currentUser.uid],
+            lastMessageTime: serverTimestamp()
+        };
+        
+        const groupRef = await addDoc(collection(db, 'groupChats'), groupData);
+        
+        // Update participants' group chats
+        const batch = writeBatch(db);
+        [currentUser.uid, ...selectedUsers].forEach(userId => {
+            const userRef = doc(db, 'users', userId);
+            batch.update(userRef, {
+                groupChats: arrayUnion(groupRef.id)
+            });
+        });
+        
+        await batch.commit();
+        
+        // Start the group chat
+        startGroupChat(groupRef.id, name);
+        
+        return groupRef.id;
+    } catch (error) {
+        console.error('Error creating group chat:', error);
+        throw error;
+    }
+}
+
+async function startGroupChat(groupId, groupName) {
+    if (!currentUser) return;
+    
+    try {
+        // Get group data
+        const groupDoc = await getDoc(doc(db, 'groupChats', groupId));
+        if (!groupDoc.exists()) {
+            throw new Error('Group chat not found');
+        }
+        
+        const groupData = groupDoc.data();
+        
+        // Check if user is a participant
+        if (!groupData.participants.includes(currentUser.uid)) {
+            throw new Error('You are not a participant in this group chat');
+        }
+        
+        currentChatUser = { id: groupId, username: groupName, isGroup: true };
+        
+        // Update chat header
+        document.getElementById('active-chat-username').textContent = groupName;
+        
+        // Show message input
+        const messageInput = document.querySelector('.message-input');
+        messageInput.classList.add('visible');
+        document.getElementById('message-input').placeholder = `Message ${groupName}`;
+        
+        // Load group messages
+        loadGroupMessages(groupId);
+        
+        // Set up typing listener for group
+        if (window.currentTypingUnsubscribe) {
+            window.currentTypingUnsubscribe();
+        }
+        window.currentTypingUnsubscribe = setupGroupTypingListener(groupId);
+    } catch (error) {
+        console.error('Error starting group chat:', error);
+        alert(error.message);
+    }
+}
+
+async function loadGroupMessages(groupId) {
+    if (!currentUser) return;
+    
+    const chatMessages = document.getElementById('chat-messages');
+    chatMessages.innerHTML = '';
+    
+    try {
+        const messagesQuery = query(
+            collection(db, 'messages'),
+            where('groupId', '==', groupId),
+            orderBy('timestamp', 'asc')
+        );
+        
+        if (window.currentMessageUnsubscribe) {
+            window.currentMessageUnsubscribe();
+        }
+        
+        const unsubscribe = onSnapshot(messagesQuery, async (snapshot) => {
+            chatMessages.innerHTML = '';
+            let lastMessageTime = null;
+            
+            for (const doc of snapshot.docs) {
+                const message = doc.data();
+                const messageTime = message.timestamp.toDate();
+                
+                // Add timestamp or gap if needed
+                if (lastMessageTime) {
+                    const timeDiff = messageTime - lastMessageTime;
+                    const twentyMinutes = 20 * 60 * 1000;
+                    
+                    if (timeDiff > twentyMinutes) {
+                        const dateSeparator = document.createElement('div');
+                        dateSeparator.className = 'date-separator';
+                        const today = new Date();
+                        
+                        let dateText;
+                        if (messageTime.toDateString() === today.toDateString()) {
+                            dateText = `Today ${messageTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+                        } else if (messageTime.toDateString() === new Date(today - 86400000).toDateString()) {
+                            dateText = `Yesterday ${messageTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+                        } else {
+                            dateText = messageTime.toLocaleDateString([], { 
+                                month: 'short', 
+                                day: 'numeric',
+                                hour: 'numeric',
+                                minute: '2-digit'
+                            });
+                        }
+                        
+                        dateSeparator.textContent = dateText;
+                        chatMessages.appendChild(dateSeparator);
+                    }
+                }
+                
+                // Get sender's data
+                const senderDoc = await getDoc(doc(db, 'users', message.senderId));
+                const senderData = senderDoc.data();
+                const senderName = senderData?.username || 'Unknown User';
+                
+                const messageElement = document.createElement('div');
+                messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
+                messageElement.dataset.messageId = doc.id;
+                
+                // Add sender name for group messages
+                if (message.senderId !== currentUser.uid) {
+                    const senderNameElement = document.createElement('div');
+                    senderNameElement.className = 'sender-name';
+                    senderNameElement.textContent = senderName;
+                    messageElement.appendChild(senderNameElement);
+                }
+                
+                // Create message content container
+                const contentContainer = document.createElement('div');
+                contentContainer.className = 'content';
+                contentContainer.innerHTML = formatMessageContent(message.content);
+                
+                // Create reactions container
+                const reactionsContainer = document.createElement('div');
+                reactionsContainer.className = 'message-reactions';
+                
+                if (message.reactions && Object.keys(message.reactions).length > 0) {
+                    reactionsContainer.classList.add('has-reactions');
+                    Object.keys(message.reactions).forEach(emoji => {
+                        const reaction = document.createElement('span');
+                        reaction.className = 'reaction';
+                        reaction.textContent = emoji;
+                        reaction.onclick = (e) => {
+                            e.stopPropagation();
+                            addReaction(doc.id, emoji);
+                        };
+                        reactionsContainer.appendChild(reaction);
+                    });
+                }
+                
+                // Create reaction button for received messages
+                if (message.senderId !== currentUser.uid) {
+                    const reactionButton = document.createElement('div');
+                    reactionButton.className = 'reaction-button';
+                    reactionButton.innerHTML = '<span class="material-symbols-outlined">add_reaction</span>';
+                    reactionButton.onclick = (e) => {
+                        e.stopPropagation();
+                        showReactionPicker(e, doc.id);
+                    };
+                    messageElement.appendChild(reactionButton);
+                }
+                
+                messageElement.appendChild(contentContainer);
+                messageElement.appendChild(reactionsContainer);
+                
+                chatMessages.appendChild(messageElement);
+                lastMessageTime = messageTime;
+            }
+            
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+        
+        window.currentMessageUnsubscribe = unsubscribe;
+    } catch (error) {
+        console.error('Error loading group messages:', error);
+    }
+}
+
+async function sendGroupMessage(content) {
+    if (!currentUser || !currentChatUser || !currentChatUser.isGroup) return;
+    
+    if (!content) return;
+    
+    // Strip out any image-related content
+    content = content.replace(/<img[^>]*>/g, '');
+    content = content.replace(/!\[.*?\]\(.*?\)/g, '');
+    content = content.replace(/https?:\/\/.*?\.(jpg|jpeg|png|gif|webp)/gi, '');
+    
+    try {
+        const timestamp = serverTimestamp();
+        
+        // Get group data
+        const groupDoc = await getDoc(doc(db, 'groupChats', currentChatUser.id));
+        if (!groupDoc.exists()) {
+            throw new Error('Group chat not found');
+        }
+        
+        const groupData = groupDoc.data();
+        
+        // Create message data
+        const messageData = {
+            content: content,
+            senderId: currentUser.uid,
+            groupId: currentChatUser.id,
+            participants: groupData.participants,
+            timestamp: timestamp,
+            readBy: [currentUser.uid]
+        };
+        
+        // Add message to Firestore
+        await addDoc(collection(db, 'messages'), messageData);
+        
+        // Update group's last message time
+        await updateDoc(doc(db, 'groupChats', currentChatUser.id), {
+            lastMessageTime: timestamp,
+            lastMessage: content
+        });
+        
+        // Scroll to bottom
+        const chatMessages = document.getElementById('chat-messages');
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    } catch (error) {
+        console.error('Error sending group message:', error);
+    }
+}
+
+function setupGroupTypingListener(groupId) {
+    if (!currentUser) return;
+    
+    const typingRef = collection(db, 'typing');
+    const groupTypingQuery = query(
+        typingRef,
+        where('groupId', '==', groupId),
+        where('userId', '!=', currentUser.uid)
+    );
+    
+    return onSnapshot(groupTypingQuery, (snapshot) => {
+        const chatMessages = document.getElementById('chat-messages');
+        const existingIndicator = document.getElementById('typing-indicator');
+        
+        if (snapshot.docs.length > 0) {
+            if (!existingIndicator) {
+                const typingIndicator = document.createElement('div');
+                typingIndicator.id = 'typing-indicator';
+                typingIndicator.className = 'typing-indicator';
+                typingIndicator.innerHTML = `
+                    <lord-icon
+                        src="https://cdn.lordicon.com/jpgpblwn.json"
+                        trigger="loop"
+                        state="loop-scale"
+                        colors="primary:#b6b8c8"
+                        style="width:24px;height:24px">
+                    </lord-icon>
+                `;
+                chatMessages.appendChild(typingIndicator);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        } else if (existingIndicator) {
+            existingIndicator.remove();
+        }
+    });
+}
+
+// Modify the existing sendMessage function to handle both direct and group messages
+async function sendMessage(content) {
+    if (!currentUser || !currentChatUser) {
+        console.log('No current user or chat user');
+        return;
+    }
+    
+    if (!content) {
+        return;
+    }
+    
+    // Strip out any image-related content
+    content = content.replace(/<img[^>]*>/g, '');
+    content = content.replace(/!\[.*?\]\(.*?\)/g, '');
+    content = content.replace(/https?:\/\/.*?\.(jpg|jpeg|png|gif|webp)/gi, '');
+    
+    try {
+        if (currentChatUser.isGroup) {
+            await sendGroupMessage(content);
+        } else {
+            // Get receiver's blocked users list
+            const receiverDoc = await getDoc(doc(db, 'users', currentChatUser.id));
+            const receiverData = receiverDoc.data();
+            const receiverBlockedUsers = receiverData?.blockedUsers || [];
+            
+            if (receiverBlockedUsers.includes(currentUser.uid)) {
+                alert('You cannot send messages to this user as they have blocked you.');
+                return;
+            }
+            
+            const timestamp = serverTimestamp();
+            
+            // Create message data
+            const messageData = {
+                content: content,
+                senderId: currentUser.uid,
+                receiverId: currentChatUser.id,
+                participants: [currentUser.uid, currentChatUser.id],
+                timestamp: timestamp,
+                readBy: [currentUser.uid]
+            };
+            
+            // Add message to Firestore
+            await addDoc(collection(db, 'messages'), messageData);
+            
+            // Update last message time for both users
+            const batch = writeBatch(db);
+            
+            // Update sender's last message time
+            const senderRef = doc(db, 'users', currentUser.uid);
+            batch.update(senderRef, {
+                [`conversations.${currentChatUser.id}.lastMessageTime`]: timestamp,
+                [`conversations.${currentChatUser.id}.lastMessage`]: content
+            });
+            
+            // Update receiver's last message time
+            const receiverRef = doc(db, 'users', currentChatUser.id);
+            batch.update(receiverRef, {
+                [`conversations.${currentUser.uid}.lastMessageTime`]: timestamp,
+                [`conversations.${currentUser.uid}.lastMessage`]: content
+            });
+            
+            // Commit the batch
+            await batch.commit();
+        }
+        
+        // Scroll to bottom
+        const chatMessages = document.getElementById('chat-messages');
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    } catch (error) {
+        console.error('Error sending message:', error);
+    }
+}
+
+// Add group chat button to compose modal
+document.addEventListener('DOMContentLoaded', () => {
+    const composeModal = document.getElementById('compose-modal');
+    if (composeModal) {
+        const modalContent = composeModal.querySelector('.modal-content');
+        
+        // Add group chat button
+        const groupChatButton = document.createElement('button');
+        groupChatButton.className = 'group-chat-button';
+        groupChatButton.innerHTML = '<span class="material-symbols-outlined">group_add</span> New Group Chat';
+        groupChatButton.onclick = openNewGroupModal;
+        modalContent.insertBefore(groupChatButton, modalContent.firstChild);
+    }
+});
+
+// New Group Modal Functions
+function openNewGroupModal() {
+    const newGroupModal = document.getElementById('new-group-modal');
+    if (!newGroupModal) {
+        // Create modal if it doesn't exist
+        const modalElement = document.createElement('div');
+        modalElement.id = 'new-group-modal';
+        modalElement.className = 'modal';
+        modalElement.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>New Group Chat</h2>
+                    <span class="close-modal">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <input type="text" id="group-name" placeholder="Group Name" maxlength="50">
+                    <div class="selected-users"></div>
+                    <div class="user-search">
+                        <input type="text" id="group-user-search" placeholder="Search users...">
+                        <div class="search-results"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="create-group-button" disabled>Create Group</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modalElement);
+        
+        // Add event listeners
+        const closeButton = modalElement.querySelector('.close-modal');
+        closeButton.onclick = closeNewGroupModal;
+        
+        const groupNameInput = modalElement.querySelector('#group-name');
+        const createButton = modalElement.querySelector('.create-group-button');
+        const selectedUsers = new Set();
+        
+        groupNameInput.addEventListener('input', () => {
+            createButton.disabled = !groupNameInput.value.trim() || selectedUsers.size === 0;
+        });
+        
+        const searchInput = modalElement.querySelector('#group-user-search');
+        searchInput.addEventListener('input', async (e) => {
+            const searchTerm = e.target.value.trim().toLowerCase();
+            const searchResults = modalElement.querySelector('.search-results');
+            searchResults.innerHTML = '';
+            
+            if (searchTerm) {
+                try {
+                    const usersQuery = query(collection(db, 'users'));
+                    const usersSnapshot = await getDocs(usersQuery);
+                    
+                    usersSnapshot.forEach(doc => {
+                        if (doc.id !== currentUser.uid) {
+                            const userData = doc.data();
+                            const username = userData.username?.toLowerCase() || '';
+                            
+                            if (username.includes(searchTerm)) {
+                                const userElement = document.createElement('div');
+                                userElement.className = 'search-result-item';
+                                userElement.innerHTML = `
+                                    <img src="${userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${userData.username}" class="user-avatar">
+                                    <span>${userData.username}</span>
+                                `;
+                                
+                                userElement.onclick = () => {
+                                    if (!selectedUsers.has(doc.id)) {
+                                        selectedUsers.add(doc.id);
+                                        updateSelectedUsers();
+                                        createButton.disabled = !groupNameInput.value.trim() || selectedUsers.size === 0;
+                                    }
+                                };
+                                
+                                searchResults.appendChild(userElement);
+                            }
+                        }
+                    });
+                } catch (error) {
+                    console.error('Error searching users:', error);
+                }
+            }
+        });
+        
+        createButton.onclick = async () => {
+            const groupName = groupNameInput.value.trim();
+            if (groupName && selectedUsers.size > 0) {
+                try {
+                    await createGroupChat(groupName, Array.from(selectedUsers));
+                    closeNewGroupModal();
+                    closeComposeModal();
+                } catch (error) {
+                    console.error('Error creating group chat:', error);
+                    alert('Error creating group chat. Please try again.');
+                }
+            }
+        };
+    }
+    
+    // Show modal
+    const modalToShow = document.getElementById('new-group-modal');
+    modalToShow.style.display = 'block';
+}
+
+function closeNewGroupModal() {
+    const modalToClose = document.getElementById('new-group-modal');
+    if (modalToClose) {
+        modalToClose.style.display = 'none';
+        // Clear inputs
+        modalToClose.querySelector('#group-name').value = '';
+        modalToClose.querySelector('#group-user-search').value = '';
+        modalToClose.querySelector('.selected-users').innerHTML = '';
+        modalToClose.querySelector('.search-results').innerHTML = '';
+        modalToClose.querySelector('.create-group-button').disabled = true;
+    }
+}
+
+function updateSelectedUsers() {
+    const selectedUsersContainer = document.querySelector('.selected-users');
+    if (!selectedUsersContainer) return;
+    
+    selectedUsersContainer.innerHTML = '';
+    
+    // Get all selected user IDs
+    const selectedUserElements = document.querySelectorAll('.selected-user');
+    const selectedUserIds = Array.from(selectedUserElements).map(el => el.dataset.userId);
+    
+    // Create elements for each selected user
+    selectedUserIds.forEach(async (userId) => {
+        try {
+            const userDoc = await getDoc(doc(db, 'users', userId));
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                const userElement = document.createElement('div');
+                userElement.className = 'selected-user';
+                userElement.dataset.userId = userId;
+                userElement.innerHTML = `
+                    <img src="${userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${userData.username}" class="user-avatar">
+                    <span>${userData.username}</span>
+                    <span class="remove-user">&times;</span>
+                `;
+                
+                userElement.querySelector('.remove-user').onclick = (e) => {
+                    e.stopPropagation();
+                    userElement.remove();
+                    selectedUsers.delete(userId);
+                    updateSelectedUsers();
+                };
+                
+                selectedUsersContainer.appendChild(userElement);
+            }
+        } catch (error) {
+            console.error('Error getting user data:', error);
+        }
+    });
+}
+
+// Add group chat styles
+const style = document.createElement('style');
+style.textContent = `
+    .group-chat-button {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        background-color: #4a90e2;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-bottom: 16px;
+        width: 100%;
+    }
+    
+    .group-chat-button:hover {
+        background-color: #357abd;
+    }
+    
+    .selected-users {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 16px 0;
+    }
+    
+    .selected-user {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 8px;
+        background-color: #f0f2f5;
+        border-radius: 16px;
+    }
+    
+    .selected-user img {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+    }
+    
+    .remove-user {
+        cursor: pointer;
+        color: #666;
+    }
+    
+    .remove-user:hover {
+        color: #ff4444;
+    }
+    
+    .search-result-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px;
+        cursor: pointer;
+    }
+    
+    .search-result-item:hover {
+        background-color: #f0f2f5;
+    }
+    
+    .search-result-item img {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+    }
+    
+    .sender-name {
+        font-size: 0.8em;
+        color: #666;
+        margin-bottom: 4px;
+    }
+`;
+document.head.appendChild(style);
