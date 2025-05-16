@@ -200,5 +200,62 @@
             </div>
         </div>
     </div>
+
+    <div class="compose-button">
+        <span class="material-symbols-outlined">edit</span>
+    </div>
+
+    <!-- Add Group Chat Button -->
+    <div class="create-group-button">
+        <span class="material-symbols-outlined">group_add</span>
+    </div>
+
+    <!-- Add Group Chat Modal -->
+    <div id="create-group-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Create Group Chat</h2>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="group-name-input" placeholder="Enter group name" class="group-name-input">
+                <div class="selected-users-container">
+                    <h3>Selected Users</h3>
+                    <div id="selected-users-list" class="selected-users-list"></div>
+                </div>
+                <div class="available-users-container">
+                    <h3>Available Users</h3>
+                    <div id="available-users-list" class="available-users-list"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="create-group-button" class="create-group-button">Create Group</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Group Info Modal -->
+    <div id="group-info-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Group Info</h2>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="group-info-header">
+                    <img src="https://i.ibb.co/Gf9VD2MN/group.png" alt="Group" class="group-avatar">
+                    <input type="text" id="group-name-edit" class="group-name-edit">
+                </div>
+                <div class="group-members-container">
+                    <h3>Members</h3>
+                    <div id="group-members-list" class="group-members-list"></div>
+                </div>
+                <div class="group-actions">
+                    <button id="add-members-button" class="action-button">Add Members</button>
+                    <button id="leave-group-button" class="action-button danger">Leave Group</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
