@@ -1161,156 +1161,225 @@ function checkFirebaseConnection() {
 function openComposeModal() {
     const modal = document.getElementById('compose-modal');
     modal.style.display = 'block';
+    // Trigger reflow
+    modal.offsetHeight;
     modal.classList.add('active');
-    document.getElementById('compose-search').value = '';
-    document.getElementById('compose-results').innerHTML = '';
-    document.getElementById('group-name').value = '';
-    document.getElementById('group-member-search').value = '';
-    document.getElementById('group-members-list').innerHTML = '';
-    document.getElementById('selected-members-list').innerHTML = '';
-    selectedGroupMembers.clear();
-    
-    // Set initial tab
-    const tabs = document.querySelectorAll('.tab-button');
-    const tabContents = document.querySelectorAll('.tab-content');
-    tabs.forEach(tab => tab.classList.remove('active'));
-    tabContents.forEach(content => {
-        content.classList.remove('active');
-        content.style.display = 'none';
-    });
-    tabs[0].classList.add('active');
-    tabContents[0].classList.add('active');
-    tabContents[0].style.display = 'block';
+    // Focus the search input
+    const searchInput = document.getElementById('compose-search');
+    searchInput.focus();
 }
 
 function closeComposeModal() {
     const modal = document.getElementById('compose-modal');
-    modal.style.display = 'none';
     modal.classList.remove('active');
+    // Wait for animation to complete before hiding
+    setTimeout(() => {
+        modal.style.display = 'none';
+        // Clear search results
+        const composeResults = document.getElementById('compose-results');
+        composeResults.innerHTML = '';
+        // Clear search input
+        const searchInput = document.getElementById('compose-search');
+        searchInput.value = '';
+    }, 300);
 }
 
-// Add tab switching functionality
+// Compose new message
 document.addEventListener('DOMContentLoaded', () => {
-    // Tab switching
-    const tabs = document.querySelectorAll('.tab-button');
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            // Remove active class from all tabs and contents
-            tabs.forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-                content.style.display = 'none';
-            });
-            
-            // Add active class to clicked tab and corresponding content
-            tab.classList.add('active');
-            const tabId = `${tab.dataset.tab}-tab`;
-            const content = document.getElementById(tabId);
-            content.classList.add('active');
-            content.style.display = 'block';
-        });
-    });
-    
-    // Compose modal event listeners
-    const composeModal = document.getElementById('compose-modal');
-    const newMessageButton = document.querySelector('.new-message-button');
-    const closeComposeModalBtn = composeModal.querySelector('.close-modal');
-    
-    // Remove any existing event listeners
-    const newNewMessageButton = newMessageButton.cloneNode(true);
-    newMessageButton.parentNode.replaceChild(newNewMessageButton, newMessageButton);
-    
-    // Add event listeners
-    newNewMessageButton.addEventListener('click', openComposeModal);
-    closeComposeModalBtn.addEventListener('click', closeComposeModal);
-    
-    // Close compose modal when clicking outside
-    window.addEventListener('click', (e) => {
-        if (e.target === composeModal) {
-            closeComposeModal();
-        }
-    });
-    
-    // Handle compose search
-    const composeSearch = document.getElementById('compose-search');
-    composeSearch.addEventListener('input', async (e) => {
-        const searchTerm = e.target.value.toLowerCase();
-        const resultsContainer = document.getElementById('compose-results');
-        const modalContent = document.querySelector('#compose-modal .modal-content');
-        resultsContainer.innerHTML = '';
-        
-        // Toggle has-text class based on input
-        if (searchTerm.length > 0) {
-            modalContent.classList.add('has-text');
-        } else {
-            modalContent.classList.remove('has-text');
-            modalContent.classList.remove('has-results');
-        }
-        
-        if (searchTerm.length > 0) {
-            try {
-                const usersQuery = query(collection(db, 'users'));
-                const usersSnapshot = await getDocs(usersQuery);
-                const suggestions = [];
-                
-                usersSnapshot.forEach(doc => {
-                    if (doc.id !== currentUser.uid) {
-                        const user = doc.data();
-                        // Skip deleted users
-                        if (user.deleted) return;
-                        
-                        const username = user.username?.toLowerCase() || '';
-                        
-                        if (username.includes(searchTerm)) {
-                            suggestions.push({
-                                id: doc.id,
-                                username: user.username,
-                                profilePicture: user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
-                                verified: user.verified || false
-                            });
-                        }
-                    }
-                });
-
-                // Sort suggestions by username
-                suggestions.sort((a, b) => a.username.localeCompare(b.username));
-
-                // Display suggestions
-                if (suggestions.length > 0) {
-                    modalContent.classList.add('has-results');
-                    suggestions.forEach(user => {
-                        const userElement = document.createElement('div');
-                        userElement.className = 'compose-user-item';
-                        userElement.innerHTML = `
-                            <img src="${user.profilePicture}" alt="${user.username}" class="user-avatar">
-                            <span>${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
-                        `;
-                        userElement.onclick = () => {
-                            startChat(user.id, user.username);
-                            closeComposeModal();
-                        };
-                        resultsContainer.appendChild(userElement);
-                    });
-                } else {
-                    modalContent.classList.remove('has-results');
-                    const noResults = document.createElement('div');
-                    noResults.className = 'no-results';
-                    noResults.textContent = 'No users found';
-                    resultsContainer.appendChild(noResults);
+    // Message input event listener
+    const messageInput = document.getElementById('message-input');
+    if (messageInput) {
+        // Prevent pasting images
+        messageInput.addEventListener('paste', (e) => {
+            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) {
+                    e.preventDefault();
+                    return;
                 }
-            } catch (error) {
-                console.error('Error searching users:', error);
-                modalContent.classList.remove('has-results');
-                const errorElement = document.createElement('div');
-                errorElement.className = 'no-results';
-                errorElement.textContent = 'Error searching users. Please try again.';
-                resultsContainer.appendChild(errorElement);
             }
+        });
+
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const content = messageInput.value.trim();
+                if (content) {
+                    messageInput.value = ''; // Clear input immediately
+                    sendMessage(content); // Pass content to sendMessage
+                    updateTypingStatus(false);
+                }
+            }
+        });
+
+        // Add typing status listeners
+        messageInput.addEventListener('input', () => {
+            if (!isTyping) {
+                isTyping = true;
+                updateTypingStatus(true);
+            }
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => {
+                isTyping = false;
+                updateTypingStatus(false);
+            }, 1000);
+        });
+
+        // Add a safe wrapper for selectionStart
+        const safeGetSelectionStart = (element) => {
+            try {
+                if (!element || !element.isConnected) return 0;
+                return element.selectionStart || 0;
+            } catch (error) {
+                console.warn('Error accessing selectionStart:', error);
+                return 0;
+            }
+        };
+
+        // Override the getPosition function if it exists
+        if (typeof window.getPosition === 'function') {
+            const originalGetPosition = window.getPosition;
+            window.getPosition = function(element) {
+                return safeGetSelectionStart(element);
+            };
         }
-    });
+    }
+
+    // Compose icon event listener
+    const composeIcon = document.querySelector('.new-message-button');
+    if (composeIcon) {
+        composeIcon.addEventListener('click', openComposeModal);
+    }
+
+    // Close modal event listener
+    const closeModal = document.querySelector('.close-modal');
+    if (closeModal) {
+        closeModal.addEventListener('click', closeComposeModal);
+    }
+
+    // Compose search event listener
+    const composeSearch = document.getElementById('compose-search');
+    if (composeSearch) {
+        composeSearch.addEventListener('input', async (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const composeResults = document.getElementById('compose-results');
+            const modalContent = document.querySelector('#compose-modal .modal-content');
+            composeResults.innerHTML = '';
+
+            // Toggle has-text class based on input
+            if (searchTerm.length > 0) {
+                modalContent.classList.add('has-text');
+            } else {
+                modalContent.classList.remove('has-text');
+                modalContent.classList.remove('has-results');
+            }
+
+            if (searchTerm.length > 0) {
+                try {
+                    // Get all users except current user
+                    const usersQuery = query(collection(db, 'users'));
+                    const usersSnapshot = await getDocs(usersQuery);
+                    const suggestions = [];
+                    
+                    usersSnapshot.forEach(doc => {
+                        if (doc.id !== currentUser.uid) {
+                            const user = doc.data();
+                            // Skip deleted users
+                            if (user.deleted) return;
+                            
+                            const username = user.username?.toLowerCase() || '';
+                            
+                            if (username.includes(searchTerm)) {
+                                suggestions.push({
+                                    id: doc.id,
+                                    username: user.username,
+                                    profilePicture: user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
+                                    verified: user.verified || false
+                                });
+                            }
+                        }
+                    });
+
+                    // Sort suggestions by username
+                    suggestions.sort((a, b) => a.username.localeCompare(b.username));
+
+                    // Display suggestions
+                    if (suggestions.length > 0) {
+                        modalContent.classList.add('has-results');
+                        suggestions.forEach(user => {
+                            const userElement = document.createElement('div');
+                            userElement.className = 'compose-user-item';
+                            userElement.innerHTML = `
+                                <img src="${user.profilePicture}" alt="${user.username}" class="user-avatar">
+                                <span>${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
+                            `;
+                            userElement.onclick = () => {
+                                startChat(user.id, user.username);
+                                closeComposeModal();
+                            };
+                            composeResults.appendChild(userElement);
+                        });
+                    } else {
+                        modalContent.classList.remove('has-results');
+                        const noResults = document.createElement('div');
+                        noResults.className = 'no-results';
+                        noResults.textContent = 'No users found';
+                        composeResults.appendChild(noResults);
+                    }
+                } catch (error) {
+                    console.error('Error searching users:', error);
+                    modalContent.classList.remove('has-results');
+                    const errorElement = document.createElement('div');
+                    errorElement.className = 'no-results';
+                    errorElement.textContent = 'Error searching users. Please try again.';
+                    composeResults.appendChild(errorElement);
+                }
+            }
+        });
+    }
+
+    // Search input event listener
+    const searchInput = document.getElementById('search-user');
+    if (searchInput) {
+        let searchTimeout;
+        searchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.trim();
+            
+            // Clear any existing timeout
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+            
+            // Set a new timeout to debounce the search
+            searchTimeout = setTimeout(async () => {
+                if (!searchTerm) {
+                    // If search is empty, reload all users
+                    await loadUsers();
+                } else {
+                    await searchUsers(searchTerm);
+                }
+            }, 300); // 300ms debounce
+        });
+    }
+
+    if (clearSearch) {
+        clearSearch.addEventListener('click', async () => {
+            if (searchInput) {
+                searchInput.value = '';
+                // Force reload all users when clear button is clicked
+                await loadUsers();
+            }
+        });
+    }
 });
 
-// ... existing code ...
+// Close compose modal when clicking outside
+window.addEventListener('click', (event) => {
+    const modal = document.getElementById('compose-modal');
+    if (event.target === modal) {
+        closeComposeModal();
+    }
+});
 
 // Send message
 async function sendMessage(content) {
@@ -2329,343 +2398,3 @@ loadUsers = async function() {
     await originalLoadUsers();
     checkUsernameOverflow();
 };
-
-// Group Chat Variables
-let selectedGroupMembers = new Set();
-let currentGroupChat = null;
-
-// Open group chat modal
-function openGroupModal() {
-    const modal = document.getElementById('group-modal');
-    modal.style.display = 'block';
-    // Clear previous selections
-    selectedGroupMembers.clear();
-    document.getElementById('selected-members-list').innerHTML = '';
-    document.getElementById('group-name').value = '';
-    document.getElementById('group-description').value = '';
-    document.getElementById('group-member-search').value = '';
-    document.getElementById('group-members-list').innerHTML = '';
-}
-
-// Close group chat modal
-function closeGroupModal() {
-    const modal = document.getElementById('group-modal');
-    modal.style.display = 'none';
-}
-
-// Add member to group
-function addGroupMember(user) {
-    if (selectedGroupMembers.has(user.id)) return;
-    
-    selectedGroupMembers.add(user.id);
-    const selectedMembersList = document.getElementById('selected-members-list');
-    
-    const memberElement = document.createElement('div');
-    memberElement.className = 'selected-member';
-    memberElement.innerHTML = `
-        <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.username}">
-        <span>${user.username}</span>
-        <span class="material-symbols-outlined remove-member">close</span>
-    `;
-    
-    memberElement.querySelector('.remove-member').onclick = () => {
-        selectedGroupMembers.delete(user.id);
-        memberElement.remove();
-    };
-    
-    selectedMembersList.appendChild(memberElement);
-}
-
-// Create new group chat
-async function createGroupChat() {
-    const groupName = document.getElementById('group-name').value.trim();
-    const groupDescription = document.getElementById('group-description').value.trim();
-    
-    if (!groupName) {
-        alert('Please enter a group name');
-        return;
-    }
-    
-    if (selectedGroupMembers.size < 2) {
-        alert('Please select at least 2 members');
-        return;
-    }
-    
-    try {
-        // Create group document
-        const groupData = {
-            name: groupName,
-            description: groupDescription,
-            createdBy: currentUser.uid,
-            createdAt: serverTimestamp(),
-            members: [...selectedGroupMembers, currentUser.uid],
-            admins: [currentUser.uid]
-        };
-        
-        const groupRef = await addDoc(collection(db, 'groups'), groupData);
-        
-        // Create initial group message
-        const messageData = {
-            content: `${currentUser.displayName} created the group`,
-            senderId: currentUser.uid,
-            groupId: groupRef.id,
-            timestamp: serverTimestamp(),
-            type: 'system'
-        };
-        
-        await addDoc(collection(db, 'messages'), messageData);
-        
-        // Add group to each member's conversations
-        const batch = writeBatch(db);
-        [...selectedGroupMembers, currentUser.uid].forEach(memberId => {
-            const userRef = doc(db, 'users', memberId);
-            batch.update(userRef, {
-                [`conversations.${groupRef.id}`]: {
-                    type: 'group',
-                    lastMessageTime: serverTimestamp(),
-                    lastMessage: 'Group created'
-                }
-            });
-        });
-        
-        await batch.commit();
-        
-        closeGroupModal();
-        loadUsers(); // Refresh the chat list
-        startGroupChat(groupRef.id, groupName);
-    } catch (error) {
-        console.error('Error creating group:', error);
-        alert('Error creating group. Please try again.');
-    }
-}
-
-// Start group chat
-async function startGroupChat(groupId, groupName) {
-    currentGroupChat = { id: groupId, name: groupName, type: 'group' };
-    
-    // Get group data
-    const groupDoc = await getDoc(doc(db, 'groups', groupId));
-    const groupData = groupDoc.data();
-    
-    // Update chat header
-    const chatHeader = document.querySelector('.chat-header');
-    chatHeader.className = 'chat-header group-chat';
-    chatHeader.innerHTML = `
-        <img src="https://i.ibb.co/Gf9VD2MN/group.png" alt="${groupName}">
-        <div class="group-info">
-            <div class="group-name">${groupName}</div>
-            <div class="member-count">${groupData.members.length} members</div>
-        </div>
-        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e3e3e3">
-            <path d="M440-120v-240h80v80h320v80H520v80h-80Zm-320-80v-80h240v80H120Zm160-160v-80H120v-80h160v-80h80v240h-80Zm160-80v-80h400v80H440Zm160-160v-240h80v80h160v80H680v80h-80Zm-480-80v-80h400v80H120Z"/>
-        </svg>
-    `;
-    
-    // Show message input
-    const messageInput = document.querySelector('.message-input');
-    messageInput.classList.add('visible');
-    messageInput.querySelector('input').placeholder = `Message ${groupName}`;
-    
-    // Load group messages
-    loadGroupMessages();
-}
-
-// Load group messages
-async function loadGroupMessages() {
-    if (!currentGroupChat) return;
-    
-    const chatMessages = document.getElementById('chat-messages');
-    chatMessages.innerHTML = '';
-    
-    try {
-        const messagesQuery = query(
-            collection(db, 'messages'),
-            where('groupId', '==', currentGroupChat.id),
-            orderBy('timestamp', 'asc')
-        );
-        
-        if (window.currentMessageUnsubscribe) {
-            window.currentMessageUnsubscribe();
-        }
-        
-        const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
-            chatMessages.innerHTML = '';
-            let lastMessageTime = null;
-            
-            snapshot.forEach(doc => {
-                const message = doc.data();
-                const messageTime = message.timestamp.toDate();
-                
-                // Add timestamp or gap if needed
-                if (lastMessageTime) {
-                    const timeDiff = messageTime - lastMessageTime;
-                    const twentyMinutes = 20 * 60 * 1000;
-                    
-                    if (timeDiff > twentyMinutes) {
-                        const dateSeparator = document.createElement('div');
-                        dateSeparator.className = 'date-separator';
-                        const today = new Date();
-                        const messageDate = messageTime;
-                        
-                        let dateText;
-                        if (messageDate.toDateString() === today.toDateString()) {
-                            dateText = `Today ${messageDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
-                        } else if (messageDate.toDateString() === new Date(today - 86400000).toDateString()) {
-                            dateText = `Yesterday ${messageDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
-                        } else {
-                            dateText = messageDate.toLocaleDateString([], { 
-                                month: 'short', 
-                                day: 'numeric',
-                                hour: 'numeric',
-                                minute: '2-digit'
-                            });
-                        }
-                        
-                        dateSeparator.textContent = dateText;
-                        chatMessages.appendChild(dateSeparator);
-                    }
-                }
-                
-                const messageElement = document.createElement('div');
-                messageElement.className = `message group-message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
-                
-                if (message.type === 'system') {
-                    messageElement.className = 'message system-message';
-                    messageElement.innerHTML = `<div class="content">${message.content}</div>`;
-                } else {
-                    // Get sender's data
-                    getDoc(doc(db, 'users', message.senderId)).then(senderDoc => {
-                        const senderData = senderDoc.data();
-                        messageElement.innerHTML = `
-                            <img src="${senderData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${senderData.username}" class="profile-picture">
-                            <div class="sender">${senderData.username}</div>
-                            <div class="content">${formatMessageContent(message.content)}</div>
-                        `;
-                    });
-                }
-                
-                chatMessages.appendChild(messageElement);
-                lastMessageTime = messageTime;
-            });
-            
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        });
-        
-        window.currentMessageUnsubscribe = unsubscribe;
-    } catch (error) {
-        console.error('Error loading group messages:', error);
-    }
-}
-
-// Send group message
-async function sendGroupMessage(content) {
-    if (!currentUser || !currentGroupChat) return;
-    
-    if (!content) return;
-    
-    try {
-        const messageData = {
-            content: content,
-            senderId: currentUser.uid,
-            groupId: currentGroupChat.id,
-            timestamp: serverTimestamp(),
-            type: 'message'
-        };
-        
-        await addDoc(collection(db, 'messages'), messageData);
-        
-        // Update last message time for all group members
-        const groupDoc = await getDoc(doc(db, 'groups', currentGroupChat.id));
-        const groupData = groupDoc.data();
-        
-        const batch = writeBatch(db);
-        groupData.members.forEach(memberId => {
-            const userRef = doc(db, 'users', memberId);
-            batch.update(userRef, {
-                [`conversations.${currentGroupChat.id}.lastMessageTime`]: serverTimestamp(),
-                [`conversations.${currentGroupChat.id}.lastMessage`]: content
-            });
-        });
-        
-        await batch.commit();
-        
-        // Scroll to bottom
-        const chatMessages = document.getElementById('chat-messages');
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    } catch (error) {
-        console.error('Error sending group message:', error);
-    }
-}
-
-// Modify the existing message input event listener to handle group messages
-document.addEventListener('DOMContentLoaded', () => {
-    const messageInput = document.getElementById('message-input');
-    if (messageInput) {
-        messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                const content = messageInput.value.trim();
-                if (content) {
-                    messageInput.value = '';
-                    if (currentGroupChat) {
-                        sendGroupMessage(content);
-                    } else {
-                        sendMessage(content);
-                    }
-                    updateTypingStatus(false);
-                }
-            }
-        });
-    }
-    
-    // Add group chat modal event listeners
-    const groupModal = document.getElementById('group-modal');
-    const newGroupButton = document.querySelector('.new-group-button');
-    const closeGroupModalBtn = groupModal.querySelector('.close-modal');
-    const createGroupButton = document.getElementById('create-group-button');
-    const groupMemberSearch = document.getElementById('group-member-search');
-    
-    newGroupButton.addEventListener('click', openGroupModal);
-    closeGroupModalBtn.addEventListener('click', closeGroupModal);
-    createGroupButton.addEventListener('click', createGroupChat);
-    
-    groupMemberSearch.addEventListener('input', async (e) => {
-        const searchTerm = e.target.value.toLowerCase();
-        const membersList = document.getElementById('group-members-list');
-        membersList.innerHTML = '';
-        
-        if (searchTerm.length > 0) {
-            try {
-                const usersQuery = query(collection(db, 'users'));
-                const usersSnapshot = await getDocs(usersQuery);
-                
-                usersSnapshot.forEach(doc => {
-                    if (doc.id !== currentUser.uid) {
-                        const user = doc.data();
-                        if (user.username.toLowerCase().includes(searchTerm)) {
-                            const userElement = document.createElement('div');
-                            userElement.className = 'compose-user-item';
-                            userElement.innerHTML = `
-                                <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.username}" class="user-avatar">
-                                <span>${user.username}</span>
-                            `;
-                            userElement.onclick = () => addGroupMember({ id: doc.id, ...user });
-                            membersList.appendChild(userElement);
-                        }
-                    }
-                });
-            } catch (error) {
-                console.error('Error searching users:', error);
-            }
-        }
-    });
-    
-    // Close group modal when clicking outside
-    window.addEventListener('click', (e) => {
-        if (e.target === groupModal) {
-            closeGroupModal();
-        }
-    });
-});
-
-// Modify loadUsers to include group chats
