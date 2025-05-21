@@ -131,11 +131,39 @@
     <!-- Compose Modal -->
     <div id="compose-modal" class="modal">
         <div class="modal-content">
-            <div class="search-container">
-                <span class="material-symbols-outlined search-icon">search</span>
-                <input type="text" id="compose-search" placeholder="Search users...">
+            <div class="modal-header">
+                <h2>New Message</h2>
+                <span class="material-symbols-outlined close-modal">close</span>
             </div>
-            <div id="compose-results" class="compose-results"></div>
+            <div class="modal-body">
+                <div class="compose-tabs">
+                    <button class="tab-button active" data-tab="direct">Direct Message</button>
+                    <button class="tab-button" data-tab="group">Group Chat</button>
+                </div>
+                <div class="tab-content" id="direct-tab">
+                    <div class="search-container">
+                        <span class="material-symbols-outlined search-icon">search</span>
+                        <input type="text" id="compose-search" placeholder="Search users...">
+                    </div>
+                    <div id="compose-results" class="compose-results"></div>
+                </div>
+                <div class="tab-content" id="group-tab" style="display: none;">
+                    <div class="form-group">
+                        <label for="group-name">Group Name</label>
+                        <input type="text" id="group-name" placeholder="Enter group name">
+                    </div>
+                    <div class="search-container">
+                        <span class="material-symbols-outlined search-icon">search</span>
+                        <input type="text" id="group-member-search" placeholder="Search users to add...">
+                    </div>
+                    <div id="group-members-list" class="compose-results"></div>
+                    <div class="selected-members">
+                        <h3>Selected Members</h3>
+                        <div id="selected-members-list"></div>
+                    </div>
+                    <button class="save-button" id="create-group-button">Create Group</button>
+                </div>
+            </div>
         </div>
     </div>
 
