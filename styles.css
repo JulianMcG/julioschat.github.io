@@ -1851,4 +1851,353 @@ input:checked + .slider:before {
     .sidebar .profile-info {
         display: none;
     }
+}
+
+/* Group Chat Styles */
+.group-chat-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 15px 20px;
+    border-bottom: 1px solid #1C1F28;
+}
+
+.group-chat-header .group-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background-color: #1F49C7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ECEBF7;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.group-chat-header .group-info {
+    flex: 1;
+}
+
+.group-chat-header .group-name {
+    font-size: 16px;
+    font-weight: 500;
+    color: #ECEBF7;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.group-chat-header .member-count {
+    font-size: 13px;
+    color: #B6B8C8;
+}
+
+.group-chat-header .group-actions {
+    display: flex;
+    gap: 15px;
+}
+
+.group-action-button {
+    color: #B6B8C8;
+    cursor: pointer;
+    font-size: 20px;
+    transition: color 0.3s;
+}
+
+.group-action-button:hover {
+    color: #ECEBF7;
+}
+
+/* Group Members Modal */
+#group-members-modal .modal-content {
+    background-color: #10121B;
+    border-radius: 15px;
+    width: 400px;
+    max-width: 90%;
+    margin: 10% auto;
+    padding: 20px;
+}
+
+.group-members-list {
+    max-height: 400px;
+    overflow-y: auto;
+    margin-top: 20px;
+}
+
+.group-member-item {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    border-radius: 8px;
+    transition: background-color 0.3s;
+}
+
+.group-member-item:hover {
+    background-color: #1C1F28;
+}
+
+.group-member-item img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+
+.group-member-info {
+    flex: 1;
+}
+
+.group-member-name {
+    font-size: 14px;
+    color: #ECEBF7;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.group-member-role {
+    font-size: 12px;
+    color: #B6B8C8;
+}
+
+.group-member-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* Create Group Modal */
+#create-group-modal .modal-content {
+    background-color: #10121B;
+    border-radius: 15px;
+    width: 500px;
+    max-width: 90%;
+    margin: 10% auto;
+    padding: 20px;
+}
+
+.group-form-group {
+    margin-bottom: 20px;
+}
+
+.group-form-group label {
+    display: block;
+    color: #B6B8C8;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.group-form-group input {
+    width: 100%;
+    padding: 16px 15px;
+    border: 1.5px solid #1C1F28;
+    border-radius: 15px;
+    font-size: 16px;
+    background-color: #10121B;
+    color: #ECEBF7;
+    transition: border-color 0.3s;
+}
+
+.group-form-group input:focus {
+    outline: none;
+    border-color: #1F49C7;
+}
+
+.group-members-selection {
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 10px;
+    border: 1.5px solid #1C1F28;
+    border-radius: 15px;
+    padding: 10px;
+}
+
+.selected-member {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    background-color: #1C1F28;
+    border-radius: 8px;
+    margin-bottom: 5px;
+}
+
+.selected-member img {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+
+.remove-member {
+    color: #E85658;
+    cursor: pointer;
+    margin-left: auto;
+    font-size: 18px;
+}
+
+.create-group-button {
+    width: 100%;
+    padding: 14px;
+    background-color: #1F49C7;
+    color: #ECEBF7;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+    transition: transform 0.1s ease;
+    box-shadow: 0 5px 0 #13296D;
+}
+
+.create-group-button:hover {
+    transform: translateY(-2px);
+}
+
+.create-group-button:active {
+    transform: translateY(5px);
+    box-shadow: 0 0 0 #13296D;
+}
+
+/* Group Message Styles */
+.group-message .sender {
+    font-size: 12px;
+    color: #B6B8C8;
+    margin-bottom: 4px;
+}
+
+.group-message.sent .sender {
+    text-align: right;
+}
+
+.group-message.received .sender {
+    text-align: left;
+}
+
+/* Group Chat Sidebar Item */
+.group-chat-item {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: background-color 0.3s;
+    width: 100%;
+    position: relative;
+    min-width: 0;
+}
+
+.group-chat-item:hover {
+    background-color: rgba(19, 22, 31, 0.5);
+}
+
+.group-chat-item.active {
+    background-color: #13161F;
+}
+
+.group-chat-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background-color: #1F49C7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ECEBF7;
+    font-size: 18px;
+    font-weight: 600;
+    margin-right: 10px;
+    flex-shrink: 0;
+}
+
+.group-chat-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.group-chat-name {
+    font-size: 14px;
+    color: #ECEBF7;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.group-chat-last-message {
+    font-size: 12px;
+    color: #B6B8C8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Group Chat Actions */
+.group-chat-actions {
+    display: none;
+    position: absolute;
+    right: 10px;
+    gap: 12px;
+}
+
+.group-chat-item:hover .group-chat-actions {
+    display: flex;
+}
+
+.group-chat-action {
+    color: #B6B8C8;
+    cursor: pointer;
+    font-size: 18px;
+    font-variation-settings: 'FILL' 1;
+}
+
+.group-chat-action:hover {
+    color: #ECEBF7;
+}
+
+/* Group Chat Settings */
+.group-settings-section {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #1C1F28;
+}
+
+.group-settings-title {
+    font-size: 16px;
+    color: #ECEBF7;
+    margin-bottom: 15px;
+}
+
+.group-settings-option {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+}
+
+.group-settings-option label {
+    color: #B6B8C8;
+    font-size: 14px;
+}
+
+.leave-group-button {
+    width: 100%;
+    padding: 14px;
+    background-color: #E85658;
+    color: #ECEBF7;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+    transition: transform 0.1s ease;
+    box-shadow: 0 5px 0 #8A1315;
+    margin-top: 20px;
+}
+
+.leave-group-button:hover {
+    transform: translateY(-2px);
+}
+
+.leave-group-button:active {
+    transform: translateY(5px);
+    box-shadow: 0 0 0 #8A1315;
 } 
