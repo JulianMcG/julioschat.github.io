@@ -1161,28 +1161,137 @@ function checkFirebaseConnection() {
 function openComposeModal() {
     const modal = document.getElementById('compose-modal');
     modal.style.display = 'block';
-    // Trigger reflow
-    modal.offsetHeight;
-    modal.classList.add('active');
-    // Focus the search input
-    const searchInput = document.getElementById('compose-search');
-    searchInput.focus();
+    document.getElementById('compose-search').value = '';
+    document.getElementById('compose-results').innerHTML = '';
+    document.getElementById('group-name').value = '';
+    document.getElementById('group-member-search').value = '';
+    document.getElementById('group-members-list').innerHTML = '';
+    document.getElementById('selected-members-list').innerHTML = '';
+    selectedGroupMembers.clear();
+    
+    // Set initial tab
+    const tabs = document.querySelectorAll('.tab-button');
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabs.forEach(tab => tab.classList.remove('active'));
+    tabContents.forEach(content => content.classList.remove('active'));
+    tabs[0].classList.add('active');
+    tabContents[0].classList.add('active');
 }
 
 function closeComposeModal() {
     const modal = document.getElementById('compose-modal');
-    modal.classList.remove('active');
-    // Wait for animation to complete before hiding
-    setTimeout(() => {
-        modal.style.display = 'none';
-        // Clear search results
-        const composeResults = document.getElementById('compose-results');
-        composeResults.innerHTML = '';
-        // Clear search input
-        const searchInput = document.getElementById('compose-search');
-        searchInput.value = '';
-    }, 300);
+    modal.style.display = 'none';
 }
+
+// Add tab switching functionality
+document.addEventListener('DOMContentLoaded', () => {
+    const tabs = document.querySelectorAll('.tab-button');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            // Remove active class from all tabs and contents
+            tabs.forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+                content.style.display = 'none';
+            });
+            
+            // Add active class to clicked tab and corresponding content
+            tab.classList.add('active');
+            const tabId = `${tab.dataset.tab}-tab`;
+            const content = document.getElementById(tabId);
+            content.classList.add('active');
+            content.style.display = 'block';
+        });
+    });
+    
+    // Add compose modal event listeners
+    const composeModal = document.getElementById('compose-modal');
+    const newMessageButton = document.querySelector('.new-message-button');
+    const closeComposeModalBtn = composeModal.querySelector('.close-modal');
+    
+    newMessageButton.addEventListener('click', openComposeModal);
+    closeComposeModalBtn.addEventListener('click', closeComposeModal);
+    
+    // Close compose modal when clicking outside
+    window.addEventListener('click', (e) => {
+        if (e.target === composeModal) {
+            closeComposeModal();
+        }
+    });
+    
+    // Handle compose search
+    const composeSearch = document.getElementById('compose-search');
+    composeSearch.addEventListener('input', async (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        const resultsContainer = document.getElementById('compose-results');
+        resultsContainer.innerHTML = '';
+        
+        if (searchTerm.length > 0) {
+            try {
+                const usersQuery = query(collection(db, 'users'));
+                const usersSnapshot = await getDocs(usersQuery);
+                
+                usersSnapshot.forEach(doc => {
+                    if (doc.id !== currentUser.uid) {
+                        const user = doc.data();
+                        if (user.username.toLowerCase().includes(searchTerm)) {
+                            const userElement = document.createElement('div');
+                            userElement.className = 'compose-user-item';
+                            userElement.innerHTML = `
+                                <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.username}" class="user-avatar">
+                                <span>${user.username}</span>
+                            `;
+                            userElement.onclick = () => {
+                                startChat(doc.id, user.username);
+                                closeComposeModal();
+                            };
+                            resultsContainer.appendChild(userElement);
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error searching users:', error);
+            }
+        }
+    });
+    
+    // Handle group member search
+    const groupMemberSearch = document.getElementById('group-member-search');
+    groupMemberSearch.addEventListener('input', async (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        const membersList = document.getElementById('group-members-list');
+        membersList.innerHTML = '';
+        
+        if (searchTerm.length > 0) {
+            try {
+                const usersQuery = query(collection(db, 'users'));
+                const usersSnapshot = await getDocs(usersQuery);
+                
+                usersSnapshot.forEach(doc => {
+                    if (doc.id !== currentUser.uid) {
+                        const user = doc.data();
+                        if (user.username.toLowerCase().includes(searchTerm)) {
+                            const userElement = document.createElement('div');
+                            userElement.className = 'compose-user-item';
+                            userElement.innerHTML = `
+                                <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.username}" class="user-avatar">
+                                <span>${user.username}</span>
+                            `;
+                            userElement.onclick = () => addGroupMember({ id: doc.id, ...user });
+                            membersList.appendChild(userElement);
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error searching users:', error);
+            }
+        }
+    });
+    
+    // Handle group creation
+    const createGroupButton = document.getElementById('create-group-button');
+    createGroupButton.addEventListener('click', createGroupChat);
+});
 
 // Compose new message
 document.addEventListener('DOMContentLoaded', () => {
