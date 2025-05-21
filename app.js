@@ -1161,6 +1161,7 @@ function checkFirebaseConnection() {
 function openComposeModal() {
     const modal = document.getElementById('compose-modal');
     modal.style.display = 'block';
+    modal.classList.add('active');
     document.getElementById('compose-search').value = '';
     document.getElementById('compose-results').innerHTML = '';
     document.getElementById('group-name').value = '';
@@ -1173,18 +1174,24 @@ function openComposeModal() {
     const tabs = document.querySelectorAll('.tab-button');
     const tabContents = document.querySelectorAll('.tab-content');
     tabs.forEach(tab => tab.classList.remove('active'));
-    tabContents.forEach(content => content.classList.remove('active'));
+    tabContents.forEach(content => {
+        content.classList.remove('active');
+        content.style.display = 'none';
+    });
     tabs[0].classList.add('active');
     tabContents[0].classList.add('active');
+    tabContents[0].style.display = 'block';
 }
 
 function closeComposeModal() {
     const modal = document.getElementById('compose-modal');
     modal.style.display = 'none';
+    modal.classList.remove('active');
 }
 
 // Add tab switching functionality
 document.addEventListener('DOMContentLoaded', () => {
+    // Tab switching
     const tabs = document.querySelectorAll('.tab-button');
     tabs.forEach(tab => {
         tab.addEventListener('click', () => {
@@ -1204,12 +1211,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
     
-    // Add compose modal event listeners
+    // Compose modal event listeners
     const composeModal = document.getElementById('compose-modal');
     const newMessageButton = document.querySelector('.new-message-button');
     const closeComposeModalBtn = composeModal.querySelector('.close-modal');
     
-    newMessageButton.addEventListener('click', openComposeModal);
+    // Remove any existing event listeners
+    const newNewMessageButton = newMessageButton.cloneNode(true);
+    newMessageButton.parentNode.replaceChild(newNewMessageButton, newMessageButton);
+    
+    // Add event listeners
+    newNewMessageButton.addEventListener('click', openComposeModal);
     closeComposeModalBtn.addEventListener('click', closeComposeModal);
     
     // Close compose modal when clicking outside
@@ -1224,271 +1236,81 @@ document.addEventListener('DOMContentLoaded', () => {
     composeSearch.addEventListener('input', async (e) => {
         const searchTerm = e.target.value.toLowerCase();
         const resultsContainer = document.getElementById('compose-results');
+        const modalContent = document.querySelector('#compose-modal .modal-content');
         resultsContainer.innerHTML = '';
         
+        // Toggle has-text class based on input
         if (searchTerm.length > 0) {
-            try {
-                const usersQuery = query(collection(db, 'users'));
-                const usersSnapshot = await getDocs(usersQuery);
-                
-                usersSnapshot.forEach(doc => {
-                    if (doc.id !== currentUser.uid) {
-                        const user = doc.data();
-                        if (user.username.toLowerCase().includes(searchTerm)) {
-                            const userElement = document.createElement('div');
-                            userElement.className = 'compose-user-item';
-                            userElement.innerHTML = `
-                                <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.username}" class="user-avatar">
-                                <span>${user.username}</span>
-                            `;
-                            userElement.onclick = () => {
-                                startChat(doc.id, user.username);
-                                closeComposeModal();
-                            };
-                            resultsContainer.appendChild(userElement);
-                        }
-                    }
-                });
-            } catch (error) {
-                console.error('Error searching users:', error);
-            }
+            modalContent.classList.add('has-text');
+        } else {
+            modalContent.classList.remove('has-text');
+            modalContent.classList.remove('has-results');
         }
-    });
-    
-    // Handle group member search
-    const groupMemberSearch = document.getElementById('group-member-search');
-    groupMemberSearch.addEventListener('input', async (e) => {
-        const searchTerm = e.target.value.toLowerCase();
-        const membersList = document.getElementById('group-members-list');
-        membersList.innerHTML = '';
         
         if (searchTerm.length > 0) {
             try {
                 const usersQuery = query(collection(db, 'users'));
                 const usersSnapshot = await getDocs(usersQuery);
+                const suggestions = [];
                 
                 usersSnapshot.forEach(doc => {
                     if (doc.id !== currentUser.uid) {
                         const user = doc.data();
-                        if (user.username.toLowerCase().includes(searchTerm)) {
-                            const userElement = document.createElement('div');
-                            userElement.className = 'compose-user-item';
-                            userElement.innerHTML = `
-                                <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.username}" class="user-avatar">
-                                <span>${user.username}</span>
-                            `;
-                            userElement.onclick = () => addGroupMember({ id: doc.id, ...user });
-                            membersList.appendChild(userElement);
+                        // Skip deleted users
+                        if (user.deleted) return;
+                        
+                        const username = user.username?.toLowerCase() || '';
+                        
+                        if (username.includes(searchTerm)) {
+                            suggestions.push({
+                                id: doc.id,
+                                username: user.username,
+                                profilePicture: user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
+                                verified: user.verified || false
+                            });
                         }
                     }
                 });
+
+                // Sort suggestions by username
+                suggestions.sort((a, b) => a.username.localeCompare(b.username));
+
+                // Display suggestions
+                if (suggestions.length > 0) {
+                    modalContent.classList.add('has-results');
+                    suggestions.forEach(user => {
+                        const userElement = document.createElement('div');
+                        userElement.className = 'compose-user-item';
+                        userElement.innerHTML = `
+                            <img src="${user.profilePicture}" alt="${user.username}" class="user-avatar">
+                            <span>${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
+                        `;
+                        userElement.onclick = () => {
+                            startChat(user.id, user.username);
+                            closeComposeModal();
+                        };
+                        resultsContainer.appendChild(userElement);
+                    });
+                } else {
+                    modalContent.classList.remove('has-results');
+                    const noResults = document.createElement('div');
+                    noResults.className = 'no-results';
+                    noResults.textContent = 'No users found';
+                    resultsContainer.appendChild(noResults);
+                }
             } catch (error) {
                 console.error('Error searching users:', error);
+                modalContent.classList.remove('has-results');
+                const errorElement = document.createElement('div');
+                errorElement.className = 'no-results';
+                errorElement.textContent = 'Error searching users. Please try again.';
+                resultsContainer.appendChild(errorElement);
             }
         }
     });
-    
-    // Handle group creation
-    const createGroupButton = document.getElementById('create-group-button');
-    createGroupButton.addEventListener('click', createGroupChat);
 });
 
-// Compose new message
-document.addEventListener('DOMContentLoaded', () => {
-    // Message input event listener
-    const messageInput = document.getElementById('message-input');
-    if (messageInput) {
-        // Prevent pasting images
-        messageInput.addEventListener('paste', (e) => {
-            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-            for (let i = 0; i < items.length; i++) {
-                if (items[i].type.indexOf('image') !== -1) {
-                    e.preventDefault();
-                    return;
-                }
-            }
-        });
-
-        messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                const content = messageInput.value.trim();
-                if (content) {
-                    messageInput.value = ''; // Clear input immediately
-                    sendMessage(content); // Pass content to sendMessage
-                    updateTypingStatus(false);
-                }
-            }
-        });
-
-        // Add typing status listeners
-        messageInput.addEventListener('input', () => {
-            if (!isTyping) {
-                isTyping = true;
-                updateTypingStatus(true);
-            }
-            clearTimeout(typingTimeout);
-            typingTimeout = setTimeout(() => {
-                isTyping = false;
-                updateTypingStatus(false);
-            }, 1000);
-        });
-
-        // Add a safe wrapper for selectionStart
-        const safeGetSelectionStart = (element) => {
-            try {
-                if (!element || !element.isConnected) return 0;
-                return element.selectionStart || 0;
-            } catch (error) {
-                console.warn('Error accessing selectionStart:', error);
-                return 0;
-            }
-        };
-
-        // Override the getPosition function if it exists
-        if (typeof window.getPosition === 'function') {
-            const originalGetPosition = window.getPosition;
-            window.getPosition = function(element) {
-                return safeGetSelectionStart(element);
-            };
-        }
-    }
-
-    // Compose icon event listener
-    const composeIcon = document.querySelector('.new-message-button');
-    if (composeIcon) {
-        composeIcon.addEventListener('click', openComposeModal);
-    }
-
-    // Close modal event listener
-    const closeModal = document.querySelector('.close-modal');
-    if (closeModal) {
-        closeModal.addEventListener('click', closeComposeModal);
-    }
-
-    // Compose search event listener
-    const composeSearch = document.getElementById('compose-search');
-    if (composeSearch) {
-        composeSearch.addEventListener('input', async (e) => {
-            const searchTerm = e.target.value.toLowerCase();
-            const composeResults = document.getElementById('compose-results');
-            const modalContent = document.querySelector('#compose-modal .modal-content');
-            composeResults.innerHTML = '';
-
-            // Toggle has-text class based on input
-            if (searchTerm.length > 0) {
-                modalContent.classList.add('has-text');
-            } else {
-                modalContent.classList.remove('has-text');
-                modalContent.classList.remove('has-results');
-            }
-
-            if (searchTerm.length > 0) {
-                try {
-                    // Get all users except current user
-                    const usersQuery = query(collection(db, 'users'));
-                    const usersSnapshot = await getDocs(usersQuery);
-                    const suggestions = [];
-                    
-                    usersSnapshot.forEach(doc => {
-                        if (doc.id !== currentUser.uid) {
-                            const user = doc.data();
-                            // Skip deleted users
-                            if (user.deleted) return;
-                            
-                            const username = user.username?.toLowerCase() || '';
-                            
-                            if (username.includes(searchTerm)) {
-                                suggestions.push({
-                                    id: doc.id,
-                                    username: user.username,
-                                    profilePicture: user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
-                                    verified: user.verified || false
-                                });
-                            }
-                        }
-                    });
-
-                    // Sort suggestions by username
-                    suggestions.sort((a, b) => a.username.localeCompare(b.username));
-
-                    // Display suggestions
-                    if (suggestions.length > 0) {
-                        modalContent.classList.add('has-results');
-                        suggestions.forEach(user => {
-                            const userElement = document.createElement('div');
-                            userElement.className = 'compose-user-item';
-                            userElement.innerHTML = `
-                                <img src="${user.profilePicture}" alt="${user.username}" class="user-avatar">
-                                <span>${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
-                            `;
-                            userElement.onclick = () => {
-                                startChat(user.id, user.username);
-                                closeComposeModal();
-                            };
-                            composeResults.appendChild(userElement);
-                        });
-                    } else {
-                        modalContent.classList.remove('has-results');
-                        const noResults = document.createElement('div');
-                        noResults.className = 'no-results';
-                        noResults.textContent = 'No users found';
-                        composeResults.appendChild(noResults);
-                    }
-                } catch (error) {
-                    console.error('Error searching users:', error);
-                    modalContent.classList.remove('has-results');
-                    const errorElement = document.createElement('div');
-                    errorElement.className = 'no-results';
-                    errorElement.textContent = 'Error searching users. Please try again.';
-                    composeResults.appendChild(errorElement);
-                }
-            }
-        });
-    }
-
-    // Search input event listener
-    const searchInput = document.getElementById('search-user');
-    if (searchInput) {
-        let searchTimeout;
-        searchInput.addEventListener('input', (e) => {
-            const searchTerm = e.target.value.trim();
-            
-            // Clear any existing timeout
-            if (searchTimeout) {
-                clearTimeout(searchTimeout);
-            }
-            
-            // Set a new timeout to debounce the search
-            searchTimeout = setTimeout(async () => {
-                if (!searchTerm) {
-                    // If search is empty, reload all users
-                    await loadUsers();
-                } else {
-                    await searchUsers(searchTerm);
-                }
-            }, 300); // 300ms debounce
-        });
-    }
-
-    if (clearSearch) {
-        clearSearch.addEventListener('click', async () => {
-            if (searchInput) {
-                searchInput.value = '';
-                // Force reload all users when clear button is clicked
-                await loadUsers();
-            }
-        });
-    }
-});
-
-// Close compose modal when clicking outside
-window.addEventListener('click', (event) => {
-    const modal = document.getElementById('compose-modal');
-    if (event.target === modal) {
-        closeComposeModal();
-    }
-});
+// ... existing code ...
 
 // Send message
 async function sendMessage(content) {
