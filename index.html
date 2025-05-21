@@ -88,10 +88,16 @@
                             <h3>Chat</h3>
                             <span class="material-symbols-outlined toggle-sidebar">thumbnail_bar</span>
                         </div>
-                        <button class="new-message-button">
-                            <span class="material-symbols-outlined">add</span>
-                            <span class="button-text">new message</span>
-                        </button>
+                        <div class="header-actions">
+                            <button class="new-group-button">
+                                <span class="material-symbols-outlined">group_add</span>
+                                <span class="button-text">new group</span>
+                            </button>
+                            <button class="new-message-button">
+                                <span class="material-symbols-outlined">add</span>
+                                <span class="button-text">new message</span>
+                            </button>
+                        </div>
                     </div>
                     <div class="search-container">
                         <span class="material-symbols-outlined search-icon">search</span>
@@ -197,6 +203,39 @@
                         <button class="unblock-button" id="unblock-user" style="display: none;">Unblock User</button>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Group Chat Modal -->
+    <div id="group-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Create New Group</h2>
+                <span class="material-symbols-outlined close-modal">close</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="group-name">Group Name</label>
+                    <input type="text" id="group-name" placeholder="Enter group name">
+                </div>
+                <div class="form-group">
+                    <label for="group-description">Description (optional)</label>
+                    <input type="text" id="group-description" placeholder="Enter group description">
+                </div>
+                <div class="form-group">
+                    <label>Select Members</label>
+                    <div class="search-container">
+                        <span class="material-symbols-outlined search-icon">search</span>
+                        <input type="text" id="group-member-search" placeholder="Search users...">
+                    </div>
+                    <div id="group-members-list" class="compose-results"></div>
+                </div>
+                <div class="selected-members">
+                    <h3>Selected Members</h3>
+                    <div id="selected-members-list"></div>
+                </div>
+                <button class="save-button" id="create-group-button">Create Group</button>
             </div>
         </div>
     </div>
