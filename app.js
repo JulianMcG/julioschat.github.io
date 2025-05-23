@@ -1151,34 +1151,42 @@ async function sendMessage(content) {
             const chatMessages = document.getElementById('chat-messages');
             const typingIndicator = document.createElement('div');
             typingIndicator.id = 'julio-typing-indicator';
-            typingIndicator.className = 'typing-indicator';
+            typingIndicator.className = 'typing-indicator received';
             typingIndicator.innerHTML = `
-                <lord-icon
-                    src="https://cdn.lordicon.com/jpgpblwn.json"
-                    trigger="loop"
-                    state="loop-scale"
-                    colors="primary:#b6b8c8"
-                    style="width:24px;height:24px">
-                </lord-icon>
+                <div class="content">
+                    <lord-icon
+                        src="https://cdn.lordicon.com/jpgpblwn.json"
+                        trigger="loop"
+                        state="loop-scale"
+                        colors="primary:#b6b8c8"
+                        style="width:24px;height:24px">
+                    </lord-icon>
+                </div>
             `;
             chatMessages.appendChild(typingIndicator);
             chatMessages.scrollTop = chatMessages.scrollHeight;
             
-            // Get AI response
-            const aiResponse = await callGeminiAPI(content);
-            
-            // Remove typing indicator
-            typingIndicator.remove();
-            
-            // Add AI's response to chat
-            const aiMessageData = {
-                content: aiResponse,
-                senderId: JULIO_USER_ID,
-                timestamp: serverTimestamp(),
-                participants: [currentUser.uid, JULIO_USER_ID]
-            };
-            
-            await addDoc(collection(db, 'messages'), aiMessageData);
+            try {
+                // Get AI response
+                const aiResponse = await callGeminiAPI(content);
+                
+                // Remove typing indicator
+                typingIndicator.remove();
+                
+                // Add AI's response to chat
+                const aiMessageData = {
+                    content: aiResponse,
+                    senderId: JULIO_USER_ID,
+                    timestamp: serverTimestamp(),
+                    participants: [currentUser.uid, JULIO_USER_ID]
+                };
+                
+                await addDoc(collection(db, 'messages'), aiMessageData);
+            } catch (error) {
+                console.error('Error getting AI response:', error);
+                typingIndicator.remove();
+                throw error;
+            }
         } else {
             // Normal message handling for other users
             await addDoc(collection(db, 'messages'), messageData);
