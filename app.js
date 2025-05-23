@@ -622,21 +622,7 @@ async function startChat(userId, username) {
     // Show message input and user options icon
     const messageInput = document.querySelector('.message-input');
     messageInput.classList.add('visible');
-    
-    // Update the header icon based on whether we're chatting with Julio
-    const headerIcon = document.querySelector('.chat-header .material-symbols-outlined');
-    if (userId === JULIO_USER_ID) {
-        headerIcon.textContent = 'edit_square';
-        headerIcon.onclick = wipeJulioMemory;
-    } else {
-        headerIcon.textContent = 'settings';
-        headerIcon.onclick = () => {
-            if (currentChatUser) {
-                openUserOptionsModal(currentChatUser.id, currentChatUser.username);
-            }
-        };
-    }
-    headerIcon.style.display = 'block';
+    document.querySelector('.chat-header svg').style.display = 'block';
 
     // Set up typing listener
     if (window.currentTypingUnsubscribe) {
@@ -646,30 +632,6 @@ async function startChat(userId, username) {
 
     // Load messages
     loadMessages();
-}
-
-// Function to wipe Julio's memory
-async function wipeJulioMemory() {
-    if (!currentChatUser || currentChatUser.id !== JULIO_USER_ID) return;
-    
-    // Clear Julio's conversation context
-    julioConversationContext = [];
-    
-    // Add a timestamp message indicating memory wipe
-    const now = new Date();
-    const timestampMessage = {
-        content: `Memory wiped at ${now.toLocaleTimeString()}`,
-        senderId: JULIO_USER_ID,
-        timestamp: serverTimestamp(),
-        participants: [currentUser.uid, JULIO_USER_ID]
-    };
-    
-    try {
-        await addDoc(collection(db, 'messages'), timestampMessage);
-        lastJulioMessageTime = now;
-    } catch (error) {
-        console.error('Error wiping Julio\'s memory:', error);
-    }
 }
 
 // Function to convert markdown-style formatting to HTML
