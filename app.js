@@ -641,6 +641,14 @@ function formatMessageContent(content) {
     content = content.replace(/!\[.*?\]\(.*?\)/g, ''); // Remove markdown images
     content = content.replace(/https?:\/\/.*?\.(jpg|jpeg|png|gif|webp)/gi, ''); // Remove image URLs
 
+    // Format game links
+    content = content.replace(/(https?:\/\/[^\s]+)/g, (url) => {
+        if (url.includes('julios.games')) {
+            return `<a href="${url}" style="color: #1F49C7; text-decoration: none;">${url}</a>`;
+        }
+        return url;
+    });
+
     // Then apply markdown formatting
     return content
         .replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>') // Bold Italics
