@@ -457,14 +457,10 @@ async function loadUsers() {
             return b.lastMessageTime.toMillis() - a.lastMessageTime.toMillis();
         });
 
-        // Add users to the sidebar, ensuring no duplicates
-        const addedUserIds = new Set([JULIO_USER_ID]); // Track added user IDs, including Julio
+        // Add users to the sidebar
         users.forEach(user => {
-            if (!addedUserIds.has(user.id)) {
-                const userElement = createUserElement(user);
-                usersContainer.appendChild(userElement);
-                addedUserIds.add(user.id);
-            }
+            const userElement = createUserElement(user);
+            usersContainer.appendChild(userElement);
         });
 
         // Check for username overflow after loading users
@@ -617,8 +613,8 @@ async function startChat(userId, username) {
         }
     });
 
-    // Update chat header with verified badge if user is verified
-    const isVerified = otherUserData?.verified || false;
+    // Update chat header with verified badge if user is verified or if it's Julio
+    const isVerified = userId === JULIO_USER_ID ? true : (otherUserData?.verified || false);
     const verifiedBadge = isVerified ? '<span class="material-symbols-outlined verified-badge" style="font-variation-settings: \'FILL\' 1;">verified</span>' : '';
     document.getElementById('active-chat-username').innerHTML = `${alias}${verifiedBadge}`;
 
