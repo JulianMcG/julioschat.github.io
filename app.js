@@ -1147,8 +1147,28 @@ async function sendMessage(content) {
             // Add user's message to chat
             const userMessageRef = await addDoc(collection(db, 'messages'), messageData);
             
+            // Show typing indicator for Julio
+            const chatMessages = document.getElementById('chat-messages');
+            const typingIndicator = document.createElement('div');
+            typingIndicator.id = 'julio-typing-indicator';
+            typingIndicator.className = 'typing-indicator';
+            typingIndicator.innerHTML = `
+                <lord-icon
+                    src="https://cdn.lordicon.com/jpgpblwn.json"
+                    trigger="loop"
+                    state="loop-scale"
+                    colors="primary:#b6b8c8"
+                    style="width:24px;height:24px">
+                </lord-icon>
+            `;
+            chatMessages.appendChild(typingIndicator);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
             // Get AI response
             const aiResponse = await callGeminiAPI(content);
+            
+            // Remove typing indicator
+            typingIndicator.remove();
             
             // Add AI's response to chat
             const aiMessageData = {
@@ -1173,6 +1193,12 @@ async function sendMessage(content) {
     } catch (error) {
         console.error('Error sending message:', error);
         alert('Error sending message. Please try again.');
+        
+        // Remove typing indicator if it exists
+        const typingIndicator = document.getElementById('julio-typing-indicator');
+        if (typingIndicator) {
+            typingIndicator.remove();
+        }
     }
 }
 
