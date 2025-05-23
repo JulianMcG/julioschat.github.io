@@ -613,8 +613,8 @@ async function startChat(userId, username) {
         }
     });
     
-    // Update chat header with verified badge if user is verified
-    const isVerified = otherUserData?.verified || false;
+    // Update chat header with verified badge if user is Julio or verified
+    const isVerified = userId === JULIO_USER_ID || otherUserData?.verified || false;
     const verifiedBadge = isVerified ? '<span class="material-symbols-outlined verified-badge" style="font-variation-settings: \'FILL\' 1;">verified</span>' : '';
     document.getElementById('active-chat-username').innerHTML = `${alias}${verifiedBadge}`;
 
@@ -2199,10 +2199,8 @@ async function callGeminiAPI(message, context = []) {
     try {
         const systemPrompt = `You are Julio, an AI chatbot in a chat application called "Julio's Chat" on an unblocked games website named "Julio's". Keep your responses very short and concise - ideally 1-2 sentences maximum. Be friendly and helpful, but get straight to the point. While you can mention your identity occasionally, don't overdo it - keep it natural and focus on being helpful. You can discuss games, help with homework, chat about various topics, or just be a friendly conversation partner.`;
 
-        // Format conversation history
-        const conversationHistory = context.map(msg => 
-            `${msg.role === 'user' ? 'User' : 'Julio'}: ${msg.content}`
-        ).join('\n');
+        // Format conversation history without prefixes
+        const conversationHistory = context.map(msg => msg.content).join('\n');
 
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
