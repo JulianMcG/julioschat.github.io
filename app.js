@@ -641,12 +641,9 @@ function formatMessageContent(content) {
     content = content.replace(/!\[.*?\]\(.*?\)/g, ''); // Remove markdown images
     content = content.replace(/https?:\/\/.*?\.(jpg|jpeg|png|gif|webp)/gi, ''); // Remove image URLs
 
-    // Format game links
+    // Format all links
     content = content.replace(/(https?:\/\/[^\s]+)/g, (url) => {
-        if (url.includes('julios.games')) {
-            return `<a href="${url}" style="color: #1F49C7; text-decoration: none;">${url}</a>`;
-        }
-        return url;
+        return `<a href="${url}" style="color: #1F49C7; text-decoration: none;">${url}</a>`;
     });
 
     // Then apply markdown formatting
@@ -2271,10 +2268,10 @@ function createJulioElement() {
     userElement.dataset.uid = JULIO_USER_ID;
     userElement.innerHTML = `
         <div class="profile-picture-container">
-            <img src="https://i.ibb.co/Mk4vyGrv/u456.png" alt="Julio" class="profile-picture">
+            <img src="https://i.ibb.co/JRhpnM4x/3.png" alt="Julio AI" class="profile-picture">
             <div class="online-status active"></div>
         </div>
-        <span class="username">${JULIO_USERNAME}<span class="material-symbols-outlined verified-badge" style="font-variation-settings: 'FILL' 1;">verified</span></span>
+        <span class="username">Julio <span style="color: #B6B8C8;">AI</span><span class="material-symbols-outlined verified-badge" style="font-variation-settings: 'FILL' 1;">verified</span></span>
         <div class="user-actions">
             <span class="material-symbols-outlined action-icon pin-icon">keep</span>
             <span class="material-symbols-outlined action-icon close-icon">close</span>
@@ -2284,7 +2281,7 @@ function createJulioElement() {
     // Add click handler for the user item
     userElement.onclick = (e) => {
         if (!e.target.classList.contains('action-icon')) {
-            startChat(JULIO_USER_ID, JULIO_USERNAME);
+            startChat(JULIO_USER_ID, 'Julio AI');
         }
     };
 
