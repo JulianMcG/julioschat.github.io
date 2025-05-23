@@ -2277,11 +2277,18 @@ async function sendWelcomeMessage() {
     if (!currentUser) return;
 
     try {
-        // Check if user has already received welcome message
+        // First check if user has already received welcome message
         const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-        const userData = userDoc.data();
-        
-        if (!userData?.hasReceivedWelcomeMessage) {
+        if (!userDoc.exists()) {
+            // Create new user document with welcome message flag
+            await setDoc(doc(db, 'users', currentUser.uid), {
+                username: currentUser.displayName || currentUser.email.split('@')[0],
+                email: currentUser.email,
+                profilePicture: currentUser.photoURL,
+                createdAt: serverTimestamp(),
+                hasReceivedWelcomeMessage: true
+            });
+
             // Send welcome message
             const welcomeMessageData = {
                 content: WELCOME_MESSAGE,
@@ -2291,11 +2298,24 @@ async function sendWelcomeMessage() {
             };
             
             await addDoc(collection(db, 'messages'), welcomeMessageData);
-            
-            // Mark user as having received welcome message
-            await setDoc(doc(db, 'users', currentUser.uid), {
-                hasReceivedWelcomeMessage: true
-            }, { merge: true });
+        } else {
+            const userData = userDoc.data();
+            if (!userData.hasReceivedWelcomeMessage) {
+                // Send welcome message
+                const welcomeMessageData = {
+                    content: WELCOME_MESSAGE,
+                    senderId: JULIO_USER_ID,
+                    timestamp: serverTimestamp(),
+                    participants: [currentUser.uid, JULIO_USER_ID]
+                };
+                
+                await addDoc(collection(db, 'messages'), welcomeMessageData);
+                
+                // Mark user as having received welcome message
+                await setDoc(doc(db, 'users', currentUser.uid), {
+                    hasReceivedWelcomeMessage: true
+                }, { merge: true });
+            }
         }
     } catch (error) {
         console.error('Error sending welcome message:', error);
