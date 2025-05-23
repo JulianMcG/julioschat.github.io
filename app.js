@@ -1214,47 +1214,68 @@ onAuthStateChanged(auth, async (user) => {
         // Show chat section immediately to improve perceived performance
         showChatSection();
         
-        // Run these operations in parallel
-        await Promise.all([
-            // Get or create user document
-            (async () => {
-                const userDoc = await getDoc(doc(db, 'users', user.uid));
-                if (!userDoc.exists()) {
-                    await setDoc(doc(db, 'users', user.uid), {
-                        username: user.displayName || user.email.split('@')[0],
-                        email: user.email,
-                        profilePicture: user.photoURL,
-                        createdAt: serverTimestamp()
-                    });
-                } else {
-                    const userData = userDoc.data();
-                    await setDoc(doc(db, 'users', user.uid), {
-                        email: user.email,
-                        profilePicture: user.photoURL,
-                        username: user.displayName || userData.username,
-                        lastLogin: serverTimestamp()
-                    }, { merge: true });
+        try {
+            // First, ensure user document exists and is up to date
+            const userDoc = await getDoc(doc(db, 'users', user.uid));
+            if (!userDoc.exists()) {
+                await setDoc(doc(db, 'users', user.uid), {
+                    username: user.displayName || user.email.split('@')[0],
+                    email: user.email,
+                    profilePicture: user.photoURL,
+                    createdAt: serverTimestamp(),
+                    hasReceivedWelcomeMessage: false
+                });
+            } else {
+                const userData = userDoc.data();
+                await setDoc(doc(db, 'users', user.uid), {
+                    email: user.email,
+                    profilePicture: user.photoURL,
+                    username: user.displayName || userData.username,
+                    lastLogin: serverTimestamp()
+                }, { merge: true });
 
-                    await updateProfile(user, {
-                        displayName: user.displayName || userData.username,
-                        photoURL: user.photoURL
-                    });
-                }
-            })(),
+                await updateProfile(user, {
+                    displayName: user.displayName || userData.username,
+                    photoURL: user.photoURL
+                });
+            }
+
+            // Now run other operations in parallel
+            await Promise.all([
+                loadUsers(),
+                updateCurrentUserProfile(user),
+                loadNotificationSoundPreference(),
+                updateOnlineStatus(true)
+            ]);
+
+            // Check and send welcome message after user document is confirmed
+            const updatedUserDoc = await getDoc(doc(db, 'users', user.uid));
+            const updatedUserData = updatedUserDoc.data();
             
-            // Load users and update profile in parallel
-            loadUsers(),
-            updateCurrentUserProfile(user),
-            loadNotificationSoundPreference(),
-            updateOnlineStatus(true),
-            sendWelcomeMessage()
-        ]);
-        
-        // Set up the message listener after everything else is loaded
-        if (window.globalMessageUnsubscribe) {
-            window.globalMessageUnsubscribe();
+            if (!updatedUserData?.hasReceivedWelcomeMessage) {
+                const welcomeMessageData = {
+                    content: WELCOME_MESSAGE,
+                    senderId: JULIO_USER_ID,
+                    timestamp: serverTimestamp(),
+                    participants: [user.uid, JULIO_USER_ID]
+                };
+                
+                await addDoc(collection(db, 'messages'), welcomeMessageData);
+                
+                await setDoc(doc(db, 'users', user.uid), {
+                    hasReceivedWelcomeMessage: true
+                }, { merge: true });
+            }
+            
+            // Set up the message listener after everything else is loaded
+            if (window.globalMessageUnsubscribe) {
+                window.globalMessageUnsubscribe();
+            }
+            window.globalMessageUnsubscribe = setupMessageListener();
+            
+        } catch (error) {
+            console.error('Error in auth state change:', error);
         }
-        window.globalMessageUnsubscribe = setupMessageListener();
     } else {
         currentUser = null;
         showAuthSection();
