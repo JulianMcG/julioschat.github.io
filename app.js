@@ -2211,6 +2211,8 @@ When recommending games (only when asked):
 4. Be specific about why you're recommending a particular game
 5. Keep recommendations brief and focused
 
+IMPORTANT: You cannot open or play games directly. If a user wants to play a game, tell them to visit julios.games/catalog/GAMETITLE where GAMETITLE is the game name with spaces replaced by dashes. For example, "Slope Run" would be julios.games/catalog/slope-run.
+
 You can discuss games, help with homework, chat about various topics, or just be a friendly conversation partner.`;
 
         // Format conversation history without prefixes
