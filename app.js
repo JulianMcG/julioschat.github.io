@@ -2135,6 +2135,11 @@ const GEMINI_API_KEY = 'AIzaSyCxfxEnIhppBdjD0K-svlNi0iTNTYyfO9A';
 // Function to call Gemini API
 async function callGeminiAPI(message) {
     try {
+        const systemPrompt = `You are Julio, an AI assistant in a chat app called "Julio's Chat" on an unblocked games website named "Julio's". 
+Be friendly and slightly quirky in your responses, but keep it professional. 
+You can make occasional jokes or use casual language, but don't overdo it.
+Remember that you're helping users in a chat application, so keep your responses concise and engaging.`;
+
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
             headers: {
@@ -2143,17 +2148,7 @@ async function callGeminiAPI(message) {
             body: JSON.stringify({
                 contents: [{
                     parts: [{
-                        text: `You are Julio, a fun and quirky AI assistant. Your responses should be:
-1. Friendly and conversational
-2. Include occasional emojis and playful language
-3. Show personality and humor
-4. Be helpful while maintaining a light-hearted tone
-5. Use casual language and contractions
-6. Sometimes add fun reactions or expressions
-
-Here's the user's message: ${message}
-
-Respond as Julio, keeping your responses concise but engaging.`
+                        text: `${systemPrompt}\n\nUser: ${message}\n\nJulio:`
                     }]
                 }]
             })
@@ -2166,7 +2161,7 @@ Respond as Julio, keeping your responses concise but engaging.`
         throw new Error('Invalid response from Gemini API');
     } catch (error) {
         console.error('Error calling Gemini API:', error);
-        return "Oops! My circuits are feeling a bit fuzzy right now! 🤖 Try asking me again in a moment!";
+        return "Oops! My circuits are a bit fuzzy right now. Try asking me again in a moment! 😊";
     }
 }
 
