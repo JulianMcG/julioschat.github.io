@@ -624,7 +624,11 @@ async function startChat(userId, username) {
         refreshButton.title = 'Start new chat with Julio';
         refreshButton.onclick = async () => {
             resetJulioContext();
-            // Clear all messages from Firestore
+            // Clear chat messages
+            const chatMessages = document.getElementById('chat-messages');
+            chatMessages.innerHTML = '';
+            
+            // Delete all messages with Julio from Firestore
             try {
                 const messagesQuery = query(
                     collection(db, 'messages'),
@@ -634,21 +638,21 @@ async function startChat(userId, username) {
                 
                 const batch = writeBatch(db);
                 messagesSnapshot.forEach(doc => {
-                    batch.delete(doc.ref);
+                    const message = doc.data();
+                    if (message.participants.includes(JULIO_USER_ID)) {
+                        batch.delete(doc.ref);
+                    }
                 });
                 await batch.commit();
-                
-                // Clear chat messages
-                const chatMessages = document.getElementById('chat-messages');
-                chatMessages.innerHTML = '';
-                // Add a system message
-                const systemMessage = document.createElement('div');
-                systemMessage.className = 'message received';
-                systemMessage.innerHTML = '<div class="content">Starting a new chat with Julio...</div>';
-                chatMessages.appendChild(systemMessage);
             } catch (error) {
                 console.error('Error clearing messages:', error);
             }
+            
+            // Add a system message
+            const systemMessage = document.createElement('div');
+            systemMessage.className = 'message received';
+            systemMessage.innerHTML = '<div class="content">Starting a new chat with Julio...</div>';
+            chatMessages.appendChild(systemMessage);
         };
         messageInput.insertBefore(refreshButton, messageInput.firstChild);
     } else {
@@ -2308,32 +2312,29 @@ style.textContent = `
         border: none;
         color: #B6B8C8;
         cursor: pointer;
-        padding: 10px;
-        margin: 0 10px;
-        border-radius: calc(var(--message-input-radius) - 15px);
+        padding: 0;
+        margin: 0 12px;
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: all 0.2s ease;
+        transition: color 0.2s;
         height: 24px;
         width: 24px;
-        min-height: 24px;
-        min-width: 24px;
     }
 
     .refresh-julio:hover {
-        background-color: #ECEBF7;
+        color: #ECEBF7;
     }
 
     .refresh-julio .material-symbols-outlined {
         font-size: 24px;
-        line-height: 1;
+        font-variation-settings: 'FILL' 0;
     }
 
     .message-input {
         display: flex;
         align-items: center;
-        gap: 10px;
+        padding: 0 12px;
     }
 `;
 document.head.appendChild(style);
