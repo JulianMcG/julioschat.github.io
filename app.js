@@ -410,7 +410,10 @@ async function loadUsers() {
         usersSnapshot.forEach(doc => {
             const userData = doc.data();
             if (userData.uid !== currentUser.uid) {
-                const userElement = createUserElement(userData);
+                const userElement = createUserElement({
+                    ...userData,
+                    id: doc.id // Add the document ID as the user ID
+                });
                 usersContainer.appendChild(userElement);
             }
         });
@@ -2246,10 +2249,10 @@ function createJulioElement() {
     userElement.dataset.uid = JULIO_USER_ID;
     userElement.innerHTML = `
         <div class="profile-picture-container">
-            <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Julio" alt="Julio" class="profile-picture">
+            <img src="https://i.ibb.co/GfFDn26n/pfpfpfpfpfpfp.png" alt="Julio" class="profile-picture">
             <div class="online-status active"></div>
         </div>
-        <span class="username">${JULIO_USERNAME}<span class="material-symbols-outlined verified-badge">verified</span></span>
+        <span class="username">${JULIO_USERNAME}<span class="material-symbols-outlined verified-badge" style="font-variation-settings: 'FILL' 1;">verified</span></span>
         <div class="user-actions">
             <span class="material-symbols-outlined action-icon pin-icon">keep</span>
             <span class="material-symbols-outlined action-icon close-icon">close</span>
