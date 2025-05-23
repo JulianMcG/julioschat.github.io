@@ -416,16 +416,15 @@ async function loadUsers() {
         );
         const messagesSnapshot = await getDocs(messagesQuery);
 
-        // Create a Map to store unique users with their latest message timestamp
-        const uniqueUsers = new Map();
-
-        // Process messages to get unique users
+        // Get unique user IDs from messages with their latest message timestamp
+        const dmUsers = new Map();
         messagesSnapshot.forEach(doc => {
             const message = doc.data();
             message.participants.forEach(id => {
                 if (id !== currentUser.uid && id !== JULIO_USER_ID) {
-                    if (!uniqueUsers.has(id) || message.timestamp > uniqueUsers.get(id).lastMessageTime) {
-                        uniqueUsers.set(id, {
+                    // Only update timestamp if it's more recent than what we have
+                    if (!dmUsers.has(id) || message.timestamp > dmUsers.get(id).lastMessageTime) {
+                        dmUsers.set(id, {
                             lastMessageTime: message.timestamp
                         });
                     }
@@ -433,8 +432,8 @@ async function loadUsers() {
             });
         });
 
-        // Get user data for each unique user
-        const userPromises = Array.from(uniqueUsers.keys()).map(async (userId) => {
+        // Get user data for each DM user
+        const userPromises = Array.from(dmUsers.keys()).map(async (userId) => {
             const userDoc = await getDoc(doc(db, 'users', userId));
             if (userDoc.exists()) {
                 const userData = userDoc.data();
@@ -444,13 +443,12 @@ async function loadUsers() {
                     profilePicture: userData.profilePicture,
                     verified: userData.verified || false,
                     alias: userData.alias,
-                    lastMessageTime: uniqueUsers.get(userId).lastMessageTime
+                    lastMessageTime: dmUsers.get(userId).lastMessageTime
                 };
             }
             return null;
         });
 
-        // Wait for all user data to be fetched
         const users = (await Promise.all(userPromises)).filter(user => user !== null);
 
         // Sort users by last message timestamp
@@ -605,18 +603,8 @@ async function startChat(userId, username) {
     
     currentChatUser = { id: userId, username: alias };
     
-    // Update active user in sidebar
-    const userItems = document.querySelectorAll('.user-item');
-    userItems.forEach(item => {
-        if (item.dataset.uid === userId) {
-            item.classList.add('active');
-        } else {
-            item.classList.remove('active');
-        }
-    });
-
-    // Update chat header with verified badge if user is verified or if it's Julio
-    const isVerified = userId === JULIO_USER_ID ? true : (otherUserData?.verified || false);
+    // Update chat header with verified badge if user is verified
+    const isVerified = otherUserData?.verified || false;
     const verifiedBadge = isVerified ? '<span class="material-symbols-outlined verified-badge" style="font-variation-settings: \'FILL\' 1;">verified</span>' : '';
     document.getElementById('active-chat-username').innerHTML = `${alias}${verifiedBadge}`;
 
@@ -1226,76 +1214,47 @@ onAuthStateChanged(auth, async (user) => {
         // Show chat section immediately to improve perceived performance
         showChatSection();
         
-        try {
-            // First check if user document exists and has received welcome message
-            const userDoc = await getDoc(doc(db, 'users', user.uid));
-            let hasReceivedWelcome = false;
+        // Run these operations in parallel
+        await Promise.all([
+            // Get or create user document
+            (async () => {
+                const userDoc = await getDoc(doc(db, 'users', user.uid));
+                if (!userDoc.exists()) {
+                    await setDoc(doc(db, 'users', user.uid), {
+                        username: user.displayName || user.email.split('@')[0],
+                        email: user.email,
+                        profilePicture: user.photoURL,
+                        createdAt: serverTimestamp()
+                    });
+                } else {
+                    const userData = userDoc.data();
+                    await setDoc(doc(db, 'users', user.uid), {
+                        email: user.email,
+                        profilePicture: user.photoURL,
+                        username: user.displayName || userData.username,
+                        lastLogin: serverTimestamp()
+                    }, { merge: true });
+
+                    await updateProfile(user, {
+                        displayName: user.displayName || userData.username,
+                        photoURL: user.photoURL
+                    });
+                }
+            })(),
             
-            if (userDoc.exists()) {
-                const userData = userDoc.data();
-                hasReceivedWelcome = userData.hasReceivedWelcomeMessage || false;
-            }
-
-            // Run these operations in parallel
-            await Promise.all([
-                // Get or create user document
-                (async () => {
-                    if (!userDoc.exists()) {
-                        await setDoc(doc(db, 'users', user.uid), {
-                            username: user.displayName || user.email.split('@')[0],
-                            email: user.email,
-                            profilePicture: user.photoURL,
-                            createdAt: serverTimestamp(),
-                            hasReceivedWelcomeMessage: false
-                        });
-                    } else {
-                        const userData = userDoc.data();
-                        await setDoc(doc(db, 'users', user.uid), {
-                            email: user.email,
-                            profilePicture: user.photoURL,
-                            username: user.displayName || userData.username,
-                            lastLogin: serverTimestamp()
-                        }, { merge: true });
-
-                        await updateProfile(user, {
-                            displayName: user.displayName || userData.username,
-                            photoURL: user.photoURL
-                        });
-                    }
-                })(),
-                
-                // Update profile and preferences in parallel
-                updateCurrentUserProfile(user),
-                loadNotificationSoundPreference(),
-                updateOnlineStatus(true)
-            ]);
-
-            // Load users after all other operations are complete
-            await loadUsers();
-
-            // Send welcome message only if user hasn't received it
-            if (!hasReceivedWelcome) {
-                const welcomeMessageData = {
-                    content: WELCOME_MESSAGE,
-                    senderId: JULIO_USER_ID,
-                    timestamp: serverTimestamp(),
-                    participants: [user.uid, JULIO_USER_ID]
-                };
-                
-                await addDoc(collection(db, 'messages'), welcomeMessageData);
-                await setDoc(doc(db, 'users', user.uid), {
-                    hasReceivedWelcomeMessage: true
-                }, { merge: true });
-            }
-            
-            // Set up the message listener after everything else is loaded
-            if (window.globalMessageUnsubscribe) {
-                window.globalMessageUnsubscribe();
-            }
-            window.globalMessageUnsubscribe = setupMessageListener();
-        } catch (error) {
-            console.error('Error in auth state change:', error);
+            // Load users and update profile in parallel
+            loadUsers(),
+            updateCurrentUserProfile(user),
+            loadNotificationSoundPreference(),
+            updateOnlineStatus(true),
+            sendWelcomeMessage()
+        ]);
+        
+        // Set up the message listener after everything else is loaded
+        if (window.globalMessageUnsubscribe) {
+            window.globalMessageUnsubscribe();
         }
+        window.globalMessageUnsubscribe = setupMessageListener();
     } else {
         currentUser = null;
         showAuthSection();
@@ -1497,13 +1456,7 @@ async function searchUsers(searchTerm) {
     const usersContainer = document.getElementById('users-container');
     if (!usersContainer) return;
     
-    // Clear existing users
-    usersContainer.innerHTML = '';
-    
-    // Add Julio at the top
-    const julioElement = createJulioElement();
-    julioElement.classList.add('pinned');
-    usersContainer.appendChild(julioElement);
+    const userItems = usersContainer.querySelectorAll('.user-item');
     
     if (!searchTerm) {
         // If search is empty, reload all users
@@ -1511,152 +1464,14 @@ async function searchUsers(searchTerm) {
         return;
     }
     
-    try {
-        // Get all messages where current user is a participant
-        const messagesQuery = query(
-            collection(db, 'messages'),
-            where('participants', 'array-contains', currentUser.uid),
-            orderBy('timestamp', 'desc')
-        );
-        const messagesSnapshot = await getDocs(messagesQuery);
-
-        // Create a Map to store unique users with their latest message timestamp
-        const uniqueUsers = new Map();
-
-        // Process messages to get unique users
-        messagesSnapshot.forEach(doc => {
-            const message = doc.data();
-            message.participants.forEach(id => {
-                if (id !== currentUser.uid && id !== JULIO_USER_ID) {
-                    if (!uniqueUsers.has(id) || message.timestamp > uniqueUsers.get(id).lastMessageTime) {
-                        uniqueUsers.set(id, {
-                            lastMessageTime: message.timestamp
-                        });
-                    }
-                }
-            });
-        });
-
-        // Get user data for each unique user
-        const userPromises = Array.from(uniqueUsers.keys()).map(async (userId) => {
-            const userDoc = await getDoc(doc(db, 'users', userId));
-            if (userDoc.exists()) {
-                const userData = userDoc.data();
-                const username = userData.username?.toLowerCase() || '';
-                if (username.includes(searchTerm.toLowerCase())) {
-                    return {
-                        id: userId,
-                        username: userData.username || 'Unknown User',
-                        profilePicture: userData.profilePicture,
-                        verified: userData.verified || false,
-                        alias: userData.alias,
-                        lastMessageTime: uniqueUsers.get(userId).lastMessageTime
-                    };
-                }
-            }
-            return null;
-        });
-
-        // Wait for all user data to be fetched
-        const users = (await Promise.all(userPromises)).filter(user => user !== null);
-
-        // Sort users by last message timestamp
-        users.sort((a, b) => {
-            if (!a.lastMessageTime || !b.lastMessageTime) return 0;
-            return b.lastMessageTime.toMillis() - a.lastMessageTime.toMillis();
-        });
-
-        // Add users to the sidebar
-        users.forEach(user => {
-            const userElement = createUserElement(user);
-            usersContainer.appendChild(userElement);
-        });
-
-        // Check for username overflow
-        checkUsernameOverflow();
-    } catch (error) {
-        console.error('Error searching users:', error);
-    }
-}
-
-async function loadUsers() {
-    try {
-        const usersContainer = document.getElementById('users-container');
-        if (!usersContainer) {
-            console.error('Users container element not found');
-            return;
+    userItems.forEach(userItem => {
+        const username = userItem.querySelector('.username').textContent.toLowerCase();
+        if (username.includes(searchTerm.toLowerCase())) {
+            userItem.style.display = 'flex';
+        } else {
+            userItem.style.display = 'none';
         }
-
-        // Clear existing users
-        usersContainer.innerHTML = '';
-
-        // Add Julio at the top of the list
-        const julioElement = createJulioElement();
-        julioElement.classList.add('pinned');
-        usersContainer.appendChild(julioElement);
-
-        // Get all messages where current user is a participant
-        const messagesQuery = query(
-            collection(db, 'messages'),
-            where('participants', 'array-contains', currentUser.uid),
-            orderBy('timestamp', 'desc')
-        );
-        const messagesSnapshot = await getDocs(messagesQuery);
-
-        // Create a Map to store unique users with their latest message timestamp
-        const uniqueUsers = new Map();
-
-        // Process messages to get unique users
-        messagesSnapshot.forEach(doc => {
-            const message = doc.data();
-            message.participants.forEach(id => {
-                if (id !== currentUser.uid && id !== JULIO_USER_ID) {
-                    if (!uniqueUsers.has(id) || message.timestamp > uniqueUsers.get(id).lastMessageTime) {
-                        uniqueUsers.set(id, {
-                            lastMessageTime: message.timestamp
-                        });
-                    }
-                }
-            });
-        });
-
-        // Get user data for each unique user
-        const userPromises = Array.from(uniqueUsers.keys()).map(async (userId) => {
-            const userDoc = await getDoc(doc(db, 'users', userId));
-            if (userDoc.exists()) {
-                const userData = userDoc.data();
-                return {
-                    id: userId,
-                    username: userData.username || 'Unknown User',
-                    profilePicture: userData.profilePicture,
-                    verified: userData.verified || false,
-                    alias: userData.alias,
-                    lastMessageTime: uniqueUsers.get(userId).lastMessageTime
-                };
-            }
-            return null;
-        });
-
-        // Wait for all user data to be fetched
-        const users = (await Promise.all(userPromises)).filter(user => user !== null);
-
-        // Sort users by last message timestamp
-        users.sort((a, b) => {
-            if (!a.lastMessageTime || !b.lastMessageTime) return 0;
-            return b.lastMessageTime.toMillis() - a.lastMessageTime.toMillis();
-        });
-
-        // Add users to the sidebar
-        users.forEach(user => {
-            const userElement = createUserElement(user);
-            usersContainer.appendChild(userElement);
-        });
-
-        // Check for username overflow after loading users
-        checkUsernameOverflow();
-    } catch (error) {
-        console.error('Error loading users:', error);
-    }
+    });
 }
 
 // Compose Modal Functions
@@ -2452,18 +2267,11 @@ async function sendWelcomeMessage() {
     if (!currentUser) return;
 
     try {
-        // First check if user has already received welcome message
+        // Check if user has already received welcome message
         const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-        if (!userDoc.exists()) {
-            // Create new user document with welcome message flag
-            await setDoc(doc(db, 'users', currentUser.uid), {
-                username: currentUser.displayName || currentUser.email.split('@')[0],
-                email: currentUser.email,
-                profilePicture: currentUser.photoURL,
-                createdAt: serverTimestamp(),
-                hasReceivedWelcomeMessage: true
-            });
-
+        const userData = userDoc.data();
+        
+        if (!userData?.hasReceivedWelcomeMessage) {
             // Send welcome message
             const welcomeMessageData = {
                 content: WELCOME_MESSAGE,
@@ -2473,24 +2281,11 @@ async function sendWelcomeMessage() {
             };
             
             await addDoc(collection(db, 'messages'), welcomeMessageData);
-        } else {
-            const userData = userDoc.data();
-            if (!userData.hasReceivedWelcomeMessage) {
-                // Send welcome message
-                const welcomeMessageData = {
-                    content: WELCOME_MESSAGE,
-                    senderId: JULIO_USER_ID,
-                    timestamp: serverTimestamp(),
-                    participants: [currentUser.uid, JULIO_USER_ID]
-                };
-                
-                await addDoc(collection(db, 'messages'), welcomeMessageData);
-                
-                // Mark user as having received welcome message
-                await setDoc(doc(db, 'users', currentUser.uid), {
-                    hasReceivedWelcomeMessage: true
-                }, { merge: true });
-            }
+            
+            // Mark user as having received welcome message
+            await setDoc(doc(db, 'users', currentUser.uid), {
+                hasReceivedWelcomeMessage: true
+            }, { merge: true });
         }
     } catch (error) {
         console.error('Error sending welcome message:', error);
