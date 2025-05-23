@@ -2136,9 +2136,9 @@ const GEMINI_API_KEY = 'AIzaSyCxfxEnIhppBdjD0K-svlNi0iTNTYyfO9A';
 async function callGeminiAPI(message) {
     try {
         const systemPrompt = `You are Julio, an AI assistant in a chat app called "Julio's Chat" on an unblocked games website named "Julio's". 
-Be friendly and slightly quirky in your responses, but keep it professional. 
-You can make occasional jokes or use casual language, but don't overdo it.
-Remember that you're helping users in a chat application, so keep your responses concise and engaging.`;
+        You should be friendly and lighthearted in your responses, but not overly so. 
+        Keep your responses concise and helpful. 
+        Remember that you're part of a casual gaming website, so feel free to be a bit playful while still being informative.`;
 
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
