@@ -43,6 +43,14 @@ let notificationsEnabled = true;
 let lastSoundPlayTime = 0;
 const SOUND_COOLDOWN = 1000; // 1 second cooldown
 
+// Julio AI Configuration
+const JULIO_USER_ID = 'julio_ai';
+const JULIO_USERNAME = 'Julio';
+const GEMINI_API_KEY = 'AIzaSyCxfxEnIhppBdjD0K-svlNi0iTNTYyfO9A';
+
+// Add this at the top with other global variables
+let julioConversationContext = [];
+
 // Profile Picture Upload
 document.getElementById('profile-picture-preview').addEventListener('click', () => {
     document.getElementById('profile-picture-input').click();
@@ -600,6 +608,39 @@ async function startChat(userId, username) {
 
     // Load messages
     loadMessages();
+
+    // Add refresh button for Julio's chat
+    if (userId === JULIO_USER_ID) {
+        // Remove existing refresh button if any
+        const existingRefresh = messageInput.querySelector('.refresh-julio');
+        if (existingRefresh) {
+            existingRefresh.remove();
+        }
+
+        // Add refresh button
+        const refreshButton = document.createElement('button');
+        refreshButton.className = 'refresh-julio';
+        refreshButton.innerHTML = '<span class="material-symbols-outlined">refresh</span>';
+        refreshButton.title = 'Start new chat with Julio';
+        refreshButton.onclick = () => {
+            resetJulioContext();
+            // Clear chat messages
+            const chatMessages = document.getElementById('chat-messages');
+            chatMessages.innerHTML = '';
+            // Add a system message
+            const systemMessage = document.createElement('div');
+            systemMessage.className = 'message received';
+            systemMessage.innerHTML = '<div class="content">Starting a new chat with Julio...</div>';
+            chatMessages.appendChild(systemMessage);
+        };
+        messageInput.insertBefore(refreshButton, messageInput.firstChild);
+    } else {
+        // Remove refresh button if switching to a different chat
+        const refreshButton = messageInput.querySelector('.refresh-julio');
+        if (refreshButton) {
+            refreshButton.remove();
+        }
+    }
 }
 
 // Function to convert markdown-style formatting to HTML
@@ -2127,15 +2168,15 @@ loadUsers = async function() {
     checkUsernameOverflow();
 };
 
-// Julio AI Configuration
-const JULIO_USER_ID = 'julio_ai';
-const JULIO_USERNAME = 'Julio';
-const GEMINI_API_KEY = 'AIzaSyCxfxEnIhppBdjD0K-svlNi0iTNTYyfO9A';
-
 // Function to call Gemini API
 async function callGeminiAPI(message) {
     try {
         const systemPrompt = `You are Julio, an AI chatbot in a chat application called "Julio's Chat" on an unblocked games website named "Julio's". Keep your responses very short and concise - ideally 1-2 sentences maximum. Be friendly and helpful, but get straight to the point. While you can mention your identity occasionally, don't overdo it - keep it natural and focus on being helpful. You can discuss games, help with homework, chat about various topics, or just be a friendly conversation partner.`;
+
+        // Add conversation history to the prompt
+        const conversationHistory = julioConversationContext
+            .map(msg => `${msg.role}: ${msg.content}`)
+            .join('\n');
 
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
@@ -2145,7 +2186,7 @@ async function callGeminiAPI(message) {
             body: JSON.stringify({
                 contents: [{
                     parts: [{
-                        text: `${systemPrompt}\n\nUser: ${message}`
+                        text: `${systemPrompt}\n\n${conversationHistory}\n\nUser: ${message}`
                     }]
                 }]
             })
@@ -2153,7 +2194,18 @@ async function callGeminiAPI(message) {
 
         const data = await response.json();
         if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-            return data.candidates[0].content.parts[0].text;
+            const aiResponse = data.candidates[0].content.parts[0].text;
+            
+            // Update conversation context
+            julioConversationContext.push({ role: 'User', content: message });
+            julioConversationContext.push({ role: 'Assistant', content: aiResponse });
+            
+            // Keep only last 10 messages for context
+            if (julioConversationContext.length > 10) {
+                julioConversationContext = julioConversationContext.slice(-10);
+            }
+            
+            return aiResponse;
         }
         throw new Error('Invalid response from Gemini API');
     } catch (error) {
@@ -2225,3 +2277,34 @@ function createJulioElement() {
 
     return userElement;
 }
+
+// Add this function to reset Julio's conversation context
+function resetJulioContext() {
+    julioConversationContext = [];
+}
+
+// Add this CSS to your styles
+const style = document.createElement('style');
+style.textContent = `
+    .refresh-julio {
+        background: none;
+        border: none;
+        color: #666;
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.2s;
+    }
+
+    .refresh-julio:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    .refresh-julio .material-symbols-outlined {
+        font-size: 20px;
+    }
+`;
+document.head.appendChild(style);
