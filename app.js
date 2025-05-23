@@ -1716,72 +1716,6 @@ async function searchUsers(searchTerm) {
     });
 }
 
-// Compose Modal Functions
-async function searchAllUsers(searchTerm) {
-    const composeResults = document.getElementById('compose-results');
-    composeResults.innerHTML = '';
-
-    try {
-        // Get all messages where current user is a participant
-        const messagesQuery = query(
-            collection(db, 'messages'),
-            where('participants', 'array-contains', currentUser.uid)
-        );
-        const messagesSnapshot = await getDocs(messagesQuery);
-
-        // Get unique user IDs from messages
-        const dmUserIds = new Set();
-        messagesSnapshot.forEach(doc => {
-            const message = doc.data();
-            message.participants.forEach(id => {
-                if (id !== currentUser.uid) {
-                    dmUserIds.add(id);
-                }
-            });
-        });
-
-        // Get all users except current user
-        const usersSnapshot = await getDocs(collection(db, 'users'));
-        const users = [];
-        
-        usersSnapshot.forEach(doc => {
-            if (doc.id !== currentUser.uid) {
-                const user = {
-                    id: doc.id,
-                    ...doc.data()
-                };
-                if (user.username.toLowerCase().includes(searchTerm.toLowerCase())) {
-                    users.push(user);
-                }
-            }
-        });
-
-        // Display users
-        users.forEach(user => {
-            const userElement = document.createElement('div');
-            userElement.className = 'compose-user-item';
-            userElement.innerHTML = `
-                <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${user.username}" class="user-avatar">
-                <span>${user.username}</span>
-            `;
-            userElement.onclick = () => {
-                startChat(user.id, user.username);
-                closeComposeModal();
-            };
-            composeResults.appendChild(userElement);
-        });
-
-        if (users.length === 0) {
-            const noResults = document.createElement('div');
-            noResults.className = 'no-results';
-            noResults.textContent = 'No users found';
-            composeResults.appendChild(noResults);
-        }
-    } catch (error) {
-        console.error('Error searching all users:', error);
-    }
-}
-
 // Add event listeners for search
 document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('search-user');
@@ -2375,26 +2309,8 @@ window.findUsernameByEmail = async function(email) {
     }
 }
 
-// Add this function after your existing code
-function checkUsernameOverflow() {
-    const usernames = document.querySelectorAll('.username:not(.chat-header .username)');
-    usernames.forEach(username => {
-        // Remove truncated class first
-        username.classList.remove('truncated');
-        
-        // Check if text is overflowing
-        if (username.scrollWidth > username.clientWidth) {
-            username.classList.add('truncated');
-        }
-    });
-}
-
-// Add event listeners for window resize and after loading users
-window.addEventListener('resize', checkUsernameOverflow);
-
 // Modify your loadUsers function to call checkUsernameOverflow after loading
-const originalLoadUsers = loadUsers;
-loadUsers = async function() {
-    await originalLoadUsers();
-    checkUsernameOverflow();
-};
+// const originalLoadUsers = loadUsers;
+// loadUsers = async function() {
+// await originalLoadUsers();
+// };
