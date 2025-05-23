@@ -603,6 +603,16 @@ async function startChat(userId, username) {
     
     currentChatUser = { id: userId, username: alias };
     
+    // Update active user in sidebar
+    const userItems = document.querySelectorAll('.user-item');
+    userItems.forEach(item => {
+        if (item.dataset.uid === userId) {
+            item.classList.add('active');
+        } else {
+            item.classList.remove('active');
+        }
+    });
+
     // Update chat header with verified badge if user is verified
     const isVerified = otherUserData?.verified || false;
     const verifiedBadge = isVerified ? '<span class="material-symbols-outlined verified-badge" style="font-variation-settings: \'FILL\' 1;">verified</span>' : '';
