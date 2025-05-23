@@ -43,12 +43,8 @@ let notificationsEnabled = true;
 let lastSoundPlayTime = 0;
 const SOUND_COOLDOWN = 1000; // 1 second cooldown
 
-// Julio AI Configuration
-const JULIO_USER_ID = 'julio_ai';
-const JULIO_USERNAME = 'Julio';
-const GEMINI_API_KEY = 'AIzaSyCxfxEnIhppBdjD0K-svlNi0iTNTYyfO9A';
-
-// Add this at the top with other global variables
+// Add these variables at the top with other global variables
+let lastJulioMessageTime = null;
 let julioConversationContext = [];
 
 // Profile Picture Upload
@@ -569,6 +565,22 @@ async function startChat(userId, username) {
         return;
     }
 
+    // Reset Julio's conversation context if it's been more than 20 minutes
+    if (userId === JULIO_USER_ID) {
+        const now = new Date();
+        if (lastJulioMessageTime && (now - lastJulioMessageTime) > 20 * 60 * 1000) {
+            julioConversationContext = [];
+            // Add timestamp message
+            const timestampMessage = {
+                content: `New conversation started at ${now.toLocaleTimeString()}`,
+                senderId: JULIO_USER_ID,
+                timestamp: serverTimestamp(),
+                participants: [currentUser.uid, JULIO_USER_ID]
+            };
+            await addDoc(collection(db, 'messages'), timestampMessage);
+        }
+    }
+
     // Get current user's data to check for aliases and hidden conversations
     const currentUserDocRef = await getDoc(doc(db, 'users', currentUser.uid));
     const currentUserDataRef = currentUserDocRef.data();
@@ -608,60 +620,6 @@ async function startChat(userId, username) {
 
     // Load messages
     loadMessages();
-
-    // Add refresh button for Julio's chat
-    if (userId === JULIO_USER_ID) {
-        // Remove existing refresh button if any
-        const existingRefresh = messageInput.querySelector('.refresh-julio');
-        if (existingRefresh) {
-            existingRefresh.remove();
-        }
-
-        // Add refresh button
-        const refreshButton = document.createElement('button');
-        refreshButton.className = 'refresh-julio';
-        refreshButton.innerHTML = '<span class="material-symbols-outlined">edit_square</span>';
-        refreshButton.title = 'Start new chat with Julio';
-        refreshButton.onclick = async () => {
-            resetJulioContext();
-            // Clear chat messages
-            const chatMessages = document.getElementById('chat-messages');
-            chatMessages.innerHTML = '';
-            
-            // Delete all messages with Julio from Firestore
-            try {
-                const messagesQuery = query(
-                    collection(db, 'messages'),
-                    where('participants', 'array-contains', currentUser.uid)
-                );
-                const messagesSnapshot = await getDocs(messagesQuery);
-                
-                const batch = writeBatch(db);
-                messagesSnapshot.forEach(doc => {
-                    const message = doc.data();
-                    if (message.participants.includes(JULIO_USER_ID)) {
-                        batch.delete(doc.ref);
-                    }
-                });
-                await batch.commit();
-            } catch (error) {
-                console.error('Error clearing messages:', error);
-            }
-            
-            // Add a system message
-            const systemMessage = document.createElement('div');
-            systemMessage.className = 'message received';
-            systemMessage.innerHTML = '<div class="content">Starting a new chat with Julio...</div>';
-            chatMessages.appendChild(systemMessage);
-        };
-        messageInput.insertBefore(refreshButton, messageInput.firstChild);
-    } else {
-        // Remove refresh button if switching to a different chat
-        const refreshButton = messageInput.querySelector('.refresh-julio');
-        if (refreshButton) {
-            refreshButton.remove();
-        }
-    }
 }
 
 // Function to convert markdown-style formatting to HTML
@@ -1209,8 +1167,17 @@ async function sendMessage(content) {
             // Add user's message to chat
             const userMessageRef = await addDoc(collection(db, 'messages'), messageData);
             
-            // Get AI response
-            const aiResponse = await callGeminiAPI(content);
+            // Update last message time
+            lastJulioMessageTime = new Date();
+            
+            // Add message to context
+            julioConversationContext.push({ role: 'user', content: content });
+            
+            // Get AI response with context
+            const aiResponse = await callGeminiAPI(content, julioConversationContext);
+            
+            // Add AI's response to context
+            julioConversationContext.push({ role: 'assistant', content: aiResponse });
             
             // Add AI's response to chat
             const aiMessageData = {
@@ -2189,15 +2156,20 @@ loadUsers = async function() {
     checkUsernameOverflow();
 };
 
+// Julio AI Configuration
+const JULIO_USER_ID = 'julio_ai';
+const JULIO_USERNAME = 'Julio';
+const GEMINI_API_KEY = 'AIzaSyCxfxEnIhppBdjD0K-svlNi0iTNTYyfO9A';
+
 // Function to call Gemini API
-async function callGeminiAPI(message) {
+async function callGeminiAPI(message, context = []) {
     try {
         const systemPrompt = `You are Julio, an AI chatbot in a chat application called "Julio's Chat" on an unblocked games website named "Julio's". Keep your responses very short and concise - ideally 1-2 sentences maximum. Be friendly and helpful, but get straight to the point. While you can mention your identity occasionally, don't overdo it - keep it natural and focus on being helpful. You can discuss games, help with homework, chat about various topics, or just be a friendly conversation partner.`;
 
-        // Add conversation history to the prompt
-        const conversationHistory = julioConversationContext
-            .map(msg => `${msg.role}: ${msg.content}`)
-            .join('\n');
+        // Format conversation history
+        const conversationHistory = context.map(msg => 
+            `${msg.role === 'user' ? 'User' : 'Julio'}: ${msg.content}`
+        ).join('\n');
 
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
@@ -2215,18 +2187,7 @@ async function callGeminiAPI(message) {
 
         const data = await response.json();
         if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-            const aiResponse = data.candidates[0].content.parts[0].text;
-            
-            // Update conversation context
-            julioConversationContext.push({ role: 'User', content: message });
-            julioConversationContext.push({ role: 'Assistant', content: aiResponse });
-            
-            // Keep only last 10 messages for context
-            if (julioConversationContext.length > 10) {
-                julioConversationContext = julioConversationContext.slice(-10);
-            }
-            
-            return aiResponse;
+            return data.candidates[0].content.parts[0].text;
         }
         throw new Error('Invalid response from Gemini API');
     } catch (error) {
@@ -2298,43 +2259,3 @@ function createJulioElement() {
 
     return userElement;
 }
-
-// Add this function to reset Julio's conversation context
-function resetJulioContext() {
-    julioConversationContext = [];
-}
-
-// Update the CSS for the refresh button
-const style = document.createElement('style');
-style.textContent = `
-    .refresh-julio {
-        background: none;
-        border: none;
-        color: #B6B8C8;
-        cursor: pointer;
-        padding: 0;
-        margin: 0 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: color 0.2s;
-        height: 24px;
-        width: 24px;
-    }
-
-    .refresh-julio:hover {
-        color: #ECEBF7;
-    }
-
-    .refresh-julio .material-symbols-outlined {
-        font-size: 24px;
-        font-variation-settings: 'FILL' 0;
-    }
-
-    .message-input {
-        display: flex;
-        align-items: center;
-        padding: 0 12px;
-    }
-`;
-document.head.appendChild(style);
