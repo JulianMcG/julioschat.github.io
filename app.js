@@ -1,5 +1,6 @@
 // Trigger new deployment with Vercel Pro
 import { auth, db } from './firebase-config.js';
+import { GAME_LIST } from './games.js';
 import { 
     createUserWithEmailAndPassword, 
     signInWithEmailAndPassword, 
@@ -2197,7 +2198,20 @@ const GEMINI_API_KEY = 'AIzaSyCxfxEnIhppBdjD0K-svlNi0iTNTYyfO9A';
 // Function to call Gemini API
 async function callGeminiAPI(message, context = []) {
     try {
-        const systemPrompt = `You are Julio, an AI chatbot in a chat application called "Julio's Chat" on an unblocked games website named "Julio's". Keep your responses very short and concise - ideally 1-2 sentences maximum. Be friendly and helpful, but get straight to the point. While you can mention your identity occasionally, don't overdo it - keep it natural and focus on being helpful. You can discuss games, help with homework, chat about various topics, or just be a friendly conversation partner.`;
+        const systemPrompt = `You are Julio, an AI chatbot in a chat application called "Julio's Chat" on an unblocked games website named "Julio's". Keep your responses very short and concise - ideally 1-2 sentences maximum. Be friendly and helpful, but get straight to the point. While you can mention your identity occasionally, don't overdo it - keep it natural and focus on being helpful.
+
+You have access to a comprehensive list of games available on Julio's website. You can recommend games based on user preferences, discuss specific games, and help users find games they might enjoy. Here's the complete list of available games:
+
+${GAME_LIST}
+
+When recommending games:
+1. Consider the user's interests and preferences
+2. Suggest games that match their gaming style
+3. Mention popular or trending games when appropriate
+4. Be specific about why you're recommending a particular game
+5. Keep recommendations brief and focused
+
+You can discuss games, help with homework, chat about various topics, or just be a friendly conversation partner.`;
 
         // Format conversation history without prefixes
         const conversationHistory = context.map(msg => msg.content).join('\n');
