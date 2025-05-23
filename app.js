@@ -403,19 +403,45 @@ async function loadUsers() {
         julioElement.classList.add('pinned');
         usersContainer.appendChild(julioElement);
 
-        // Load other users
-        const usersQuery = query(collection(db, 'users'), orderBy('username'));
-        const usersSnapshot = await getDocs(usersQuery);
-        
-        usersSnapshot.forEach(doc => {
-            const userData = doc.data();
-            if (userData.uid !== currentUser.uid) {
-                const userElement = createUserElement({
-                    ...userData,
-                    id: doc.id // Add the document ID as the user ID
-                });
-                usersContainer.appendChild(userElement);
+        // Get all messages where current user is a participant
+        const messagesQuery = query(
+            collection(db, 'messages'),
+            where('participants', 'array-contains', currentUser.uid)
+        );
+        const messagesSnapshot = await getDocs(messagesQuery);
+
+        // Get unique user IDs from messages
+        const dmUserIds = new Set();
+        messagesSnapshot.forEach(doc => {
+            const message = doc.data();
+            message.participants.forEach(id => {
+                if (id !== currentUser.uid && id !== JULIO_USER_ID) {
+                    dmUserIds.add(id);
+                }
+            });
+        });
+
+        // Get user data for each DM user
+        const userPromises = Array.from(dmUserIds).map(async (userId) => {
+            const userDoc = await getDoc(doc(db, 'users', userId));
+            if (userDoc.exists()) {
+                return {
+                    id: userId,
+                    ...userDoc.data()
+                };
             }
+            return null;
+        });
+
+        const users = (await Promise.all(userPromises)).filter(user => user !== null);
+
+        // Sort users by username
+        users.sort((a, b) => a.username.localeCompare(b.username));
+
+        // Add users to the sidebar
+        users.forEach(user => {
+            const userElement = createUserElement(user);
+            usersContainer.appendChild(userElement);
         });
 
         // Check for username overflow after loading users
@@ -428,19 +454,49 @@ async function loadUsers() {
 function createUserElement(user) {
     const userElement = document.createElement('div');
     userElement.className = 'user-item';
+    userElement.dataset.uid = user.id;
     const displayName = user.alias || user.username;
     userElement.innerHTML = `
         <div class="profile-picture-container">
             <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${displayName}" class="profile-picture">
             <div class="online-status"></div>
         </div>
-        <span class="username">${displayName}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
+        <span class="username">${displayName}${user.verified ? '<span class="material-symbols-outlined verified-badge" style="font-variation-settings: \'FILL\' 1;">verified</span>' : ''}</span>
         <div class="user-actions">
             <span class="material-symbols-outlined action-icon pin-icon">keep</span>
             <span class="material-symbols-outlined action-icon close-icon">close</span>
         </div>
     `;
     
+    // Add click handler for the user item
+    userElement.onclick = (e) => {
+        if (!e.target.classList.contains('action-icon')) {
+            startChat(user.id, displayName);
+        }
+    };
+
+    // Add click handler for close icon
+    const closeIcon = userElement.querySelector('.close-icon');
+    closeIcon.onclick = async (e) => {
+        e.stopPropagation();
+        userElement.remove();
+        try {
+            await setDoc(doc(db, 'users', currentUser.uid), {
+                hiddenConversations: arrayUnion(user.id)
+            }, { merge: true });
+            
+            // If this was the current chat, clear it
+            if (currentChatUser && currentChatUser.id === user.id) {
+                currentChatUser = null;
+                document.getElementById('active-chat-username').textContent = 'Select a chat';
+                document.getElementById('message-input').placeholder = 'Type a message...';
+                document.querySelector('.message-input').classList.remove('visible');
+            }
+        } catch (error) {
+            console.error('Error hiding conversation:', error);
+        }
+    };
+
     // Add click handler for pin icon
     const pinIcon = userElement.querySelector('.pin-icon');
     pinIcon.onclick = async (e) => {
@@ -448,33 +504,29 @@ function createUserElement(user) {
         const isPinned = userElement.classList.contains('pinned');
         userElement.classList.toggle('pinned');
         
-        if (!isPinned) {
-            const usersContainer = document.getElementById('users-container');
-            usersContainer.insertBefore(userElement, usersContainer.firstChild);
-        }
-        
         try {
+            const userDocRef = await getDoc(doc(db, 'users', currentUser.uid));
+            const userDataRef = userDocRef.data();
+            const pinnedConversations = userDataRef?.pinnedConversations || [];
+            
             if (!isPinned) {
-                await setDoc(doc(db, 'users', currentUser.uid), {
-                    pinnedConversations: arrayUnion(user.id)
-                }, { merge: true });
+                if (!pinnedConversations.includes(user.id)) {
+                    await setDoc(doc(db, 'users', currentUser.uid), {
+                        pinnedConversations: [...pinnedConversations, user.id]
+                    }, { merge: true });
+                }
             } else {
+                const updatedPinnedConversations = pinnedConversations.filter(id => id !== user.id);
                 await setDoc(doc(db, 'users', currentUser.uid), {
-                    pinnedConversations: arrayRemove(user.id)
+                    pinnedConversations: updatedPinnedConversations
                 }, { merge: true });
             }
         } catch (error) {
             console.error('Error pinning conversation:', error);
-            // Revert UI changes if save fails
-            userElement.classList.toggle('pinned');
-            if (!isPinned) {
-                const usersContainer = document.getElementById('users-container');
-                usersContainer.appendChild(userElement);
-            }
         }
     };
 
-    // Set up online status listener with improved logic
+    // Set up online status listener
     const onlineStatusRef = doc(db, 'users', user.id);
     onSnapshot(onlineStatusRef, (doc) => {
         const userData = doc.data();
