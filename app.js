@@ -641,9 +641,11 @@ function formatMessageContent(content) {
     content = content.replace(/!\[.*?\]\(.*?\)/g, ''); // Remove markdown images
     content = content.replace(/https?:\/\/.*?\.(jpg|jpeg|png|gif|webp)/gi, ''); // Remove image URLs
 
-    // Format all links
+    // Format all links - make sure they're clickable and blue
     content = content.replace(/(https?:\/\/[^\s]+)/g, (url) => {
-        return `<a href="${url}" style="color: #1F49C7; text-decoration: none;">${url}</a>`;
+        // Clean up the URL by removing any trailing punctuation
+        const cleanUrl = url.replace(/[.,;:!?]+$/, '');
+        return `<a href="${cleanUrl}" target="_blank" style="color: #1F49C7; text-decoration: none;">${cleanUrl}</a>`;
     });
 
     // Then apply markdown formatting
@@ -2268,7 +2270,7 @@ function createJulioElement() {
     userElement.dataset.uid = JULIO_USER_ID;
     userElement.innerHTML = `
         <div class="profile-picture-container">
-            <img src="https://i.ibb.co/JRhpnM4x/3.png" alt="Julio AI" class="profile-picture">
+            <img src="https://i.ibb.co/GfFDn26n/pfpfpfpfpfpfp.png" alt="Julio AI" class="profile-picture">
             <div class="online-status active"></div>
         </div>
         <span class="username">Julio <span style="color: #B6B8C8;">AI</span><span class="material-symbols-outlined verified-badge" style="font-variation-settings: 'FILL' 1;">verified</span></span>
