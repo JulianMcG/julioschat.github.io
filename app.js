@@ -416,15 +416,16 @@ async function loadUsers() {
         );
         const messagesSnapshot = await getDocs(messagesQuery);
 
-        // Get unique user IDs from messages with their latest message timestamp
-        const dmUsers = new Map();
+        // Create a Map to store unique users with their latest message timestamp
+        const uniqueUsers = new Map();
+
+        // Process messages to get unique users
         messagesSnapshot.forEach(doc => {
             const message = doc.data();
             message.participants.forEach(id => {
                 if (id !== currentUser.uid && id !== JULIO_USER_ID) {
-                    // Only update timestamp if it's more recent than what we have
-                    if (!dmUsers.has(id) || message.timestamp > dmUsers.get(id).lastMessageTime) {
-                        dmUsers.set(id, {
+                    if (!uniqueUsers.has(id) || message.timestamp > uniqueUsers.get(id).lastMessageTime) {
+                        uniqueUsers.set(id, {
                             lastMessageTime: message.timestamp
                         });
                     }
@@ -432,8 +433,8 @@ async function loadUsers() {
             });
         });
 
-        // Get user data for each DM user
-        const userPromises = Array.from(dmUsers.keys()).map(async (userId) => {
+        // Get user data for each unique user
+        const userPromises = Array.from(uniqueUsers.keys()).map(async (userId) => {
             const userDoc = await getDoc(doc(db, 'users', userId));
             if (userDoc.exists()) {
                 const userData = userDoc.data();
@@ -443,12 +444,13 @@ async function loadUsers() {
                     profilePicture: userData.profilePicture,
                     verified: userData.verified || false,
                     alias: userData.alias,
-                    lastMessageTime: dmUsers.get(userId).lastMessageTime
+                    lastMessageTime: uniqueUsers.get(userId).lastMessageTime
                 };
             }
             return null;
         });
 
+        // Wait for all user data to be fetched
         const users = (await Promise.all(userPromises)).filter(user => user !== null);
 
         // Sort users by last message timestamp
