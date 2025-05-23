@@ -457,10 +457,14 @@ async function loadUsers() {
             return b.lastMessageTime.toMillis() - a.lastMessageTime.toMillis();
         });
 
-        // Add users to the sidebar
+        // Add users to the sidebar, ensuring no duplicates
+        const addedUserIds = new Set([JULIO_USER_ID]); // Track added user IDs, including Julio
         users.forEach(user => {
-            const userElement = createUserElement(user);
-            usersContainer.appendChild(userElement);
+            if (!addedUserIds.has(user.id)) {
+                const userElement = createUserElement(user);
+                usersContainer.appendChild(userElement);
+                addedUserIds.add(user.id);
+            }
         });
 
         // Check for username overflow after loading users
