@@ -1495,7 +1495,13 @@ async function searchUsers(searchTerm) {
     const usersContainer = document.getElementById('users-container');
     if (!usersContainer) return;
     
-    const userItems = usersContainer.querySelectorAll('.user-item');
+    // Clear existing users
+    usersContainer.innerHTML = '';
+    
+    // Add Julio at the top
+    const julioElement = createJulioElement();
+    julioElement.classList.add('pinned');
+    usersContainer.appendChild(julioElement);
     
     if (!searchTerm) {
         // If search is empty, reload all users
@@ -1503,14 +1509,152 @@ async function searchUsers(searchTerm) {
         return;
     }
     
-    userItems.forEach(userItem => {
-        const username = userItem.querySelector('.username').textContent.toLowerCase();
-        if (username.includes(searchTerm.toLowerCase())) {
-            userItem.style.display = 'flex';
-        } else {
-            userItem.style.display = 'none';
+    try {
+        // Get all messages where current user is a participant
+        const messagesQuery = query(
+            collection(db, 'messages'),
+            where('participants', 'array-contains', currentUser.uid),
+            orderBy('timestamp', 'desc')
+        );
+        const messagesSnapshot = await getDocs(messagesQuery);
+
+        // Create a Map to store unique users with their latest message timestamp
+        const uniqueUsers = new Map();
+
+        // Process messages to get unique users
+        messagesSnapshot.forEach(doc => {
+            const message = doc.data();
+            message.participants.forEach(id => {
+                if (id !== currentUser.uid && id !== JULIO_USER_ID) {
+                    if (!uniqueUsers.has(id) || message.timestamp > uniqueUsers.get(id).lastMessageTime) {
+                        uniqueUsers.set(id, {
+                            lastMessageTime: message.timestamp
+                        });
+                    }
+                }
+            });
+        });
+
+        // Get user data for each unique user
+        const userPromises = Array.from(uniqueUsers.keys()).map(async (userId) => {
+            const userDoc = await getDoc(doc(db, 'users', userId));
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                const username = userData.username?.toLowerCase() || '';
+                if (username.includes(searchTerm.toLowerCase())) {
+                    return {
+                        id: userId,
+                        username: userData.username || 'Unknown User',
+                        profilePicture: userData.profilePicture,
+                        verified: userData.verified || false,
+                        alias: userData.alias,
+                        lastMessageTime: uniqueUsers.get(userId).lastMessageTime
+                    };
+                }
+            }
+            return null;
+        });
+
+        // Wait for all user data to be fetched
+        const users = (await Promise.all(userPromises)).filter(user => user !== null);
+
+        // Sort users by last message timestamp
+        users.sort((a, b) => {
+            if (!a.lastMessageTime || !b.lastMessageTime) return 0;
+            return b.lastMessageTime.toMillis() - a.lastMessageTime.toMillis();
+        });
+
+        // Add users to the sidebar
+        users.forEach(user => {
+            const userElement = createUserElement(user);
+            usersContainer.appendChild(userElement);
+        });
+
+        // Check for username overflow
+        checkUsernameOverflow();
+    } catch (error) {
+        console.error('Error searching users:', error);
+    }
+}
+
+async function loadUsers() {
+    try {
+        const usersContainer = document.getElementById('users-container');
+        if (!usersContainer) {
+            console.error('Users container element not found');
+            return;
         }
-    });
+
+        // Clear existing users
+        usersContainer.innerHTML = '';
+
+        // Add Julio at the top of the list
+        const julioElement = createJulioElement();
+        julioElement.classList.add('pinned');
+        usersContainer.appendChild(julioElement);
+
+        // Get all messages where current user is a participant
+        const messagesQuery = query(
+            collection(db, 'messages'),
+            where('participants', 'array-contains', currentUser.uid),
+            orderBy('timestamp', 'desc')
+        );
+        const messagesSnapshot = await getDocs(messagesQuery);
+
+        // Create a Map to store unique users with their latest message timestamp
+        const uniqueUsers = new Map();
+
+        // Process messages to get unique users
+        messagesSnapshot.forEach(doc => {
+            const message = doc.data();
+            message.participants.forEach(id => {
+                if (id !== currentUser.uid && id !== JULIO_USER_ID) {
+                    if (!uniqueUsers.has(id) || message.timestamp > uniqueUsers.get(id).lastMessageTime) {
+                        uniqueUsers.set(id, {
+                            lastMessageTime: message.timestamp
+                        });
+                    }
+                }
+            });
+        });
+
+        // Get user data for each unique user
+        const userPromises = Array.from(uniqueUsers.keys()).map(async (userId) => {
+            const userDoc = await getDoc(doc(db, 'users', userId));
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                return {
+                    id: userId,
+                    username: userData.username || 'Unknown User',
+                    profilePicture: userData.profilePicture,
+                    verified: userData.verified || false,
+                    alias: userData.alias,
+                    lastMessageTime: uniqueUsers.get(userId).lastMessageTime
+                };
+            }
+            return null;
+        });
+
+        // Wait for all user data to be fetched
+        const users = (await Promise.all(userPromises)).filter(user => user !== null);
+
+        // Sort users by last message timestamp
+        users.sort((a, b) => {
+            if (!a.lastMessageTime || !b.lastMessageTime) return 0;
+            return b.lastMessageTime.toMillis() - a.lastMessageTime.toMillis();
+        });
+
+        // Add users to the sidebar
+        users.forEach(user => {
+            const userElement = createUserElement(user);
+            usersContainer.appendChild(userElement);
+        });
+
+        // Check for username overflow after loading users
+        checkUsernameOverflow();
+    } catch (error) {
+        console.error('Error loading users:', error);
+    }
 }
 
 // Compose Modal Functions
