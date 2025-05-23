@@ -649,12 +649,51 @@ function formatMessageContent(content) {
     });
 
     // Then apply markdown formatting
-    return content
+    let formattedContent = content
         .replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>') // Bold Italics
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
         .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italics
         .replace(/__(.*?)__/g, '<u>$1</u>') // Underline
         .replace(/~~(.*?)~~/g, '<s>$1</s>'); // Strikethrough
+
+    // Create a temporary div to parse the HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = formattedContent;
+    
+    // Find all text nodes and convert URLs to links
+    const walker = document.createTreeWalker(tempDiv, NodeFilter.SHOW_TEXT, null, false);
+    const textNodes = [];
+    let node;
+    while (node = walker.nextNode()) {
+        textNodes.push(node);
+    }
+    
+    textNodes.forEach(textNode => {
+        const text = textNode.nodeValue;
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        let match;
+        let lastIndex = 0;
+        let newHTML = '';
+        
+        while ((match = urlRegex.exec(text)) !== null) {
+            // Add text before the URL
+            newHTML += text.substring(lastIndex, match.index);
+            // Add the URL as a link
+            const url = match[0].replace(/[.,;:!?]+$/, '');
+            newHTML += `<a href="${url}" target="_blank" style="color: #1F49C7; text-decoration: none;">${url}</a>`;
+            lastIndex = match.index + match[0].length;
+        }
+        
+        // Add any remaining text
+        newHTML += text.substring(lastIndex);
+        
+        // Replace the text node with the new HTML
+        const span = document.createElement('span');
+        span.innerHTML = newHTML;
+        textNode.parentNode.replaceChild(span, textNode);
+    });
+    
+    return tempDiv.innerHTML;
 }
 
 // Create reaction picker
