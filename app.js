@@ -620,18 +620,35 @@ async function startChat(userId, username) {
         // Add refresh button
         const refreshButton = document.createElement('button');
         refreshButton.className = 'refresh-julio';
-        refreshButton.innerHTML = '<span class="material-symbols-outlined">refresh</span>';
+        refreshButton.innerHTML = '<span class="material-symbols-outlined">edit_square</span>';
         refreshButton.title = 'Start new chat with Julio';
-        refreshButton.onclick = () => {
+        refreshButton.onclick = async () => {
             resetJulioContext();
-            // Clear chat messages
-            const chatMessages = document.getElementById('chat-messages');
-            chatMessages.innerHTML = '';
-            // Add a system message
-            const systemMessage = document.createElement('div');
-            systemMessage.className = 'message received';
-            systemMessage.innerHTML = '<div class="content">Starting a new chat with Julio...</div>';
-            chatMessages.appendChild(systemMessage);
+            // Clear all messages from Firestore
+            try {
+                const messagesQuery = query(
+                    collection(db, 'messages'),
+                    where('participants', 'array-contains', currentUser.uid)
+                );
+                const messagesSnapshot = await getDocs(messagesQuery);
+                
+                const batch = writeBatch(db);
+                messagesSnapshot.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+                await batch.commit();
+                
+                // Clear chat messages
+                const chatMessages = document.getElementById('chat-messages');
+                chatMessages.innerHTML = '';
+                // Add a system message
+                const systemMessage = document.createElement('div');
+                systemMessage.className = 'message received';
+                systemMessage.innerHTML = '<div class="content">Starting a new chat with Julio...</div>';
+                chatMessages.appendChild(systemMessage);
+            } catch (error) {
+                console.error('Error clearing messages:', error);
+            }
         };
         messageInput.insertBefore(refreshButton, messageInput.firstChild);
     } else {
@@ -2283,28 +2300,40 @@ function resetJulioContext() {
     julioConversationContext = [];
 }
 
-// Add this CSS to your styles
+// Update the CSS for the refresh button
 const style = document.createElement('style');
 style.textContent = `
     .refresh-julio {
         background: none;
         border: none;
-        color: #666;
+        color: #B6B8C8;
         cursor: pointer;
-        padding: 8px;
-        border-radius: 50%;
+        padding: 10px;
+        margin: 0 10px;
+        border-radius: calc(var(--message-input-radius) - 15px);
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: background-color 0.2s;
+        transition: all 0.2s ease;
+        height: 24px;
+        width: 24px;
+        min-height: 24px;
+        min-width: 24px;
     }
 
     .refresh-julio:hover {
-        background-color: rgba(0, 0, 0, 0.05);
+        background-color: #ECEBF7;
     }
 
     .refresh-julio .material-symbols-outlined {
-        font-size: 20px;
+        font-size: 24px;
+        line-height: 1;
+    }
+
+    .message-input {
+        display: flex;
+        align-items: center;
+        gap: 10px;
     }
 `;
 document.head.appendChild(style);
