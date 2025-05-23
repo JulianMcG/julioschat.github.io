@@ -397,6 +397,7 @@ async function loadUsers() {
 
         // Add Julio at the top of the list
         const julioElement = createJulioElement();
+        julioElement.classList.add('pinned');
         usersList.appendChild(julioElement);
 
         // Load other users
@@ -2257,22 +2258,8 @@ function createJulioElement() {
     const closeIcon = userElement.querySelector('.close-icon');
     closeIcon.onclick = async (e) => {
         e.stopPropagation();
-        userElement.remove();
-        try {
-            await setDoc(doc(db, 'users', currentUser.uid), {
-                hiddenConversations: arrayUnion(JULIO_USER_ID)
-            }, { merge: true });
-            
-            // If this was the current chat, clear it
-            if (currentChatUser && currentChatUser.id === JULIO_USER_ID) {
-                currentChatUser = null;
-                document.getElementById('active-chat-username').textContent = 'Select a chat';
-                document.getElementById('message-input').placeholder = 'Type a message...';
-                document.querySelector('.message-input').classList.remove('visible');
-            }
-        } catch (error) {
-            console.error('Error hiding conversation:', error);
-        }
+        // Don't allow closing Julio's chat
+        return;
     };
 
     // Add click handler for pin icon
