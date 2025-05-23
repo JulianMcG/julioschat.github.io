@@ -392,9 +392,12 @@ async function loadUsers() {
         const usersList = document.getElementById('users-list');
         if (!usersList) return;
 
+        // Clear existing users
+        usersList.innerHTML = '';
+
         // Add Julio at the top of the list
         const julioElement = createJulioElement();
-        usersList.insertBefore(julioElement, usersList.firstChild);
+        usersList.appendChild(julioElement);
 
         // Load other users
         const usersQuery = query(collection(db, 'users'), orderBy('username'));
@@ -2229,21 +2232,77 @@ async function callGeminiAPI(message) {
 // Function to create Julio's user element
 function createJulioElement() {
     const userElement = document.createElement('div');
-    userElement.className = 'user';
-    userElement.dataset.userId = JULIO_USER_ID;
+    userElement.className = 'user-item';
+    userElement.dataset.uid = JULIO_USER_ID;
     userElement.innerHTML = `
-        <div class="user-info">
-            <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Julio" alt="Julio" class="user-avatar">
-            <div class="user-details">
-                <div class="user-name">
-                    ${JULIO_USERNAME}
-                    <span class="verified-badge">✓</span>
-                </div>
-                <div class="user-status">AI Assistant</div>
-            </div>
+        <div class="profile-picture-container">
+            <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Julio" alt="Julio" class="profile-picture">
+            <div class="online-status active"></div>
+        </div>
+        <span class="username">${JULIO_USERNAME}<span class="material-symbols-outlined verified-badge">verified</span></span>
+        <div class="user-actions">
+            <span class="material-symbols-outlined action-icon pin-icon">keep</span>
+            <span class="material-symbols-outlined action-icon close-icon">close</span>
         </div>
     `;
     
-    userElement.addEventListener('click', () => startChat(JULIO_USER_ID, JULIO_USERNAME));
+    // Add click handler for the user item
+    userElement.onclick = (e) => {
+        if (!e.target.classList.contains('action-icon')) {
+            startChat(JULIO_USER_ID, JULIO_USERNAME);
+        }
+    };
+
+    // Add click handler for close icon
+    const closeIcon = userElement.querySelector('.close-icon');
+    closeIcon.onclick = async (e) => {
+        e.stopPropagation();
+        userElement.remove();
+        try {
+            await setDoc(doc(db, 'users', currentUser.uid), {
+                hiddenConversations: arrayUnion(JULIO_USER_ID)
+            }, { merge: true });
+            
+            // If this was the current chat, clear it
+            if (currentChatUser && currentChatUser.id === JULIO_USER_ID) {
+                currentChatUser = null;
+                document.getElementById('active-chat-username').textContent = 'Select a chat';
+                document.getElementById('message-input').placeholder = 'Type a message...';
+                document.querySelector('.message-input').classList.remove('visible');
+            }
+        } catch (error) {
+            console.error('Error hiding conversation:', error);
+        }
+    };
+
+    // Add click handler for pin icon
+    const pinIcon = userElement.querySelector('.pin-icon');
+    pinIcon.onclick = async (e) => {
+        e.stopPropagation();
+        const isPinned = userElement.classList.contains('pinned');
+        userElement.classList.toggle('pinned');
+        
+        try {
+            const userDocRef = await getDoc(doc(db, 'users', currentUser.uid));
+            const userDataRef = userDocRef.data();
+            const pinnedConversations = userDataRef?.pinnedConversations || [];
+            
+            if (!isPinned) {
+                if (!pinnedConversations.includes(JULIO_USER_ID)) {
+                    await setDoc(doc(db, 'users', currentUser.uid), {
+                        pinnedConversations: [...pinnedConversations, JULIO_USER_ID]
+                    }, { merge: true });
+                }
+            } else {
+                const updatedPinnedConversations = pinnedConversations.filter(id => id !== JULIO_USER_ID);
+                await setDoc(doc(db, 'users', currentUser.uid), {
+                    pinnedConversations: updatedPinnedConversations
+                }, { merge: true });
+            }
+        } catch (error) {
+            console.error('Error pinning conversation:', error);
+        }
+    };
+
     return userElement;
 }
