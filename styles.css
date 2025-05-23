@@ -1,4 +1,4 @@
-
+* {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -301,13 +301,7 @@ body {
 }
 
 .sidebar.collapsed .user-item:hover .user-actions {
-    display: flex; /* Changed from none to flex */
-    background-color: rgba(12, 14, 22, 0.9); /* Added background for visibility */
-    padding: 5px; /* Added some padding */
-    border-radius: 5px; /* Added border-radius */
-    z-index: 10; /* Ensure it's above other elements */
-    /* `position: absolute` and `right: 10px` are inherited from .user-actions */
-    /* This will position them over the profile picture, aligned to its right edge */
+    display: none;
 }
 
 .sidebar.collapsed .profile-section {
@@ -544,6 +538,12 @@ body {
     text-overflow: ellipsis;
     max-width: 280px;
     position: relative;
+}
+
+/* Only apply gradient mask when text is overflowing */
+.username.truncated {
+    mask-image: linear-gradient(to right, black 80%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, black 80%, transparent 100%);
 }
 
 /* Chat header username should not truncate */
@@ -1803,11 +1803,6 @@ input:checked + .slider:before {
 }
 
 /* Media query for auto-collapse */
-/* 
-    The following media query has been removed to allow user preference 
-    (via localStorage and .collapsed class on body) to control sidebar state 
-    regardless of screen width. The .collapsed class styles are defined elsewhere.
-
 @media screen and (max-width: 768px) {
     .sidebar {
         width: 80px;
@@ -1857,4 +1852,3 @@ input:checked + .slider:before {
         display: none;
     }
 } 
-*/
