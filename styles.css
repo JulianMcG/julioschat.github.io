@@ -1037,19 +1037,37 @@ body {
 }
 
 .verified-badge {
-    color: #1F49C7;
-    font-size: 18px;
-    margin-left: 3px;
-    vertical-align: middle;
-    font-variation-settings: 'FILL' 1;
+    color: #1DA1F2;
+    font-size: 14px;
+    margin-left: 4px;
+    display: inline-flex;
+    align-items: center;
 }
 
-.chat-header .verified-badge {
-    color: #1F49C7;
-    font-size: 20px;
-    margin-left: 3px;
-    vertical-align: middle;
-    font-variation-settings: 'FILL' 1;
+.user-status {
+    font-size: 12px;
+    color: #666;
+    margin-top: 2px;
+}
+
+/* Julio AI specific styles */
+.user[data-user-id="julio_ai"] {
+    background-color: rgba(29, 161, 242, 0.1);
+    border-left: 3px solid #1DA1F2;
+}
+
+.user[data-user-id="julio_ai"] .user-avatar {
+    border: 2px solid #1DA1F2;
+}
+
+/* AI message styling */
+.message[data-sender-id="julio_ai"] {
+    background-color: #f0f7ff;
+    border-left: 3px solid #1DA1F2;
+}
+
+.message[data-sender-id="julio_ai"] .message-content {
+    color: #1a1a1a;
 }
 
 /* Compose Modal Styles */
