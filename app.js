@@ -389,16 +389,19 @@ function showChatSection() {
 // Chat Functions
 async function loadUsers() {
     try {
-        const usersList = document.getElementById('users-list');
-        if (!usersList) return;
+        const usersContainer = document.getElementById('users-container');
+        if (!usersContainer) {
+            console.error('Users container element not found');
+            return;
+        }
 
         // Clear existing users
-        usersList.innerHTML = '';
+        usersContainer.innerHTML = '';
 
         // Add Julio at the top of the list
         const julioElement = createJulioElement();
         julioElement.classList.add('pinned');
-        usersList.appendChild(julioElement);
+        usersContainer.appendChild(julioElement);
 
         // Load other users
         const usersQuery = query(collection(db, 'users'), orderBy('username'));
@@ -408,9 +411,12 @@ async function loadUsers() {
             const userData = doc.data();
             if (userData.uid !== currentUser.uid) {
                 const userElement = createUserElement(userData);
-                usersList.appendChild(userElement);
+                usersContainer.appendChild(userElement);
             }
         });
+
+        // Check for username overflow after loading users
+        checkUsernameOverflow();
     } catch (error) {
         console.error('Error loading users:', error);
     }
@@ -1495,10 +1501,10 @@ document.querySelector('.save-button').addEventListener('click', async () => {
 
 // Search Functions
 async function searchUsers(searchTerm) {
-    const usersList = document.getElementById('users-list');
-    if (!usersList) return;
+    const usersContainer = document.getElementById('users-container');
+    if (!usersContainer) return;
     
-    const userItems = usersList.querySelectorAll('.user-item');
+    const userItems = usersContainer.querySelectorAll('.user-item');
     
     if (!searchTerm) {
         // If search is empty, reload all users
