@@ -1495,8 +1495,10 @@ document.querySelector('.save-button').addEventListener('click', async () => {
 
 // Search Functions
 async function searchUsers(searchTerm) {
-    const usersContainer = document.getElementById('users-container');
-    const userItems = usersContainer.querySelectorAll('.user-item');
+    const usersList = document.getElementById('users-list');
+    if (!usersList) return;
+    
+    const userItems = usersList.querySelectorAll('.user-item');
     
     if (!searchTerm) {
         // If search is empty, reload all users
@@ -1584,6 +1586,7 @@ async function searchAllUsers(searchTerm) {
 document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('search-user');
     const clearSearch = document.querySelector('.clear-search');
+    const usersList = document.getElementById('users-list');
 
     if (searchInput) {
         let searchTimeout;
