@@ -614,10 +614,11 @@ async function startChat(userId, username) {
         }
     });
     
-    // Update chat header with verified badge if user is Julio or verified
-    const isVerified = userId === JULIO_USER_ID || otherUserData?.verified || false;
-    const verifiedBadge = isVerified ? '<span class="material-symbols-outlined verified-badge" style="font-variation-settings: \'FILL\' 1;">verified</span>' : '';
-    document.getElementById('active-chat-username').innerHTML = `${alias}${verifiedBadge}`;
+    // Update chat header with robot icon if user is Julio
+    const isJulio = userId === JULIO_USER_ID;
+    const icon = isJulio ? '<span class="material-symbols-outlined" style="color: #C79D1F; font-variation-settings: \'FILL\' 1;">smart_toy</span>' : 
+                          (otherUserData?.verified ? '<span class="material-symbols-outlined verified-badge" style="font-variation-settings: \'FILL\' 1;">verified</span>' : '');
+    document.getElementById('active-chat-username').innerHTML = `${alias}${icon}`;
 
     // Show message input and user options icon
     const messageInput = document.querySelector('.message-input');
@@ -2274,7 +2275,7 @@ function createJulioElement() {
             <img src="https://i.ibb.co/GfFDn26n/pfpfpfpfpfpfp.png" alt="Julio" class="profile-picture">
             <div class="online-status active"></div>
         </div>
-        <span class="username">${JULIO_USERNAME}<span class="material-symbols-outlined verified-badge" style="font-variation-settings: 'FILL' 1;">verified</span></span>
+        <span class="username">${JULIO_USERNAME}<span class="material-symbols-outlined" style="color: #C79D1F; font-variation-settings: 'FILL' 1;">smart_toy</span></span>
         <div class="user-actions">
             <span class="material-symbols-outlined action-icon pin-icon">keep</span>
             <span class="material-symbols-outlined action-icon close-icon">close</span>
