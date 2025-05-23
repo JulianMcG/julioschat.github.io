@@ -406,23 +406,29 @@ async function loadUsers() {
         // Get all messages where current user is a participant
         const messagesQuery = query(
             collection(db, 'messages'),
-            where('participants', 'array-contains', currentUser.uid)
+            where('participants', 'array-contains', currentUser.uid),
+            orderBy('timestamp', 'desc')
         );
         const messagesSnapshot = await getDocs(messagesQuery);
 
-        // Get unique user IDs from messages
-        const dmUserIds = new Set();
+        // Get unique user IDs from messages with their latest message timestamp
+        const dmUsers = new Map();
         messagesSnapshot.forEach(doc => {
             const message = doc.data();
             message.participants.forEach(id => {
                 if (id !== currentUser.uid && id !== JULIO_USER_ID) {
-                    dmUserIds.add(id);
+                    // Only update timestamp if it's more recent than what we have
+                    if (!dmUsers.has(id) || message.timestamp > dmUsers.get(id).lastMessageTime) {
+                        dmUsers.set(id, {
+                            lastMessageTime: message.timestamp
+                        });
+                    }
                 }
             });
         });
 
         // Get user data for each DM user
-        const userPromises = Array.from(dmUserIds).map(async (userId) => {
+        const userPromises = Array.from(dmUsers.keys()).map(async (userId) => {
             const userDoc = await getDoc(doc(db, 'users', userId));
             if (userDoc.exists()) {
                 const userData = userDoc.data();
@@ -431,7 +437,8 @@ async function loadUsers() {
                     username: userData.username || 'Unknown User',
                     profilePicture: userData.profilePicture,
                     verified: userData.verified || false,
-                    alias: userData.alias
+                    alias: userData.alias,
+                    lastMessageTime: dmUsers.get(userId).lastMessageTime
                 };
             }
             return null;
@@ -439,8 +446,11 @@ async function loadUsers() {
 
         const users = (await Promise.all(userPromises)).filter(user => user !== null);
 
-        // Sort users by username
-        users.sort((a, b) => (a.username || '').localeCompare(b.username || ''));
+        // Sort users by last message timestamp
+        users.sort((a, b) => {
+            if (!a.lastMessageTime || !b.lastMessageTime) return 0;
+            return b.lastMessageTime.toMillis() - a.lastMessageTime.toMillis();
+        });
 
         // Add users to the sidebar
         users.forEach(user => {
