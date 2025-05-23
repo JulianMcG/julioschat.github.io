@@ -1264,12 +1264,14 @@ onAuthStateChanged(auth, async (user) => {
                     }
                 })(),
                 
-                // Load users and update profile in parallel
-                loadUsers(),
+                // Update profile and preferences in parallel
                 updateCurrentUserProfile(user),
                 loadNotificationSoundPreference(),
                 updateOnlineStatus(true)
             ]);
+
+            // Load users after all other operations are complete
+            await loadUsers();
 
             // Send welcome message only if user hasn't received it
             if (!hasReceivedWelcome) {
