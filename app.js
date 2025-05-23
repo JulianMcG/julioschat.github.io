@@ -46,6 +46,7 @@ const SOUND_COOLDOWN = 1000; // 1 second cooldown
 // Add these variables at the top with other global variables
 let lastJulioMessageTime = null;
 let julioConversationContext = [];
+const WELCOME_MESSAGE = "Hi there! Welcome to Julio's Chat! To start chatting, click the \"New Message\" button at the top of the sidebar and search for users to chat with. If you need help, or just want to chat, feel free to message me here!";
 
 // Profile Picture Upload
 document.getElementById('profile-picture-preview').addEventListener('click', () => {
@@ -1245,7 +1246,8 @@ onAuthStateChanged(auth, async (user) => {
             loadUsers(),
             updateCurrentUserProfile(user),
             loadNotificationSoundPreference(),
-            updateOnlineStatus(true)
+            updateOnlineStatus(true),
+            sendWelcomeMessage()
         ]);
         
         // Set up the message listener after everything else is loaded
@@ -2258,4 +2260,34 @@ function createJulioElement() {
     };
 
     return userElement;
+}
+
+// Add this function to handle welcome messages
+async function sendWelcomeMessage() {
+    if (!currentUser) return;
+
+    try {
+        // Check if user has already received welcome message
+        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        const userData = userDoc.data();
+        
+        if (!userData?.hasReceivedWelcomeMessage) {
+            // Send welcome message
+            const welcomeMessageData = {
+                content: WELCOME_MESSAGE,
+                senderId: JULIO_USER_ID,
+                timestamp: serverTimestamp(),
+                participants: [currentUser.uid, JULIO_USER_ID]
+            };
+            
+            await addDoc(collection(db, 'messages'), welcomeMessageData);
+            
+            // Mark user as having received welcome message
+            await setDoc(doc(db, 'users', currentUser.uid), {
+                hasReceivedWelcomeMessage: true
+            }, { merge: true });
+        }
+    } catch (error) {
+        console.error('Error sending welcome message:', error);
+    }
 }
