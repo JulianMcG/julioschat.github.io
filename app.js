@@ -2135,10 +2135,7 @@ const GEMINI_API_KEY = 'AIzaSyCxfxEnIhppBdjD0K-svlNi0iTNTYyfO9A';
 // Function to call Gemini API
 async function callGeminiAPI(message) {
     try {
-        const systemPrompt = `You are Julio, an AI assistant in a chat app called "Julio's Chat" on an unblocked games website named "Julio's". 
-        You should be friendly and lighthearted in your responses, but not overly so. 
-        Keep your responses concise and helpful. 
-        Remember that you're part of a casual gaming website, so feel free to be a bit playful while still being informative.`;
+        const systemPrompt = `You are Julio, an AI chatbot in a chat application called "Julio's Chat" on an unblocked games website named "Julio's". You are friendly, helpful, and knowledgeable. While you can mention your identity occasionally, don't overdo it - keep it natural and focus on being helpful. You can discuss games, help with homework, chat about various topics, or just be a friendly conversation partner.`;
 
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
@@ -2148,7 +2145,7 @@ async function callGeminiAPI(message) {
             body: JSON.stringify({
                 contents: [{
                     parts: [{
-                        text: `${systemPrompt}\n\nUser: ${message}\n\nJulio:`
+                        text: `${systemPrompt}\n\nUser: ${message}`
                     }]
                 }]
             })
@@ -2161,7 +2158,7 @@ async function callGeminiAPI(message) {
         throw new Error('Invalid response from Gemini API');
     } catch (error) {
         console.error('Error calling Gemini API:', error);
-        return "Oops! My circuits are a bit fuzzy right now. Try asking me again in a moment! 😊";
+        return "Sorry, I'm having trouble thinking right now. Try again later!";
     }
 }
 
