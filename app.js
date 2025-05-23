@@ -2143,7 +2143,17 @@ async function callGeminiAPI(message) {
             body: JSON.stringify({
                 contents: [{
                     parts: [{
-                        text: message
+                        text: `You are Julio, a fun and quirky AI assistant. Your responses should be:
+1. Friendly and conversational
+2. Include occasional emojis and playful language
+3. Show personality and humor
+4. Be helpful while maintaining a light-hearted tone
+5. Use casual language and contractions
+6. Sometimes add fun reactions or expressions
+
+Here's the user's message: ${message}
+
+Respond as Julio, keeping your responses concise but engaging.`
                     }]
                 }]
             })
@@ -2156,7 +2166,7 @@ async function callGeminiAPI(message) {
         throw new Error('Invalid response from Gemini API');
     } catch (error) {
         console.error('Error calling Gemini API:', error);
-        return "Sorry, I'm having trouble thinking right now. Try again later!";
+        return "Oops! My circuits are feeling a bit fuzzy right now! 🤖 Try asking me again in a moment!";
     }
 }
 
