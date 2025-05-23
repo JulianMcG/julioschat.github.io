@@ -388,209 +388,27 @@ function showChatSection() {
 
 // Chat Functions
 async function loadUsers() {
-    const usersContainer = document.getElementById('users-container');
-    const searchInput = document.getElementById('search-user');
-    const searchTerm = searchInput ? searchInput.value.trim() : '';
-
     try {
-        // Get current user's data and all messages in parallel
-        const [currentUserDoc, messagesSnapshot] = await Promise.all([
-            getDoc(doc(db, 'users', currentUser.uid)),
-            getDocs(query(
-                collection(db, 'messages'),
-                where('participants', 'array-contains', currentUser.uid)
-            ))
-        ]);
+        const usersList = document.getElementById('users-list');
+        if (!usersList) return;
 
-        if (!currentUserDoc.exists()) {
-            throw new Error('User document not found');
-        }
+        // Add Julio at the top of the list
+        const julioElement = createJulioElement();
+        usersList.insertBefore(julioElement, usersList.firstChild);
 
-        const currentUserData = currentUserDoc.data();
-        const hiddenConversations = currentUserData?.hiddenConversations || [];
-        const pinnedConversations = currentUserData?.pinnedConversations || [];
-        const userAliases = currentUserData?.userAliases || {};
-
-        // Process messages to get latest conversations
-        const latestMessages = new Map();
-        messagesSnapshot.forEach(doc => {
-            const message = doc.data();
-            if (!message.participants) return;
-
-            const otherUserId = message.participants.find(id => id !== currentUser.uid);
-            if (!otherUserId || hiddenConversations.includes(otherUserId)) return;
-
-            const currentLatest = latestMessages.get(otherUserId);
-            if (!currentLatest || message.timestamp > currentLatest.timestamp) {
-                latestMessages.set(otherUserId, {
-                    timestamp: message.timestamp,
-                    content: message.content
-                });
-            }
-        });
-
-        if (latestMessages.size === 0) {
-            usersContainer.innerHTML = '<div class="no-results">No conversations yet. Start a new chat!</div>';
-            return;
-        }
-
-        // Get all user documents in a single batch
-        const userIds = Array.from(latestMessages.keys());
-        const userDocs = await Promise.all(
-            userIds.map(userId => getDoc(doc(db, 'users', userId)))
-        );
-
-        // Process users and create elements
-        const users = userDocs
-            .filter(doc => doc.exists() && !doc.data().deleted)
-            .map(doc => {
-                const userData = doc.data();
-                const messageData = latestMessages.get(doc.id);
-                const username = userData.username || userData.email?.split('@')[0] || 'User';
-                const alias = userAliases[doc.id] || username;
-
-                return {
-                    id: doc.id,
-                    username: username,
-                    alias: alias,
-                    profilePicture: userData.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png',
-                    verified: userData.verified || false,
-                    isPinned: pinnedConversations.includes(doc.id),
-                    lastMessageTime: messageData.timestamp,
-                    lastMessage: messageData.content
-                };
-            });
-
-        // Sort users
-        users.sort((a, b) => {
-            if (a.isPinned && !b.isPinned) return -1;
-            if (!a.isPinned && b.isPinned) return 1;
-            
-            const timeA = a.lastMessageTime?.toDate?.() || new Date(0);
-            const timeB = b.lastMessageTime?.toDate?.() || new Date(0);
-            return timeB - timeA;
-        });
-
-        // Create a document fragment for better performance
-        const fragment = document.createDocumentFragment();
+        // Load other users
+        const usersQuery = query(collection(db, 'users'), orderBy('username'));
+        const usersSnapshot = await getDocs(usersQuery);
         
-        // Create a map of existing user elements
-        const existingUsers = new Map();
-        usersContainer.querySelectorAll('.user-item').forEach(element => {
-            existingUsers.set(element.dataset.uid, element);
-        });
-
-        // Clear the container
-        usersContainer.innerHTML = '';
-
-        // Add users to fragment
-        users.forEach(user => {
-            let userElement;
-            
-            if (existingUsers.has(user.id)) {
-                userElement = existingUsers.get(user.id);
-                const displayName = user.alias || user.username;
-                userElement.innerHTML = `
-                    <div class="profile-picture-container">
-                        <img src="${user.profilePicture}" alt="${displayName}" class="profile-picture">
-                        <div class="online-status"></div>
-                    </div>
-                    <span class="username">${displayName}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
-                    <div class="user-actions">
-                        <span class="material-symbols-outlined action-icon pin-icon">keep</span>
-                        <span class="material-symbols-outlined action-icon close-icon">close</span>
-                    </div>
-                `;
-            } else {
-                userElement = createUserElement(user);
-            }
-            
-            userElement.dataset.uid = user.id;
-            
-            // Add click handler for the user item
-            userElement.onclick = (e) => {
-                if (!e.target.classList.contains('action-icon')) {
-                    startChat(user.id, user.alias || user.username);
-                }
-            };
-
-            // Add click handler for close icon
-            const closeIcon = userElement.querySelector('.close-icon');
-            closeIcon.onclick = async (e) => {
-                e.stopPropagation();
-                userElement.remove();
-                try {
-                    // Add to hidden conversations
-                    await setDoc(doc(db, 'users', currentUser.uid), {
-                        hiddenConversations: arrayUnion(user.id)
-                    }, { merge: true });
-                    
-                    // If this was the current chat, clear it
-                    if (currentChatUser && currentChatUser.id === user.id) {
-                        currentChatUser = null;
-                        document.getElementById('active-chat-username').textContent = 'Select a chat';
-                        document.getElementById('message-input').placeholder = 'Type a message...';
-                        document.querySelector('.message-input').classList.remove('visible');
-                    }
-                } catch (error) {
-                    console.error('Error hiding conversation:', error);
-                    // If there's an error, add the element back
-                    if (user.isPinned) {
-                        fragment.insertBefore(userElement, fragment.firstChild);
-                    } else {
-                        fragment.appendChild(userElement);
-                    }
-                }
-            };
-
-            // Add click handler for pin icon
-            const pinIcon = userElement.querySelector('.pin-icon');
-            pinIcon.onclick = async (e) => {
-                e.stopPropagation();
-                const isPinned = userElement.classList.contains('pinned');
-                userElement.classList.toggle('pinned');
-                
-                try {
-                    if (!isPinned) {
-                        await setDoc(doc(db, 'users', currentUser.uid), {
-                            pinnedConversations: arrayUnion(user.id)
-                        }, { merge: true });
-                    } else {
-                        await setDoc(doc(db, 'users', currentUser.uid), {
-                            pinnedConversations: arrayRemove(user.id)
-                        }, { merge: true });
-                    }
-                } catch (error) {
-                    console.error('Error pinning conversation:', error);
-                    // Revert UI changes if save fails
-                    userElement.classList.toggle('pinned');
-                }
-            };
-            
-            if (user.isPinned) {
-                userElement.classList.add('pinned');
-                fragment.insertBefore(userElement, fragment.firstChild);
-            } else {
-                fragment.appendChild(userElement);
+        usersSnapshot.forEach(doc => {
+            const userData = doc.data();
+            if (userData.uid !== currentUser.uid) {
+                const userElement = createUserElement(userData);
+                usersList.appendChild(userElement);
             }
         });
-
-        // Add all users at once
-        usersContainer.appendChild(fragment);
-
-        // Apply search filter if needed
-        if (searchTerm) {
-            const userItems = usersContainer.querySelectorAll('.user-item');
-            userItems.forEach(userItem => {
-                const username = userItem.querySelector('.username').textContent.toLowerCase();
-                userItem.style.display = username.includes(searchTerm.toLowerCase()) ? 'flex' : 'none';
-            });
-        }
-
-        checkUsernameOverflow();
     } catch (error) {
         console.error('Error loading users:', error);
-        usersContainer.innerHTML = '<div class="no-results">Error loading conversations. Please try again.</div>';
     }
 }
 
@@ -1383,71 +1201,47 @@ window.addEventListener('click', (event) => {
 
 // Send message
 async function sendMessage(content) {
-    if (!currentUser || !currentChatUser) {
-        console.log('No current user or chat user');
-        return;
-    }
-    
-    if (!content) {
-        return;
-    }
-
-    // Strip out any image-related content
-    content = content.replace(/<img[^>]*>/g, ''); // Remove img tags
-    content = content.replace(/!\[.*?\]\(.*?\)/g, ''); // Remove markdown images
-    content = content.replace(/https?:\/\/.*?\.(jpg|jpeg|png|gif|webp)/gi, ''); // Remove image URLs
+    if (!content.trim() || !currentChatUser) return;
 
     try {
-        // Get receiver's blocked users list
-        const receiverDoc = await getDoc(doc(db, 'users', currentChatUser.id));
-        const receiverData = receiverDoc.data();
-        const receiverBlockedUsers = receiverData?.blockedUsers || [];
-
-        if (receiverBlockedUsers.includes(currentUser.uid)) {
-            alert('You cannot send messages to this user as they have blocked you.');
-            return;
-        }
-
-        const timestamp = serverTimestamp();
-
-        // Create message data
         const messageData = {
             content: content,
             senderId: currentUser.uid,
-            receiverId: currentChatUser.id,
-            participants: [currentUser.uid, currentChatUser.id],
-            timestamp: timestamp,
-            readBy: [currentUser.uid] // Initialize readBy with sender's ID
+            timestamp: serverTimestamp(),
+            participants: [currentUser.uid, currentChatUser.id]
         };
 
-        // Add message to Firestore
-        await addDoc(collection(db, 'messages'), messageData);
+        // If chatting with Julio, handle AI response
+        if (currentChatUser.id === JULIO_USER_ID) {
+            // Add user's message to chat
+            const userMessageRef = await addDoc(collection(db, 'messages'), messageData);
+            
+            // Get AI response
+            const aiResponse = await callGeminiAPI(content);
+            
+            // Add AI's response to chat
+            const aiMessageData = {
+                content: aiResponse,
+                senderId: JULIO_USER_ID,
+                timestamp: serverTimestamp(),
+                participants: [currentUser.uid, JULIO_USER_ID]
+            };
+            
+            await addDoc(collection(db, 'messages'), aiMessageData);
+        } else {
+            // Normal message handling for other users
+            await addDoc(collection(db, 'messages'), messageData);
+        }
 
-        // Update last message time for both users
-        const batch = writeBatch(db);
+        // Clear input
+        document.getElementById('message-input').value = '';
         
-        // Update sender's last message time
-        const senderRef = doc(db, 'users', currentUser.uid);
-        batch.update(senderRef, {
-            [`conversations.${currentChatUser.id}.lastMessageTime`]: timestamp,
-            [`conversations.${currentChatUser.id}.lastMessage`]: content
-        });
-
-        // Update receiver's last message time
-        const receiverRef = doc(db, 'users', currentChatUser.id);
-        batch.update(receiverRef, {
-            [`conversations.${currentUser.uid}.lastMessageTime`]: timestamp,
-            [`conversations.${currentUser.uid}.lastMessage`]: content
-        });
-
-        // Commit the batch
-        await batch.commit();
+        // Update typing status
+        await updateTypingStatus(false);
         
-        // Scroll to bottom
-        const chatMessages = document.getElementById('chat-messages');
-        chatMessages.scrollTop = chatMessages.scrollHeight;
     } catch (error) {
         console.error('Error sending message:', error);
+        alert('Error sending message. Please try again.');
     }
 }
 
@@ -2398,3 +2192,58 @@ loadUsers = async function() {
     await originalLoadUsers();
     checkUsernameOverflow();
 };
+
+// Julio AI Configuration
+const JULIO_USER_ID = 'julio_ai';
+const JULIO_USERNAME = 'Julio';
+const GEMINI_API_KEY = 'AIzaSyCxfxEnIhppBdjD0K-svlNi0iTNTYyfO9A';
+
+// Function to call Gemini API
+async function callGeminiAPI(message) {
+    try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [{
+                        text: message
+                    }]
+                }]
+            })
+        });
+
+        const data = await response.json();
+        if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+            return data.candidates[0].content.parts[0].text;
+        }
+        throw new Error('Invalid response from Gemini API');
+    } catch (error) {
+        console.error('Error calling Gemini API:', error);
+        return "Sorry, I'm having trouble thinking right now. Try again later!";
+    }
+}
+
+// Function to create Julio's user element
+function createJulioElement() {
+    const userElement = document.createElement('div');
+    userElement.className = 'user';
+    userElement.dataset.userId = JULIO_USER_ID;
+    userElement.innerHTML = `
+        <div class="user-info">
+            <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Julio" alt="Julio" class="user-avatar">
+            <div class="user-details">
+                <div class="user-name">
+                    ${JULIO_USERNAME}
+                    <span class="verified-badge">✓</span>
+                </div>
+                <div class="user-status">AI Assistant</div>
+            </div>
+        </div>
+    `;
+    
+    userElement.addEventListener('click', () => startChat(JULIO_USER_ID, JULIO_USERNAME));
+    return userElement;
+}
