@@ -7,11 +7,15 @@
     --primary-color-dark: hsl(var(--primary-hue), 70%, 35%);
     --primary-color-light: hsl(var(--primary-hue), 70%, 55%);
     
-    /* Background colors */
+    /* Background colors - based on #0C0E16 with theme hue */
     --bg-dark: hsl(var(--primary-hue), 15%, 8%);
     --bg-darker: hsl(var(--primary-hue), 15%, 10%);
     --bg-light: hsl(var(--primary-hue), 15%, 12%);
     --bg-lighter: hsl(var(--primary-hue), 15%, 15%);
+    
+    /* Hover and active states */
+    --hover-bg: hsl(var(--primary-hue), 15%, 20%);
+    --active-bg: hsl(var(--primary-hue), 15%, 25%);
     
     /* Text colors */
     --text-primary: hsl(var(--primary-hue), 10%, 92%);
@@ -23,9 +27,6 @@
     --accent-red-dark: hsl(0, 70%, 40%);
     --accent-gray: hsl(var(--primary-hue), 10%, 35%);
     --accent-gray-dark: hsl(var(--primary-hue), 10%, 25%);
-
-    /* Hover colors */
-    --hover-color: hsl(var(--primary-hue), 15%, 20%);
 }
 
 * {
@@ -408,7 +409,7 @@ body {
 }
 
 .new-message-button:hover {
-    background-color: var(--hover-color);
+    background-color: var(--hover-bg);
 }
 
 .new-message-button .material-symbols-outlined {
@@ -511,11 +512,11 @@ body {
 }
 
 .user-item:hover {
-    background-color: var(--hover-color);
+    background-color: var(--hover-bg);
 }
 
 .user-item.active {
-    background-color: var(--hover-color);
+    background-color: var(--active-bg);
     border-radius: 8px;
     padding: 10px;
 }
@@ -1222,7 +1223,7 @@ body {
 }
 
 .compose-user-item:hover {
-    background-color: var(--bg-light);
+    background-color: var(--hover-bg);
 }
 
 .compose-user-item img {
@@ -1917,18 +1918,16 @@ input:checked + .slider:before {
 .theme-options {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-    max-width: 200px;
+    gap: 10px;
 }
 
 .theme-option {
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     cursor: pointer;
     border: 2px solid transparent;
     transition: transform 0.2s;
-    margin: 0 auto;
 }
 
 .theme-option:hover {
