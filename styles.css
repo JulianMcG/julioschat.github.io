@@ -7,15 +7,11 @@
     --primary-color-dark: hsl(var(--primary-hue), 70%, 35%);
     --primary-color-light: hsl(var(--primary-hue), 70%, 55%);
     
-    /* Background colors - based on #0C0E16 with theme hue */
+    /* Background colors */
     --bg-dark: hsl(var(--primary-hue), 15%, 8%);
     --bg-darker: hsl(var(--primary-hue), 15%, 10%);
     --bg-light: hsl(var(--primary-hue), 15%, 12%);
     --bg-lighter: hsl(var(--primary-hue), 15%, 15%);
-    
-    /* Hover and active states */
-    --hover-bg: hsl(var(--primary-hue), 15%, 20%);
-    --active-bg: hsl(var(--primary-hue), 15%, 25%);
     
     /* Text colors */
     --text-primary: hsl(var(--primary-hue), 10%, 92%);
@@ -27,6 +23,16 @@
     --accent-red-dark: hsl(0, 70%, 40%);
     --accent-gray: hsl(var(--primary-hue), 10%, 35%);
     --accent-gray-dark: hsl(var(--primary-hue), 10%, 25%);
+}
+
+/* Default sidebar background for non-blue themes */
+.sidebar {
+    background-color: var(--bg-dark);
+}
+
+/* Special sidebar background for blue theme */
+[style*="--primary-hue: 225"] .sidebar {
+    background-color: #0c0e16;
 }
 
 * {
@@ -286,7 +292,6 @@ body {
 .sidebar {
     width: 350px;
     min-width: 350px;
-    background-color: var(--bg-dark);
     padding: 20px;
     display: flex;
     flex-direction: column;
@@ -409,7 +414,7 @@ body {
 }
 
 .new-message-button:hover {
-    background-color: var(--hover-bg);
+    background-color: var(--bg-lighter);
 }
 
 .new-message-button .material-symbols-outlined {
@@ -512,11 +517,11 @@ body {
 }
 
 .user-item:hover {
-    background-color: var(--hover-bg);
+    background-color: rgba(19, 22, 31, 0.5);
 }
 
 .user-item.active {
-    background-color: var(--active-bg);
+    background-color: var(--bg-light);
     border-radius: 8px;
     padding: 10px;
 }
@@ -1223,7 +1228,7 @@ body {
 }
 
 .compose-user-item:hover {
-    background-color: var(--hover-bg);
+    background-color: var(--bg-light);
 }
 
 .compose-user-item img {
