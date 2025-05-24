@@ -1209,57 +1209,24 @@ window.addEventListener('click', (event) => {
 });
 
 // Send message
-async function sendMessage(content) {
-    if (!content.trim() || !currentChatUser) return;
+async function sendMessage(content, isImage = false) {
+    if (!content.trim() && !isImage) return;
 
+    const messageInput = document.getElementById('message-input');
+    const chatId = getChatId(currentUserId, activeChatId);
+    
     try {
         const messageData = {
+            senderId: currentUserId,
             content: content,
-            senderId: currentUser.uid,
             timestamp: serverTimestamp(),
-            participants: [currentUser.uid, currentChatUser.id]
+            isImage: isImage
         };
 
-        // If chatting with Julio, handle AI response
-        if (currentChatUser.id === JULIO_USER_ID) {
-            // Add user's message to chat
-            const userMessageRef = await addDoc(collection(db, 'messages'), messageData);
-            
-            // Update last message time
-            lastJulioMessageTime = new Date();
-            
-            // Add message to context
-            julioConversationContext.push({ role: 'user', content: content });
-            
-            // Get AI response with context
-            const aiResponse = await callGeminiAPI(content, julioConversationContext);
-            
-            // Add AI's response to context
-            julioConversationContext.push({ role: 'assistant', content: aiResponse });
-            
-            // Add AI's response to chat
-            const aiMessageData = {
-                content: aiResponse,
-                senderId: JULIO_USER_ID,
-                timestamp: serverTimestamp(),
-                participants: [currentUser.uid, JULIO_USER_ID]
-            };
-            
-            await addDoc(collection(db, 'messages'), aiMessageData);
-        } else {
-            // Normal message handling for other users
-            await addDoc(collection(db, 'messages'), messageData);
-        }
-
-        // Clear input
-        document.getElementById('message-input').value = '';
-        
-        // Update typing status
-        await updateTypingStatus(false);
-        
+        await addDoc(collection(db, `chats/${chatId}/messages`), messageData);
+        messageInput.value = '';
     } catch (error) {
         console.error('Error sending message:', error);
-        alert('Error sending message. Please try again.');
     }
 }
 
@@ -2395,3 +2362,97 @@ async function sendWelcomeMessage() {
         console.error('Error sending welcome message:', error);
     }
 }
+
+// Image Upload Functions
+function setupImageUpload() {
+    const imageUploadIcon = document.querySelector('.image-upload-icon');
+    const imageUploadInput = document.getElementById('image-upload');
+    const chatArea = document.querySelector('.chat-area');
+    const messageInput = document.getElementById('message-input');
+
+    // Click to upload
+    imageUploadIcon.addEventListener('click', () => {
+        imageUploadInput.click();
+    });
+
+    imageUploadInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file && file.type.startsWith('image/')) {
+            handleImageUpload(file);
+        }
+    });
+
+    // Drag and drop
+    chatArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        chatArea.classList.add('drag-over');
+    });
+
+    chatArea.addEventListener('dragleave', () => {
+        chatArea.classList.remove('drag-over');
+    });
+
+    chatArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        chatArea.classList.remove('drag-over');
+        
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith('image/')) {
+            handleImageUpload(file);
+        }
+    });
+
+    // Paste
+    messageInput.addEventListener('paste', (e) => {
+        const items = e.clipboardData.items;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.startsWith('image/')) {
+                const file = items[i].getAsFile();
+                handleImageUpload(file);
+                break;
+            }
+        }
+    });
+}
+
+async function handleImageUpload(file) {
+    try {
+        const imageUrl = await uploadImage(file);
+        await sendMessage(imageUrl, true);
+    } catch (error) {
+        console.error('Error uploading image:', error);
+    }
+}
+
+async function uploadImage(file) {
+    const storageRef = ref(storage, `images/${Date.now()}_${file.name}`);
+    await uploadBytes(storageRef, file);
+    return await getDownloadURL(storageRef);
+}
+
+function createMessageElement(message) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${message.senderId === currentUserId ? 'sent' : 'received'}`;
+    
+    const bubble = document.createElement('div');
+    bubble.className = `message-bubble ${message.senderId === currentUserId ? 'sent' : 'received'}`;
+    
+    if (message.isImage) {
+        bubble.classList.add('image-message');
+        const img = document.createElement('img');
+        img.src = message.content;
+        img.alt = 'Shared image';
+        bubble.appendChild(img);
+    } else {
+        bubble.textContent = message.content;
+    }
+    
+    messageDiv.appendChild(bubble);
+    return messageDiv;
+}
+
+// Add setupImageUpload to the initialization
+document.addEventListener('DOMContentLoaded', () => {
+    // ... existing initialization code ...
+    setupImageUpload();
+});
