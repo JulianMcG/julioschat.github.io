@@ -1330,9 +1330,6 @@ onAuthStateChanged(auth, async (user) => {
             }
             window.globalMessageUnsubscribe = setupMessageListener();
             
-            await loadColorThemePreference();
-            setupColorThemeListener();
-            
         } catch (error) {
             console.error('Error in auth state change:', error);
         }
@@ -2399,49 +2396,61 @@ async function sendWelcomeMessage() {
     }
 }
 
-// Color theme functions
-async function loadColorThemePreference() {
+// Theme management
+async function loadThemePreference() {
+    const user = auth.currentUser;
+    if (!user) return;
+
     try {
-        const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
-        const userData = userDoc.data();
-        if (userData?.colorTheme) {
-            applyColorTheme(userData.colorTheme);
-            const selectedOption = document.querySelector(`.color-option[data-hue="${userData.colorTheme}"]`);
-            if (selectedOption) {
-                selectedOption.classList.add('selected');
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) {
+            const data = userDoc.data();
+            if (data.themeHue) {
+                setTheme(data.themeHue);
             }
         }
     } catch (error) {
-        console.error('Error loading color theme preference:', error);
+        console.error('Error loading theme preference:', error);
     }
 }
 
-async function saveColorThemePreference(theme) {
+async function saveThemePreference(hue) {
+    const user = auth.currentUser;
+    if (!user) return;
+
     try {
-        await setDoc(doc(db, 'users', auth.currentUser.uid), {
-            colorTheme: theme
+        await setDoc(doc(db, 'users', user.uid), {
+            themeHue: hue
         }, { merge: true });
     } catch (error) {
-        console.error('Error saving color theme preference:', error);
+        console.error('Error saving theme preference:', error);
     }
 }
 
-function applyColorTheme(hue) {
-    document.documentElement.style.setProperty('--hue', hue);
+function setTheme(hue) {
+    document.documentElement.style.setProperty('--primary-hue', hue);
+    
+    // Update active theme option
+    const themeOptions = document.querySelectorAll('.theme-option');
+    themeOptions.forEach(option => {
+        option.classList.toggle('active', option.dataset.hue === hue.toString());
+    });
 }
 
-function setupColorThemeListener() {
-    const colorOptions = document.querySelectorAll('.color-option');
-    colorOptions.forEach(option => {
+function setupThemeSelector() {
+    const themeOptions = document.querySelectorAll('.theme-option');
+    themeOptions.forEach(option => {
         option.addEventListener('click', async () => {
-            // Remove selected class from all options
-            colorOptions.forEach(opt => opt.classList.remove('selected'));
-            // Add selected class to clicked option
-            option.classList.add('selected');
-            
-            const hue = option.dataset.hue;
-            applyColorTheme(hue);
-            await saveColorThemePreference(hue);
+            const hue = parseInt(option.dataset.hue);
+            setTheme(hue);
+            await saveThemePreference(hue);
         });
     });
 }
+
+// Add to your existing initialization code
+document.addEventListener('DOMContentLoaded', () => {
+    // ... existing initialization code ...
+    setupThemeSelector();
+    loadThemePreference();
+});
