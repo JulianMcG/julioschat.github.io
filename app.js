@@ -1211,22 +1211,60 @@ window.addEventListener('click', (event) => {
 // Send message
 async function sendMessage(content, isImage = false) {
     if (!content.trim() && !isImage) return;
+    if (!currentChatUser) return;
 
     const messageInput = document.getElementById('message-input');
-    const chatId = getChatId(currentUserId, activeChatId);
+    const chatId = getChatId(currentUserId, currentChatUser.id);
     
     try {
         const messageData = {
             senderId: currentUserId,
             content: content,
             timestamp: serverTimestamp(),
-            isImage: isImage
+            isImage: isImage,
+            participants: [currentUserId, currentChatUser.id]
         };
 
-        await addDoc(collection(db, `chats/${chatId}/messages`), messageData);
+        // If chatting with Julio, handle AI response
+        if (currentChatUser.id === JULIO_USER_ID) {
+            // Add user's message to chat
+            const userMessageRef = await addDoc(collection(db, 'messages'), messageData);
+            
+            // Update last message time
+            lastJulioMessageTime = new Date();
+            
+            // Add message to context
+            julioConversationContext.push({ role: 'user', content: content });
+            
+            // Get AI response with context
+            const aiResponse = await callGeminiAPI(content, julioConversationContext);
+            
+            // Add AI's response to context
+            julioConversationContext.push({ role: 'assistant', content: aiResponse });
+            
+            // Add AI's response to chat
+            const aiMessageData = {
+                content: aiResponse,
+                senderId: JULIO_USER_ID,
+                timestamp: serverTimestamp(),
+                participants: [currentUserId, JULIO_USER_ID],
+                isImage: false
+            };
+            
+            await addDoc(collection(db, 'messages'), aiMessageData);
+        } else {
+            // Normal message handling for other users
+            await addDoc(collection(db, 'messages'), messageData);
+        }
+
+        // Clear input
         messageInput.value = '';
+        
+        // Update typing status
+        await updateTypingStatus(false);
     } catch (error) {
         console.error('Error sending message:', error);
+        alert('Error sending message. Please try again.');
     }
 }
 
@@ -2383,24 +2421,42 @@ function setupImageUpload() {
     });
 
     // Drag and drop
-    chatArea.addEventListener('dragover', (e) => {
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        chatArea.addEventListener(eventName, preventDefaults, false);
+        document.body.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
         e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        chatArea.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        chatArea.addEventListener(eventName, unhighlight, false);
+    });
+
+    function highlight(e) {
         chatArea.classList.add('drag-over');
-    });
+    }
 
-    chatArea.addEventListener('dragleave', () => {
+    function unhighlight(e) {
         chatArea.classList.remove('drag-over');
-    });
+    }
 
-    chatArea.addEventListener('drop', (e) => {
-        e.preventDefault();
-        chatArea.classList.remove('drag-over');
+    chatArea.addEventListener('drop', handleDrop, false);
+
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const file = dt.files[0];
         
-        const file = e.dataTransfer.files[0];
         if (file && file.type.startsWith('image/')) {
             handleImageUpload(file);
         }
-    });
+    }
 
     // Paste
     messageInput.addEventListener('paste', (e) => {
@@ -2421,13 +2477,19 @@ async function handleImageUpload(file) {
         await sendMessage(imageUrl, true);
     } catch (error) {
         console.error('Error uploading image:', error);
+        alert('Error uploading image. Please try again.');
     }
 }
 
 async function uploadImage(file) {
-    const storageRef = ref(storage, `images/${Date.now()}_${file.name}`);
-    await uploadBytes(storageRef, file);
-    return await getDownloadURL(storageRef);
+    try {
+        const storageRef = ref(storage, `images/${Date.now()}_${file.name}`);
+        const snapshot = await uploadBytes(storageRef, file);
+        return await getDownloadURL(snapshot.ref);
+    } catch (error) {
+        console.error('Error uploading to Firebase Storage:', error);
+        throw error;
+    }
 }
 
 function createMessageElement(message) {
@@ -2442,6 +2504,10 @@ function createMessageElement(message) {
         const img = document.createElement('img');
         img.src = message.content;
         img.alt = 'Shared image';
+        img.onerror = () => {
+            img.src = 'https://i.ibb.co/Gf9VD2MN/pfp.png'; // Fallback image
+            img.alt = 'Failed to load image';
+        };
         bubble.appendChild(img);
     } else {
         bubble.textContent = message.content;
