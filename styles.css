@@ -7,6 +7,15 @@
     color: #ECEBF7;
 }
 
+:root {
+    --hue: 210;
+    --primary-color: hsl(var(--hue), 70%, 45%);
+    --primary-color-hover: hsl(var(--hue), 70%, 40%);
+    --primary-color-shadow: hsl(var(--hue), 70%, 30%);
+    --primary-color-light: hsl(var(--hue), 70%, 95%);
+    --primary-color-dark: hsl(var(--hue), 70%, 20%);
+}
+
 body {
     margin: 0;
     padding: 0;
@@ -119,7 +128,7 @@ body {
 .button-wrapper button {
     width: 100%;
     padding: 14px;
-    background-color: #1F49C7;
+    background-color: var(--primary-color);
     color: #ECEBF7;
     border: 3px solid rgba(255, 255, 255, 0.1);
     border-radius: 15px;
@@ -127,12 +136,12 @@ body {
     font-size: 16px;
     font-weight: 500;
     transition: transform 0.1s ease;
-    box-shadow: 0 5px 0 #13296D;
+    box-shadow: 0 5px 0 var(--primary-color-shadow);
 }
 
 .button-wrapper button:active {
     transform: translateY(5px);
-    box-shadow: 0 0 0 #13296D;
+    box-shadow: 0 0 0 var(--primary-color-shadow);
 }
 
 .button-wrapper::after {
@@ -146,7 +155,7 @@ body {
 .auth-form button {
     width: 100%;
     padding: 14px;
-    background-color: #1F49C7;
+    background-color: var(--primary-color);
     color: #ECEBF7;
     border: 3px solid rgba(255, 255, 255, 0.1);
     border-radius: 15px;
@@ -160,7 +169,7 @@ body {
 }
 
 .auth-form button:hover {
-    background-color: #1a3db0;
+    background-color: var(--primary-color-hover);
     transform: translateY(-2px);
 }
 
@@ -197,14 +206,14 @@ body {
 }
 
 .auth-link {
-    color: #1F49C7 !important;
+    color: var(--primary-color) !important;
     text-decoration: none;
     font-weight: 500;
     transition: color 0.3s;
 }
 
 .auth-link:hover {
-    color: #1a3db0 !important;
+    color: var(--primary-color-hover) !important;
 }
 
 .profile-picture-upload {
@@ -221,7 +230,7 @@ body {
     object-fit: cover;
     margin-bottom: 15px;
     cursor: pointer;
-    border: 3px solid #1F49C7;
+    border: 3px solid var(--primary-color);
     transition: transform 0.3s;
 }
 
@@ -663,7 +672,7 @@ body {
 }
 
 .message-bubble.sent {
-    background-color: #1F49C7;
+    background-color: var(--primary-color);
     align-self: flex-end;
 }
 
@@ -713,7 +722,7 @@ body {
 }
 
 .message.sent {
-    background-color: #1F49C7;
+    background-color: var(--primary-color);
     color: #ECEBF7;
     margin-left: auto;
     margin-right: 20px;
@@ -968,21 +977,25 @@ body {
 }
 
 .save-button {
-    background-color: #1F49C7;
+    background-color: var(--primary-color);
     color: #ECEBF7;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 8px;
+    border: 3px solid rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
     cursor: pointer;
-    transition: background-color 0.3s;
+    font-size: 16px;
+    font-weight: 500;
+    transition: transform 0.1s ease;
+    box-shadow: 0 5px 0 var(--primary-color-shadow);
+    margin-bottom: 20px;
 }
 
 .save-button:hover {
-    background-color: #1a3db0;
+    transform: translateY(-2px);
 }
 
 .save-button:active {
-    transform: translateY(0);
+    transform: translateY(5px);
+    box-shadow: 0 0 0 var(--primary-color-shadow);
 }
 
 .no-results {
@@ -1359,7 +1372,7 @@ body {
 #settings-modal .save-button {
     width: 100%;
     padding: 14px;
-    background-color: #494C56;
+    background-color: var(--primary-color);
     color: #ECEBF7;
     border: 3px solid rgba(255, 255, 255, 0.05);
     border-radius: 15px;
@@ -1367,7 +1380,7 @@ body {
     font-size: 16px;
     font-weight: 500;
     transition: transform 0.1s ease;
-    box-shadow: 0 5px 0 #31333A;
+    box-shadow: 0 5px 0 var(--primary-color-shadow);
     margin-bottom: 20px;
 }
 
@@ -1507,7 +1520,7 @@ body {
 #unblock-user {
     width: 100%;
     padding: 14px;
-    background-color: #1F49C7;
+    background-color: var(--primary-color);
     color: #ECEBF7;
     border: 3px solid rgba(255, 255, 255, 0.1);
     border-radius: 15px;
@@ -1515,7 +1528,7 @@ body {
     font-size: 16px;
     font-weight: 500;
     transition: transform 0.1s ease;
-    box-shadow: 0 5px 0 #13296D;
+    box-shadow: 0 5px 0 var(--primary-color-shadow);
 }
 
 #unblock-user:hover {
@@ -1524,7 +1537,7 @@ body {
 
 #unblock-user:active {
     transform: translateY(5px);
-    box-shadow: 0 0 0 #13296D;
+    box-shadow: 0 0 0 var(--primary-color-shadow);
 }
 
 /* Add scrollbar hiding for all scrollable elements */
@@ -1572,7 +1585,7 @@ button:hover {
 .message-edit-input {
     width: 100%;
     padding: 8px 12px;
-    background-color: #1F49C7;
+    background-color: var(--primary-color);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
     color: #ECEBF7;
@@ -1636,7 +1649,7 @@ button:hover {
 }
 
 input:checked + .slider {
-    background-color: #1F49C7;
+    background-color: var(--primary-color);
 }
 
 input:checked + .slider:before {
