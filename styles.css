@@ -1,26 +1,28 @@
 :root {
     /* Theme colors - default is blue (225) */
     --primary-hue: 225;
+    
+    /* Primary colors */
     --primary-color: hsl(var(--primary-hue), 70%, 45%);
     --primary-color-dark: hsl(var(--primary-hue), 70%, 35%);
     --primary-color-light: hsl(var(--primary-hue), 70%, 55%);
     
-    /* Background colors */
-    --bg-dark: #0c0e16;
-    --bg-darker: #10121B;
-    --bg-light: #13161F;
-    --bg-lighter: #1C1F28;
+    /* Background colors - using complementary and analogous colors */
+    --bg-dark: hsl(calc(var(--primary-hue) + 180), 15%, 8%);
+    --bg-darker: hsl(calc(var(--primary-hue) + 180), 15%, 10%);
+    --bg-light: hsl(calc(var(--primary-hue) + 180), 15%, 12%);
+    --bg-lighter: hsl(calc(var(--primary-hue) + 180), 15%, 15%);
     
-    /* Text colors */
-    --text-primary: #ECEBF7;
-    --text-secondary: #B6B8C8;
-    --text-muted: #6b6d7a;
+    /* Text colors - using complementary colors with adjusted saturation and lightness */
+    --text-primary: hsl(calc(var(--primary-hue) + 180), 10%, 92%);
+    --text-secondary: hsl(calc(var(--primary-hue) + 180), 10%, 75%);
+    --text-muted: hsl(calc(var(--primary-hue) + 180), 10%, 45%);
     
-    /* Accent colors */
-    --accent-red: #E85658;
-    --accent-red-dark: #8A1315;
-    --accent-gray: #494C56;
-    --accent-gray-dark: #31333A;
+    /* Accent colors - using split complementary colors */
+    --accent-red: hsl(calc(var(--primary-hue) + 150), 70%, 60%);
+    --accent-red-dark: hsl(calc(var(--primary-hue) + 150), 70%, 40%);
+    --accent-gray: hsl(calc(var(--primary-hue) + 180), 10%, 35%);
+    --accent-gray-dark: hsl(calc(var(--primary-hue) + 180), 10%, 25%);
 }
 
 * {
