@@ -1223,19 +1223,13 @@ async function sendMessage(content) {
         // If chatting with Julio, handle AI response
         if (currentChatUser.id === JULIO_USER_ID) {
             // Add user's message to chat
-            const userMessageRef = await addDoc(collection(db, 'messages'), messageData);
+            await addDoc(collection(db, 'messages'), messageData);
             
             // Update last message time
             lastJulioMessageTime = new Date();
             
-            // Add message to context
-            julioConversationContext.push({ role: 'user', content: content });
-            
-            // Get AI response with context
-            const aiResponse = await callGeminiAPI(content, julioConversationContext);
-            
-            // Add AI's response to context
-            julioConversationContext.push({ role: 'assistant', content: aiResponse });
+            // Get AI response without context
+            const aiResponse = await callGeminiAPI(content);
             
             // Add AI's response to chat
             const aiMessageData = {
@@ -2271,12 +2265,13 @@ CRITICAL RULES:
 7. Use the user's name sparingly and only when appropriate (greetings, personal moments, etc.)
 8. NEVER ask a question regardless of the topic or context
 9. NEVER generate or simulate any user input or messages - only respond to the actual user message provided
+10. NEVER continue a conversation thread - only respond to the most recent user message
+11. NEVER reference previous messages unless directly relevant to the current message
+12. NEVER make assumptions about what the user might say next
 
 You can discuss games, help with homework, chat about various topics, or just be a friendly conversation partner.`;
 
-        // Format conversation history without prefixes
-        const conversationHistory = context.map(msg => msg.content).join('\n');
-
+        // Only use the most recent message for context
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
             headers: {
@@ -2285,7 +2280,7 @@ You can discuss games, help with homework, chat about various topics, or just be
             body: JSON.stringify({
                 contents: [{
                     parts: [{
-                        text: `${systemPrompt}\n\n${conversationHistory}\n\nUser: ${message}`
+                        text: `${systemPrompt}\n\nUser: ${message}`
                     }]
                 }]
             })
