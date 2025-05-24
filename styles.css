@@ -618,18 +618,6 @@ body {
     gap: 10px;
 }
 
-.image-upload-icon {
-    color: #B6B8C8;
-    cursor: pointer;
-    font-size: 24px;
-    font-variation-settings: 'FILL' 0;
-    transition: color 0.3s;
-}
-
-.image-upload-icon:hover {
-    color: #ECEBF7;
-}
-
 .message-input input {
     width: 100%;
     background-color: transparent;
@@ -1882,31 +1870,51 @@ input:checked + .slider:before {
     }
 }
 
-/* Image Message Styles */
-.message-bubble img {
-    max-width: 200px;
-    width: 100%;
-    height: auto;
+.message-image {
+    max-width: 300px;
+    max-height: 300px;
     border-radius: 8px;
-    object-fit: cover;
-    display: block;
+    cursor: pointer;
+    transition: transform 0.2s;
 }
 
-.message-bubble.image-message {
-    padding: 0;
-    background: none;
+.message-image:hover {
+    transform: scale(1.02);
 }
 
-.message-bubble.image-message.sent {
-    background: none;
+#image-upload-button {
+    font-size: 24px;
+    transition: color 0.2s;
 }
 
-.message-bubble.image-message.received {
-    background: none;
+#image-upload-button:hover {
+    color: #ECEBF7;
 }
 
-/* Drag and Drop Styles */
-.chat-area.drag-over {
-    background-color: rgba(31, 73, 199, 0.1);
-    border: 2px dashed #1F49C7;
+.image-preview {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.image-preview img {
+    max-width: 90%;
+    max-height: 90%;
+    object-fit: contain;
+}
+
+.image-preview .close-preview {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    color: white;
+    font-size: 30px;
+    cursor: pointer;
 } 
