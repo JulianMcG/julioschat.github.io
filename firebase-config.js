@@ -44,20 +44,11 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-let app;
-let auth;
-let db;
-let storage;
-
-try {
-    app = initializeApp(firebaseConfig);
-    auth = getAuth(app);
-    db = getFirestore(app);
-    storage = getStorage(app);
-    console.log("Firebase initialized successfully");
-} catch (error) {
-    console.error("Error initializing Firebase:", error);
-}
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const storage = getStorage(app);
+console.log("Firebase initialized successfully");
 
 // Export Firebase services
 export { 
