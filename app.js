@@ -2405,8 +2405,11 @@ async function loadColorThemePreference() {
         const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
         const userData = userDoc.data();
         if (userData?.colorTheme) {
-            document.documentElement.style.setProperty('--hue', userData.colorTheme);
-            document.getElementById('color-theme').value = userData.colorTheme;
+            applyColorTheme(userData.colorTheme);
+            const selectedOption = document.querySelector(`.color-option[data-hue="${userData.colorTheme}"]`);
+            if (selectedOption) {
+                selectedOption.classList.add('selected');
+            }
         }
     } catch (error) {
         console.error('Error loading color theme preference:', error);
@@ -2423,13 +2426,22 @@ async function saveColorThemePreference(theme) {
     }
 }
 
+function applyColorTheme(hue) {
+    document.documentElement.style.setProperty('--hue', hue);
+}
+
 function setupColorThemeListener() {
-    const colorThemeSelect = document.getElementById('color-theme');
-    if (colorThemeSelect) {
-        colorThemeSelect.addEventListener('change', async (e) => {
-            const theme = e.target.value;
-            document.documentElement.style.setProperty('--hue', theme);
-            await saveColorThemePreference(theme);
+    const colorOptions = document.querySelectorAll('.color-option');
+    colorOptions.forEach(option => {
+        option.addEventListener('click', async () => {
+            // Remove selected class from all options
+            colorOptions.forEach(opt => opt.classList.remove('selected'));
+            // Add selected class to clicked option
+            option.classList.add('selected');
+            
+            const hue = option.dataset.hue;
+            applyColorTheme(hue);
+            await saveColorThemePreference(hue);
         });
-    }
+    });
 }
