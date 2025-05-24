@@ -115,9 +115,9 @@
                     </div>
                     <div class="chat-messages" id="chat-messages"></div>
                     <div class="message-input">
-                        <span class="material-symbols-outlined image-upload-icon">add_photo_alternate</span>
-                        <input type="file" id="image-upload" accept="image/*" style="display: none;">
                         <input type="text" id="message-input" placeholder="Type a message...">
+                        <input type="file" id="image-upload" accept="image/*" style="display: none;">
+                        <span class="material-symbols-outlined" id="image-upload-button" style="cursor: pointer; color: #B6B8C8;">image</span>
                     </div>
                 </div>
             </div>
@@ -201,6 +201,12 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Image Preview Modal -->
+    <div class="image-preview">
+        <span class="material-symbols-outlined close-preview">close</span>
+        <img src="" alt="Preview">
     </div>
 </body>
 </html>
