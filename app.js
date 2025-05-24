@@ -1,5 +1,16 @@
 // Trigger new deployment with Vercel Pro
-import { auth, db, storage } from './firebase-config.js';
+import { 
+    auth, 
+    db, 
+    storage,
+    ref,
+    uploadBytes,
+    getDownloadURL,
+    addDoc,
+    serverTimestamp,
+    collection,
+    doc
+} from './firebase-config.js';
 import { GAME_LIST } from './games.js';
 import { 
     createUserWithEmailAndPassword, 
@@ -29,7 +40,6 @@ import {
     updateDoc,
     runTransaction
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
 let currentUser = null;
 let currentChatUser = null;
