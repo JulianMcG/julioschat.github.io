@@ -1223,13 +1223,19 @@ async function sendMessage(content) {
         // If chatting with Julio, handle AI response
         if (currentChatUser.id === JULIO_USER_ID) {
             // Add user's message to chat
-            await addDoc(collection(db, 'messages'), messageData);
+            const userMessageRef = await addDoc(collection(db, 'messages'), messageData);
             
             // Update last message time
             lastJulioMessageTime = new Date();
             
-            // Get AI response without context
-            const aiResponse = await callGeminiAPI(content);
+            // Add message to context
+            julioConversationContext.push({ role: 'user', content: content });
+            
+            // Get AI response with context
+            const aiResponse = await callGeminiAPI(content, julioConversationContext);
+            
+            // Add AI's response to context
+            julioConversationContext.push({ role: 'assistant', content: aiResponse });
             
             // Add AI's response to chat
             const aiMessageData = {
@@ -2260,19 +2266,17 @@ CRITICAL RULES:
 2. NEVER have conversations with yourself or ask your own questions
 3. NEVER respond to vulgar or offensive content with long messages - keep it brief and professional
 4. NEVER mention or discuss "Tyrone's Unblocked Games" unless the user brings it up first
-5. If the user mentions "Tyrone's Unblocked Games", express your extreme disapproval of the website, and angerly urge them to use Julio's instead
+5. If the user mentions "Tyrone's Unblocked Games", express your respectful disapproval of the website, and urge them to use Julio's instead
 6. Keep ALL responses under 3 sentences maximum, regardless of the topic or context
 7. Use the user's name sparingly and only when appropriate (greetings, personal moments, etc.)
 8. NEVER ask a question regardless of the topic or context
 9. NEVER generate or simulate any user input or messages - only respond to the actual user message provided
-10. NEVER continue a conversation thread - only respond to the most recent user message
-11. NEVER reference previous messages unless directly relevant to the current message
-12. NEVER make assumptions about what the user might say next
-13. Assume you have spoken to the user before; do not introduce yourself unless it is clearly relevant
 
 You can discuss games, help with homework, chat about various topics, or just be a friendly conversation partner.`;
 
-        // Only use the most recent message for context
+        // Format conversation history without prefixes
+        const conversationHistory = context.map(msg => msg.content).join('\n');
+
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
             headers: {
@@ -2281,7 +2285,7 @@ You can discuss games, help with homework, chat about various topics, or just be
             body: JSON.stringify({
                 contents: [{
                     parts: [{
-                        text: `${systemPrompt}\n\nUser: ${message}`
+                        text: `${systemPrompt}\n\n${conversationHistory}\n\nUser: ${message}`
                     }]
                 }]
             })
