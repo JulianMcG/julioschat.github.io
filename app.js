@@ -1330,6 +1330,9 @@ onAuthStateChanged(auth, async (user) => {
             }
             window.globalMessageUnsubscribe = setupMessageListener();
             
+            // Load theme preference
+            await loadThemePreference();
+            
         } catch (error) {
             console.error('Error in auth state change:', error);
         }
@@ -2420,7 +2423,7 @@ async function saveThemePreference(hue) {
 
     try {
         await setDoc(doc(db, 'users', user.uid), {
-            themeHue: hue
+            themeHue: parseInt(hue)
         }, { merge: true });
     } catch (error) {
         console.error('Error saving theme preference:', error);
@@ -2452,5 +2455,7 @@ function setupThemeSelector() {
 document.addEventListener('DOMContentLoaded', () => {
     // ... existing initialization code ...
     setupThemeSelector();
-    loadThemePreference();
+    if (auth.currentUser) {
+        loadThemePreference();
+    }
 });
