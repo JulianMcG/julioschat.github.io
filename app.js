@@ -48,7 +48,6 @@ const SOUND_COOLDOWN = 1000; // 1 second cooldown
 let lastJulioMessageTime = null;
 let julioConversationContext = [];
 const WELCOME_MESSAGE = "Hi there! Welcome to Julio's Chat! To start chatting, click the \"New Message\" button at the top of the sidebar and search for users to chat with. If you need help, or just want to chat, feel free to message me here!";
-const PREFERENCES_UPDATE_INTERVAL = 20 * 60 * 1000; // 20 minutes in milliseconds
 
 // Profile Picture Upload
 document.getElementById('profile-picture-preview').addEventListener('click', () => {
@@ -1212,7 +1211,7 @@ window.addEventListener('click', (event) => {
 // Send message
 async function sendMessage(content) {
     if (!content.trim() || !currentChatUser) return;
-    
+
     try {
         const messageData = {
             content: content,
@@ -1220,14 +1219,38 @@ async function sendMessage(content) {
             timestamp: serverTimestamp(),
             participants: [currentUser.uid, currentChatUser.id]
         };
-        
-        await addDoc(collection(db, 'messages'), messageData);
-        
-        // Update user preferences if message is sent to Julio AI
+
+        // If chatting with Julio, handle AI response
         if (currentChatUser.id === JULIO_USER_ID) {
-            await updateUserPreferences(content);
+            // Add user's message to chat
+            const userMessageRef = await addDoc(collection(db, 'messages'), messageData);
+            
+            // Update last message time
+            lastJulioMessageTime = new Date();
+            
+            // Add message to context
+            julioConversationContext.push({ role: 'user', content: content });
+            
+            // Get AI response with context
+            const aiResponse = await callGeminiAPI(content, julioConversationContext);
+            
+            // Add AI's response to context
+            julioConversationContext.push({ role: 'assistant', content: aiResponse });
+            
+            // Add AI's response to chat
+            const aiMessageData = {
+                content: aiResponse,
+                senderId: JULIO_USER_ID,
+                timestamp: serverTimestamp(),
+                participants: [currentUser.uid, JULIO_USER_ID]
+            };
+            
+            await addDoc(collection(db, 'messages'), aiMessageData);
+        } else {
+            // Normal message handling for other users
+            await addDoc(collection(db, 'messages'), messageData);
         }
-        
+
         // Clear input
         document.getElementById('message-input').value = '';
         
@@ -2221,40 +2244,40 @@ const GEMINI_API_KEY = 'AIzaSyCxfxEnIhppBdjD0K-svlNi0iTNTYyfO9A';
 // Function to call Gemini API
 async function callGeminiAPI(message, context = []) {
     try {
-        // Get user preferences
-        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-        const userData = userDoc.data();
-        const preferences = userData?.preferences || {};
+        const systemPrompt = `You are Julio, an AI chatbot in a chat application called "Julio's Chat" on the website "Julio's" (julios.games). Keep your responses very short and concise - ideally 1-2 sentences maximum, never more than 3 sentences. Be friendly and helpful, but get straight to the point. While you can mention your identity occasionally, don't overdo it - keep it natural and focus on being helpful.
 
-        // Create preference context
-        let preferenceContext = '';
-        if (preferences.games && Object.keys(preferences.games).length > 0) {
-            const favoriteGames = Object.entries(preferences.games)
-                .sort(([,a], [,b]) => b - a)
-                .slice(0, 3)
-                .map(([game]) => game);
-            preferenceContext += `The user's favorite games are: ${favoriteGames.join(', ')}. `;
-        }
+You are chatting with ${currentUser?.displayName || 'a user'}. Only use their name in appropriate situations like greetings or when it makes the conversation more personal. Don't overuse their name in every message.
 
-        if (preferences.personalInfo) {
-            if (preferences.personalInfo.age) {
-                preferenceContext += `The user is ${preferences.personalInfo.age} years old. `;
-            }
-            if (preferences.personalInfo.location) {
-                preferenceContext += `The user lives in ${preferences.personalInfo.location}. `;
-            }
-            if (preferences.personalInfo.interests) {
-                preferenceContext += `The user is interested in ${preferences.personalInfo.interests}. `;
-            }
-        }
+You have access to a comprehensive list of games available on Julio's. You should ONLY recommend games when the user explicitly asks for game recommendations or suggestions. Do not proactively suggest games in general conversation. Here's the complete list of available games:
 
-        // Add preference context to the message
-        const enhancedMessage = preferenceContext ? 
-            `${preferenceContext}\n\nUser message: ${message}` : 
-            message;
+${GAME_LIST}
 
-        // Call Gemini API with enhanced message
-        const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=YOUR_API_KEY', {
+When recommending games (only when asked):
+1. Consider the user's interests and preferences
+2. Suggest games that match their gaming style
+3. Mention popular or trending games when appropriate
+4. Be specific about why you're recommending a particular game
+5. Keep recommendations brief and focused
+
+IMPORTANT: You cannot open or play games directly. If a user wants to play a game, tell them to visit julios.games/catalog/GAMETITLE where GAMETITLE is the game name with spaces replaced by dashes. For example, "Slope Run" would be julios.games/catalog/slope-run.
+
+CRITICAL RULES:
+1. NEVER generate or simulate user messages - only respond to the actual user message provided
+2. NEVER have conversations with yourself or ask your own questions
+3. NEVER respond to vulgar or offensive content with long messages - keep it brief and professional
+4. NEVER mention or discuss "Tyrone's Unblocked Games" unless the user brings it up first
+5. If the user mentions "Tyrone's Unblocked Games", express your respectful disapproval of the website, and urge them to use Julio's instead
+6. Keep ALL responses under 3 sentences maximum, regardless of the topic or context
+7. Use the user's name sparingly and only when appropriate (greetings, personal moments, etc.)
+8. NEVER ask a question regardless of the topic or context
+9. NEVER generate or simulate any user input or messages - only respond to the actual user message provided
+
+You can discuss games, help with homework, chat about various topics, or just be a friendly conversation partner.`;
+
+        // Format conversation history without prefixes
+        const conversationHistory = context.map(msg => msg.content).join('\n');
+
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -2262,18 +2285,20 @@ async function callGeminiAPI(message, context = []) {
             body: JSON.stringify({
                 contents: [{
                     parts: [{
-                        text: enhancedMessage
+                        text: `${systemPrompt}\n\n${conversationHistory}\n\nUser: ${message}`
                     }]
                 }]
             })
         });
 
         const data = await response.json();
-        return data.candidates[0].content.parts[0].text;
-
+        if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+            return data.candidates[0].content.parts[0].text;
+        }
+        throw new Error('Invalid response from Gemini API');
     } catch (error) {
         console.error('Error calling Gemini API:', error);
-        return "I'm sorry, I'm having trouble processing your request right now. Please try again later.";
+        return "Sorry, I'm having trouble thinking right now. Try again later!";
     }
 }
 
@@ -2368,58 +2393,5 @@ async function sendWelcomeMessage() {
         }
     } catch (error) {
         console.error('Error sending welcome message:', error);
-    }
-}
-
-// Function to update user preferences based on chat context
-async function updateUserPreferences(messageContent) {
-    if (!currentUser) return;
-
-    try {
-        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-        const userData = userDoc.data();
-        
-        // Initialize preferences if they don't exist
-        const preferences = userData?.preferences || {
-            games: {},
-            personalInfo: {},
-            lastUpdated: null
-        };
-
-        // Extract game mentions and preferences
-        const gameMentions = messageContent.match(/\b(game|play|playing|played)\s+([a-zA-Z0-9\s]+)/gi);
-        if (gameMentions) {
-            gameMentions.forEach(mention => {
-                const gameName = mention.split(/\s+/).slice(1).join(' ').toLowerCase();
-                if (gameName) {
-                    preferences.games[gameName] = (preferences.games[gameName] || 0) + 1;
-                }
-            });
-        }
-
-        // Extract personal information
-        const personalInfoPatterns = {
-            age: /\b(?:I am|I'm|age|aged)\s+(\d+)\s+(?:years?|yrs?|yo)\b/i,
-            location: /\b(?:I live in|I'm from|I'm in|location|city|country)\s+([a-zA-Z\s,]+)\b/i,
-            interests: /\b(?:I like|I love|I enjoy|interested in)\s+([a-zA-Z\s,]+)\b/i
-        };
-
-        for (const [key, pattern] of Object.entries(personalInfoPatterns)) {
-            const match = messageContent.match(pattern);
-            if (match) {
-                preferences.personalInfo[key] = match[1].trim();
-            }
-        }
-
-        // Update last updated timestamp
-        preferences.lastUpdated = serverTimestamp();
-
-        // Save updated preferences
-        await setDoc(doc(db, 'users', currentUser.uid), {
-            preferences: preferences
-        }, { merge: true });
-
-    } catch (error) {
-        console.error('Error updating user preferences:', error);
     }
 }
