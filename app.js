@@ -1330,9 +1330,6 @@ onAuthStateChanged(auth, async (user) => {
             }
             window.globalMessageUnsubscribe = setupMessageListener();
             
-            // Load theme preference
-            await loadThemePreference();
-            
         } catch (error) {
             console.error('Error in auth state change:', error);
         }
@@ -2398,64 +2395,3 @@ async function sendWelcomeMessage() {
         console.error('Error sending welcome message:', error);
     }
 }
-
-// Theme management
-async function loadThemePreference() {
-    const user = auth.currentUser;
-    if (!user) return;
-
-    try {
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (userDoc.exists()) {
-            const data = userDoc.data();
-            if (data.themeHue) {
-                setTheme(data.themeHue);
-            }
-        }
-    } catch (error) {
-        console.error('Error loading theme preference:', error);
-    }
-}
-
-async function saveThemePreference(hue) {
-    const user = auth.currentUser;
-    if (!user) return;
-
-    try {
-        await setDoc(doc(db, 'users', user.uid), {
-            themeHue: parseInt(hue)
-        }, { merge: true });
-    } catch (error) {
-        console.error('Error saving theme preference:', error);
-    }
-}
-
-function setTheme(hue) {
-    document.documentElement.style.setProperty('--primary-hue', hue);
-    
-    // Update active theme option
-    const themeOptions = document.querySelectorAll('.theme-option');
-    themeOptions.forEach(option => {
-        option.classList.toggle('active', option.dataset.hue === hue.toString());
-    });
-}
-
-function setupThemeSelector() {
-    const themeOptions = document.querySelectorAll('.theme-option');
-    themeOptions.forEach(option => {
-        option.addEventListener('click', async () => {
-            const hue = parseInt(option.dataset.hue);
-            setTheme(hue);
-            await saveThemePreference(hue);
-        });
-    });
-}
-
-// Add to your existing initialization code
-document.addEventListener('DOMContentLoaded', () => {
-    // ... existing initialization code ...
-    setupThemeSelector();
-    if (auth.currentUser) {
-        loadThemePreference();
-    }
-});
