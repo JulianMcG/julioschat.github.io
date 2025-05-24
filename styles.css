@@ -23,6 +23,9 @@
     --accent-red-dark: hsl(0, 70%, 40%);
     --accent-gray: hsl(var(--primary-hue), 10%, 35%);
     --accent-gray-dark: hsl(var(--primary-hue), 10%, 25%);
+
+    /* Hover colors */
+    --hover-color: hsl(var(--primary-hue), 15%, 20%);
 }
 
 * {
@@ -405,7 +408,7 @@ body {
 }
 
 .new-message-button:hover {
-    background-color: var(--bg-lighter);
+    background-color: var(--hover-color);
 }
 
 .new-message-button .material-symbols-outlined {
@@ -508,11 +511,11 @@ body {
 }
 
 .user-item:hover {
-    background-color: rgba(19, 22, 31, 0.5);
+    background-color: var(--hover-color);
 }
 
 .user-item.active {
-    background-color: var(--bg-light);
+    background-color: var(--hover-color);
     border-radius: 8px;
     padding: 10px;
 }
@@ -1914,16 +1917,18 @@ input:checked + .slider:before {
 .theme-options {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
+    gap: 8px;
+    max-width: 200px;
 }
 
 .theme-option {
-    width: 40px;
-    height: 40px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     cursor: pointer;
     border: 2px solid transparent;
     transition: transform 0.2s;
+    margin: 0 auto;
 }
 
 .theme-option:hover {
