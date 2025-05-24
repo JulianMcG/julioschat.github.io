@@ -1330,6 +1330,9 @@ onAuthStateChanged(auth, async (user) => {
             }
             window.globalMessageUnsubscribe = setupMessageListener();
             
+            await loadColorThemePreference();
+            setupColorThemeListener();
+            
         } catch (error) {
             console.error('Error in auth state change:', error);
         }
@@ -2393,5 +2396,40 @@ async function sendWelcomeMessage() {
         }
     } catch (error) {
         console.error('Error sending welcome message:', error);
+    }
+}
+
+// Color theme functions
+async function loadColorThemePreference() {
+    try {
+        const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+        const userData = userDoc.data();
+        if (userData?.colorTheme) {
+            document.documentElement.style.setProperty('--hue', userData.colorTheme);
+            document.getElementById('color-theme').value = userData.colorTheme;
+        }
+    } catch (error) {
+        console.error('Error loading color theme preference:', error);
+    }
+}
+
+async function saveColorThemePreference(theme) {
+    try {
+        await setDoc(doc(db, 'users', auth.currentUser.uid), {
+            colorTheme: theme
+        }, { merge: true });
+    } catch (error) {
+        console.error('Error saving color theme preference:', error);
+    }
+}
+
+function setupColorThemeListener() {
+    const colorThemeSelect = document.getElementById('color-theme');
+    if (colorThemeSelect) {
+        colorThemeSelect.addEventListener('change', async (e) => {
+            const theme = e.target.value;
+            document.documentElement.style.setProperty('--hue', theme);
+            await saveColorThemePreference(theme);
+        });
     }
 }
