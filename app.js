@@ -1211,22 +1211,21 @@ window.addEventListener('click', (event) => {
 // Send message
 async function sendMessage(content, isImage = false) {
     if (!content.trim() && !isImage) return;
-    if (!currentChatUser) return;
+    if (!currentUser) return;
 
     const messageInput = document.getElementById('message-input');
-    const chatId = getChatId(currentUserId, currentChatUser.id);
     
     try {
         const messageData = {
-            senderId: currentUserId,
+            senderId: currentUser.uid,
             content: content,
             timestamp: serverTimestamp(),
             isImage: isImage,
-            participants: [currentUserId, currentChatUser.id]
+            participants: [currentUser.uid, activeChatId]
         };
 
         // If chatting with Julio, handle AI response
-        if (currentChatUser.id === JULIO_USER_ID) {
+        if (activeChatId === JULIO_USER_ID) {
             // Add user's message to chat
             const userMessageRef = await addDoc(collection(db, 'messages'), messageData);
             
@@ -1247,7 +1246,7 @@ async function sendMessage(content, isImage = false) {
                 content: aiResponse,
                 senderId: JULIO_USER_ID,
                 timestamp: serverTimestamp(),
-                participants: [currentUserId, JULIO_USER_ID],
+                participants: [currentUser.uid, JULIO_USER_ID],
                 isImage: false
             };
             
