@@ -618,6 +618,18 @@ body {
     gap: 10px;
 }
 
+.image-upload-icon {
+    color: #B6B8C8;
+    cursor: pointer;
+    font-size: 24px;
+    font-variation-settings: 'FILL' 0;
+    transition: color 0.3s;
+}
+
+.image-upload-icon:hover {
+    color: #ECEBF7;
+}
+
 .message-input input {
     width: 100%;
     background-color: transparent;
@@ -1868,4 +1880,33 @@ input:checked + .slider:before {
     .sidebar .profile-info {
         display: none;
     }
+}
+
+/* Image Message Styles */
+.message-bubble img {
+    max-width: 200px;
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    object-fit: cover;
+    display: block;
+}
+
+.message-bubble.image-message {
+    padding: 0;
+    background: none;
+}
+
+.message-bubble.image-message.sent {
+    background: none;
+}
+
+.message-bubble.image-message.received {
+    background: none;
+}
+
+/* Drag and Drop Styles */
+.chat-area.drag-over {
+    background-color: rgba(31, 73, 199, 0.1);
+    border: 2px dashed #1F49C7;
 } 
