@@ -1,5 +1,5 @@
 // Trigger new deployment with Vercel Pro
-import { auth, db } from './firebase-config.js';
+import { auth, db, storage } from './firebase-config.js';
 import { GAME_LIST } from './games.js';
 import { 
     createUserWithEmailAndPassword, 
@@ -1209,23 +1209,19 @@ window.addEventListener('click', (event) => {
 });
 
 // Send message
-async function sendMessage(content, isImage = false) {
-    if (!content.trim() && !isImage) return;
-    if (!currentUser) return;
+async function sendMessage(content) {
+    if (!content.trim() || !currentChatUser) return;
 
-    const messageInput = document.getElementById('message-input');
-    
     try {
         const messageData = {
-            senderId: currentUser.uid,
             content: content,
+            senderId: currentUser.uid,
             timestamp: serverTimestamp(),
-            isImage: isImage,
-            participants: [currentUser.uid, activeChatId]
+            participants: [currentUser.uid, currentChatUser.id]
         };
 
         // If chatting with Julio, handle AI response
-        if (activeChatId === JULIO_USER_ID) {
+        if (currentChatUser.id === JULIO_USER_ID) {
             // Add user's message to chat
             const userMessageRef = await addDoc(collection(db, 'messages'), messageData);
             
@@ -1246,8 +1242,7 @@ async function sendMessage(content, isImage = false) {
                 content: aiResponse,
                 senderId: JULIO_USER_ID,
                 timestamp: serverTimestamp(),
-                participants: [currentUser.uid, JULIO_USER_ID],
-                isImage: false
+                participants: [currentUser.uid, JULIO_USER_ID]
             };
             
             await addDoc(collection(db, 'messages'), aiMessageData);
@@ -1257,10 +1252,11 @@ async function sendMessage(content, isImage = false) {
         }
 
         // Clear input
-        messageInput.value = '';
+        document.getElementById('message-input').value = '';
         
         // Update typing status
         await updateTypingStatus(false);
+        
     } catch (error) {
         console.error('Error sending message:', error);
         alert('Error sending message. Please try again.');
@@ -2400,124 +2396,98 @@ async function sendWelcomeMessage() {
     }
 }
 
-// Image Upload Functions
-function setupImageUpload() {
-    const imageUploadIcon = document.querySelector('.image-upload-icon');
-    const imageUploadInput = document.getElementById('image-upload');
-    const chatArea = document.querySelector('.chat-area');
-    const messageInput = document.getElementById('message-input');
+// Image upload handling
+document.getElementById('image-upload-button').addEventListener('click', () => {
+    document.getElementById('image-upload').click();
+});
 
-    // Click to upload
-    imageUploadIcon.addEventListener('click', () => {
-        imageUploadInput.click();
-    });
-
-    imageUploadInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file && file.type.startsWith('image/')) {
-            handleImageUpload(file);
-        }
-    });
-
-    // Drag and drop
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        chatArea.addEventListener(eventName, preventDefaults, false);
-        document.body.addEventListener(eventName, preventDefaults, false);
-    });
-
-    function preventDefaults(e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
-
-    ['dragenter', 'dragover'].forEach(eventName => {
-        chatArea.addEventListener(eventName, highlight, false);
-    });
-
-    ['dragleave', 'drop'].forEach(eventName => {
-        chatArea.addEventListener(eventName, unhighlight, false);
-    });
-
-    function highlight(e) {
-        chatArea.classList.add('drag-over');
-    }
-
-    function unhighlight(e) {
-        chatArea.classList.remove('drag-over');
-    }
-
-    chatArea.addEventListener('drop', handleDrop, false);
-
-    function handleDrop(e) {
-        const dt = e.dataTransfer;
-        const file = dt.files[0];
-        
-        if (file && file.type.startsWith('image/')) {
-            handleImageUpload(file);
+document.getElementById('image-upload').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        try {
+            const imageUrl = await uploadImage(file);
+            await sendMessage('', imageUrl);
+            e.target.value = ''; // Clear the input
+        } catch (error) {
+            console.error('Error uploading image:', error);
         }
     }
-
-    // Paste
-    messageInput.addEventListener('paste', (e) => {
-        const items = e.clipboardData.items;
-        for (let i = 0; i < items.length; i++) {
-            if (items[i].type.startsWith('image/')) {
-                const file = items[i].getAsFile();
-                handleImageUpload(file);
-                break;
-            }
-        }
-    });
-}
-
-async function handleImageUpload(file) {
-    try {
-        const imageUrl = await uploadImage(file);
-        await sendMessage(imageUrl, true);
-    } catch (error) {
-        console.error('Error uploading image:', error);
-        alert('Error uploading image. Please try again.');
-    }
-}
+});
 
 async function uploadImage(file) {
+    const storageRef = ref(storage, `chat-images/${Date.now()}_${file.name}`);
+    const snapshot = await uploadBytes(storageRef, file);
+    return await getDownloadURL(snapshot.ref);
+}
+
+// Image preview handling
+const imagePreview = document.querySelector('.image-preview');
+const previewImage = imagePreview.querySelector('img');
+const closePreview = imagePreview.querySelector('.close-preview');
+
+document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('message-image')) {
+        previewImage.src = e.target.src;
+        imagePreview.style.display = 'flex';
+    }
+});
+
+closePreview.addEventListener('click', () => {
+    imagePreview.style.display = 'none';
+});
+
+imagePreview.addEventListener('click', (e) => {
+    if (e.target === imagePreview) {
+        imagePreview.style.display = 'none';
+    }
+});
+
+// Modify the sendMessage function to handle images
+async function sendMessage(content, imageUrl = null) {
+    if (!content && !imageUrl) return;
+    
+    const messageData = {
+        content: content,
+        timestamp: serverTimestamp(),
+        senderId: auth.currentUser.uid,
+        senderName: auth.currentUser.displayName,
+        imageUrl: imageUrl
+    };
+
     try {
-        const storageRef = ref(storage, `images/${Date.now()}_${file.name}`);
-        const snapshot = await uploadBytes(storageRef, file);
-        return await getDownloadURL(snapshot.ref);
+        const chatRef = doc(db, 'chats', currentChatId);
+        const messagesRef = collection(chatRef, 'messages');
+        await addDoc(messagesRef, messageData);
+        
+        // Clear the input field
+        document.getElementById('message-input').value = '';
     } catch (error) {
-        console.error('Error uploading to Firebase Storage:', error);
-        throw error;
+        console.error('Error sending message:', error);
     }
 }
 
+// Modify the message creation to handle images
 function createMessageElement(message) {
     const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${message.senderId === currentUserId ? 'sent' : 'received'}`;
+    messageDiv.className = `message ${message.senderId === auth.currentUser.uid ? 'sent' : 'received'}`;
     
-    const bubble = document.createElement('div');
-    bubble.className = `message-bubble ${message.senderId === currentUserId ? 'sent' : 'received'}`;
+    const content = document.createElement('div');
+    content.className = 'content';
     
-    if (message.isImage) {
-        bubble.classList.add('image-message');
+    if (message.imageUrl) {
         const img = document.createElement('img');
-        img.src = message.content;
+        img.src = message.imageUrl;
+        img.className = 'message-image';
         img.alt = 'Shared image';
-        img.onerror = () => {
-            img.src = 'https://i.ibb.co/Gf9VD2MN/pfp.png'; // Fallback image
-            img.alt = 'Failed to load image';
-        };
-        bubble.appendChild(img);
-    } else {
-        bubble.textContent = message.content;
+        content.appendChild(img);
     }
     
-    messageDiv.appendChild(bubble);
+    if (message.content) {
+        const text = document.createElement('span');
+        text.innerHTML = formatMessageContent(message.content);
+        content.appendChild(text);
+    }
+    
+    messageDiv.appendChild(content);
     return messageDiv;
 }
-
-// Add setupImageUpload to the initialization
-document.addEventListener('DOMContentLoaded', () => {
-    // ... existing initialization code ...
-    setupImageUpload();
-});
