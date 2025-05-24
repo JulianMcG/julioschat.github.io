@@ -1,16 +1,5 @@
 // Trigger new deployment with Vercel Pro
-import { 
-    auth, 
-    db, 
-    storage,
-    ref,
-    uploadBytes,
-    getDownloadURL,
-    addDoc,
-    serverTimestamp,
-    collection,
-    doc
-} from './firebase-config.js';
+import { auth, db } from './firebase-config.js';
 import { GAME_LIST } from './games.js';
 import { 
     createUserWithEmailAndPassword, 
@@ -40,6 +29,7 @@ import {
     updateDoc,
     runTransaction
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
 let currentUser = null;
 let currentChatUser = null;
@@ -2404,100 +2394,4 @@ async function sendWelcomeMessage() {
     } catch (error) {
         console.error('Error sending welcome message:', error);
     }
-}
-
-// Image upload handling
-document.getElementById('image-upload-button').addEventListener('click', () => {
-    document.getElementById('image-upload').click();
-});
-
-document.getElementById('image-upload').addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-        try {
-            const imageUrl = await uploadImage(file);
-            await sendMessage('', imageUrl);
-            e.target.value = ''; // Clear the input
-        } catch (error) {
-            console.error('Error uploading image:', error);
-        }
-    }
-});
-
-async function uploadImage(file) {
-    const storageRef = ref(storage, `chat-images/${Date.now()}_${file.name}`);
-    const snapshot = await uploadBytes(storageRef, file);
-    return await getDownloadURL(snapshot.ref);
-}
-
-// Image preview handling
-const imagePreview = document.querySelector('.image-preview');
-const previewImage = imagePreview.querySelector('img');
-const closePreview = imagePreview.querySelector('.close-preview');
-
-document.addEventListener('click', (e) => {
-    if (e.target.classList.contains('message-image')) {
-        previewImage.src = e.target.src;
-        imagePreview.style.display = 'flex';
-    }
-});
-
-closePreview.addEventListener('click', () => {
-    imagePreview.style.display = 'none';
-});
-
-imagePreview.addEventListener('click', (e) => {
-    if (e.target === imagePreview) {
-        imagePreview.style.display = 'none';
-    }
-});
-
-// Modify the sendMessage function to handle images
-async function sendMessage(content, imageUrl = null) {
-    if (!content && !imageUrl) return;
-    
-    const messageData = {
-        content: content,
-        timestamp: serverTimestamp(),
-        senderId: auth.currentUser.uid,
-        senderName: auth.currentUser.displayName,
-        imageUrl: imageUrl
-    };
-
-    try {
-        const chatRef = doc(db, 'chats', currentChatId);
-        const messagesRef = collection(chatRef, 'messages');
-        await addDoc(messagesRef, messageData);
-        
-        // Clear the input field
-        document.getElementById('message-input').value = '';
-    } catch (error) {
-        console.error('Error sending message:', error);
-    }
-}
-
-// Modify the message creation to handle images
-function createMessageElement(message) {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${message.senderId === auth.currentUser.uid ? 'sent' : 'received'}`;
-    
-    const content = document.createElement('div');
-    content.className = 'content';
-    
-    if (message.imageUrl) {
-        const img = document.createElement('img');
-        img.src = message.imageUrl;
-        img.className = 'message-image';
-        img.alt = 'Shared image';
-        content.appendChild(img);
-    }
-    
-    if (message.content) {
-        const text = document.createElement('span');
-        text.innerHTML = formatMessageContent(message.content);
-        content.appendChild(text);
-    }
-    
-    messageDiv.appendChild(content);
-    return messageDiv;
 }
