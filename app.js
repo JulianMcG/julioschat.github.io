@@ -27,7 +27,9 @@ import {
     arrayRemove,
     writeBatch,
     updateDoc,
-    runTransaction
+    runTransaction,
+    limit,
+    startAfter
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
@@ -572,26 +574,14 @@ async function startChat(userId, username) {
         const now = new Date();
         if (lastJulioMessageTime && (now - lastJulioMessageTime) > 20 * 60 * 1000) {
             julioConversationContext = [];
-            // Add welcome message
-            const welcomeMessage = {
-                content: `Hello, ${currentUser.displayName || 'there'}! How can I help you today?`,
+            // Add timestamp message
+            const timestampMessage = {
+                content: `New conversation started at ${now.toLocaleTimeString()}`,
                 senderId: JULIO_USER_ID,
                 timestamp: serverTimestamp(),
                 participants: [currentUser.uid, JULIO_USER_ID]
             };
-            await addDoc(collection(db, 'messages'), welcomeMessage);
-        }
-        
-        // Show refresh button for Julio
-        const refreshButton = document.querySelector('.refresh-button');
-        if (refreshButton) {
-            refreshButton.style.display = 'flex';
-        }
-    } else {
-        // Hide refresh button for other users
-        const refreshButton = document.querySelector('.refresh-button');
-        if (refreshButton) {
-            refreshButton.style.display = 'none';
+            await addDoc(collection(db, 'messages'), timestampMessage);
         }
     }
 
@@ -847,7 +837,7 @@ function formatReactions(reactions) {
     return reactionDiv;
 }
 
-// Modify the loadMessages function to include reactions
+// Modify the loadMessages function to implement pagination
 async function loadMessages() {
     if (!currentUser || !currentChatUser) {
         console.log('No current user or chat user');
@@ -863,10 +853,12 @@ async function loadMessages() {
         const currentUserData = currentUserDoc.data();
         const blockedUsers = currentUserData?.blockedUsers || [];
 
-        const messagesQuery = query(
+        // Create base query for messages between current user and chat user
+        let messagesQuery = query(
             collection(db, 'messages'),
             where('participants', 'array-contains', currentUser.uid),
-            orderBy('timestamp', 'asc')
+            orderBy('timestamp', 'desc'),
+            limit(MESSAGES_PER_PAGE)
         );
 
         if (window.currentMessageUnsubscribe) {
@@ -874,14 +866,21 @@ async function loadMessages() {
         }
 
         const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
-            chatMessages.innerHTML = '';
+            // Only clear messages if this is the initial load
+            if (!lastLoadedMessage) {
+                chatMessages.innerHTML = '';
+            }
+
             let lastMessageTime = null;
             let lastMessageSenderId = null;
             
+            // Process messages in reverse order (oldest to newest)
+            const messages = [];
             snapshot.forEach(doc => {
-                const message = doc.data();
-                console.log('Message data:', message); // Debug log
-                
+                messages.unshift({ id: doc.id, ...doc.data() });
+            });
+
+            messages.forEach(message => {
                 // Only show messages if:
                 // 1. The message is between current user and current chat user
                 // 2. The sender is not blocked
@@ -924,7 +923,7 @@ async function loadMessages() {
                     
                     const messageElement = document.createElement('div');
                     messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
-                    messageElement.dataset.messageId = doc.id;
+                    messageElement.dataset.messageId = message.id;
                     
                     // Create message content container
                     const contentContainer = document.createElement('div');
@@ -935,19 +934,15 @@ async function loadMessages() {
                     const reactionsContainer = document.createElement('div');
                     reactionsContainer.className = 'message-reactions';
                     
-                    // Debug log for reactions
-                    console.log('Message reactions:', message.reactions);
-                    
                     if (message.reactions && Object.keys(message.reactions).length > 0) {
                         reactionsContainer.classList.add('has-reactions');
                         Object.keys(message.reactions).forEach(emoji => {
                             const reaction = document.createElement('span');
                             reaction.className = 'reaction';
                             reaction.textContent = emoji;
-                            // Add click handler to remove reaction
                             reaction.onclick = (e) => {
                                 e.stopPropagation();
-                                addReaction(doc.id, emoji);
+                                addReaction(message.id, emoji);
                             };
                             reactionsContainer.appendChild(reaction);
                         });
@@ -960,7 +955,7 @@ async function loadMessages() {
                         reactionButton.innerHTML = '<span class="material-symbols-outlined">add_reaction</span>';
                         reactionButton.onclick = (e) => {
                             e.stopPropagation();
-                            showReactionPicker(e, doc.id);
+                            showReactionPicker(e, message.id);
                         };
                         messageElement.appendChild(reactionButton);
                     }
@@ -975,13 +970,96 @@ async function loadMessages() {
                     lastMessageSenderId = message.senderId;
                 }
             });
-            
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            // Store the last loaded message for pagination
+            if (messages.length > 0) {
+                lastLoadedMessage = messages[messages.length - 1];
+            }
+
+            // Scroll to bottom only on initial load
+            if (!lastLoadedMessage) {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
         }, (error) => {
             console.error('Error in message snapshot:', error);
         });
 
         window.currentMessageUnsubscribe = unsubscribe;
+
+        // Add scroll event listener for loading more messages
+        chatMessages.addEventListener('scroll', async () => {
+            if (isLoadingMore) return;
+            
+            if (chatMessages.scrollTop === 0 && lastLoadedMessage) {
+                isLoadingMore = true;
+                
+                try {
+                    const olderMessagesQuery = query(
+                        collection(db, 'messages'),
+                        where('participants', 'array-contains', currentUser.uid),
+                        orderBy('timestamp', 'desc'),
+                        startAfter(lastLoadedMessage.timestamp),
+                        limit(MESSAGES_PER_PAGE)
+                    );
+                    
+                    const olderMessagesSnapshot = await getDocs(olderMessagesQuery);
+                    const olderMessages = [];
+                    
+                    olderMessagesSnapshot.forEach(doc => {
+                        olderMessages.unshift({ id: doc.id, ...doc.data() });
+                    });
+                    
+                    if (olderMessages.length > 0) {
+                        const scrollHeight = chatMessages.scrollHeight;
+                        
+                        olderMessages.forEach(message => {
+                            if (message.participants.includes(currentChatUser.id) && 
+                                !blockedUsers.includes(message.senderId)) {
+                                
+                                const messageElement = document.createElement('div');
+                                messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
+                                messageElement.dataset.messageId = message.id;
+                                
+                                const contentContainer = document.createElement('div');
+                                contentContainer.className = 'content';
+                                contentContainer.innerHTML = formatMessageContent(message.content);
+                                
+                                const reactionsContainer = document.createElement('div');
+                                reactionsContainer.className = 'message-reactions';
+                                
+                                if (message.reactions && Object.keys(message.reactions).length > 0) {
+                                    reactionsContainer.classList.add('has-reactions');
+                                    Object.keys(message.reactions).forEach(emoji => {
+                                        const reaction = document.createElement('span');
+                                        reaction.className = 'reaction';
+                                        reaction.textContent = emoji;
+                                        reaction.onclick = (e) => {
+                                            e.stopPropagation();
+                                            addReaction(message.id, emoji);
+                                        };
+                                        reactionsContainer.appendChild(reaction);
+                                    });
+                                }
+                                
+                                messageElement.appendChild(contentContainer);
+                                messageElement.appendChild(reactionsContainer);
+                                
+                                chatMessages.insertBefore(messageElement, chatMessages.firstChild);
+                            }
+                        });
+                        
+                        // Maintain scroll position
+                        chatMessages.scrollTop = chatMessages.scrollHeight - scrollHeight;
+                        lastLoadedMessage = olderMessages[olderMessages.length - 1];
+                    }
+                } catch (error) {
+                    console.error('Error loading older messages:', error);
+                } finally {
+                    isLoadingMore = false;
+                }
+            }
+        });
+
     } catch (error) {
         console.error('Error loading messages:', error);
     }
@@ -2411,84 +2489,7 @@ async function sendWelcomeMessage() {
     }
 }
 
-// Add refresh chat functionality
-async function refreshJulioChat() {
-    console.log('Refresh button clicked');
-    if (!currentUser || !currentChatUser || currentChatUser.id !== JULIO_USER_ID) {
-        console.log('Cannot refresh: Not in Julio chat', { currentUser, currentChatUser });
-        return;
-    }
-
-    try {
-        console.log('Starting refresh process');
-        // Clear Julio's conversation context
-        julioConversationContext = [];
-        lastJulioMessageTime = null;
-        
-        // Get all messages between current user and Julio
-        const messagesQuery = query(
-            collection(db, 'messages'),
-            where('participants', 'array-contains', currentUser.uid)
-        );
-        
-        console.log('Fetching messages to delete');
-        const messagesSnapshot = await getDocs(messagesQuery);
-        console.log('Found messages to delete:', messagesSnapshot.size);
-        
-        // Delete all messages in a batch
-        const batch = writeBatch(db);
-        messagesSnapshot.forEach(doc => {
-            const message = doc.data();
-            // Only delete messages that are between current user and Julio
-            if (message.participants.includes(JULIO_USER_ID)) {
-                batch.delete(doc.ref);
-            }
-        });
-        
-        console.log('Committing batch delete');
-        await batch.commit();
-        
-        // Add welcome message
-        const welcomeMessage = {
-            content: `Hello, ${currentUser.displayName || 'there'}! How can I help you today?`,
-            senderId: JULIO_USER_ID,
-            timestamp: serverTimestamp(),
-            participants: [currentUser.uid, JULIO_USER_ID]
-        };
-        
-        console.log('Adding welcome message');
-        await addDoc(collection(db, 'messages'), welcomeMessage);
-        
-        // Clear chat messages container
-        const chatMessages = document.getElementById('chat-messages');
-        if (chatMessages) {
-            chatMessages.innerHTML = '';
-        }
-        
-        // Reload messages
-        console.log('Reloading messages');
-        await loadMessages();
-        console.log('Refresh complete');
-        
-    } catch (error) {
-        console.error('Error refreshing Julio chat:', error);
-        alert('Error refreshing chat. Please try again.');
-    }
-}
-
-// Add event listener for refresh button
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('Setting up refresh button listener');
-    const refreshButton = document.querySelector('.refresh-button');
-    if (refreshButton) {
-        console.log('Refresh button found, adding click listener');
-        refreshButton.onclick = (e) => {
-            console.log('Refresh button clicked');
-            e.preventDefault();
-            e.stopPropagation();
-            refreshJulioChat();
-        };
-    } else {
-        console.log('Refresh button not found');
-    }
-});
+// Add these variables at the top with other global variables
+let lastLoadedMessage = null;
+const MESSAGES_PER_PAGE = 20;
+let isLoadingMore = false;
