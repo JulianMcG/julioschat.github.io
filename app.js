@@ -581,6 +581,12 @@ async function startChat(userId, username) {
             };
             await addDoc(collection(db, 'messages'), timestampMessage);
         }
+        
+        // Show refresh button for Julio
+        document.querySelector('.refresh-button').style.display = 'block';
+    } else {
+        // Hide refresh button for other users
+        document.querySelector('.refresh-button').style.display = 'none';
     }
 
     // Get current user's data to check for aliases and hidden conversations
@@ -2398,3 +2404,56 @@ async function sendWelcomeMessage() {
         console.error('Error sending welcome message:', error);
     }
 }
+
+// Add refresh chat functionality
+async function refreshJulioChat() {
+    if (!currentUser || !currentChatUser || currentChatUser.id !== JULIO_USER_ID) return;
+
+    try {
+        // Clear Julio's conversation context
+        julioConversationContext = [];
+        
+        // Get all messages between current user and Julio
+        const messagesQuery = query(
+            collection(db, 'messages'),
+            where('participants', 'array-contains', currentUser.uid),
+            where('participants', 'array-contains', JULIO_USER_ID)
+        );
+        
+        const messagesSnapshot = await getDocs(messagesQuery);
+        
+        // Delete all messages in a batch
+        const batch = writeBatch(db);
+        messagesSnapshot.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+        
+        await batch.commit();
+        
+        // Add timestamp message for new conversation
+        const now = new Date();
+        const timestampMessage = {
+            content: `New conversation started at ${now.toLocaleTimeString()}`,
+            senderId: JULIO_USER_ID,
+            timestamp: serverTimestamp(),
+            participants: [currentUser.uid, JULIO_USER_ID]
+        };
+        
+        await addDoc(collection(db, 'messages'), timestampMessage);
+        
+        // Reload messages
+        loadMessages();
+        
+    } catch (error) {
+        console.error('Error refreshing Julio chat:', error);
+        alert('Error refreshing chat. Please try again.');
+    }
+}
+
+// Add event listener for refresh button
+document.addEventListener('DOMContentLoaded', () => {
+    const refreshButton = document.querySelector('.refresh-button');
+    if (refreshButton) {
+        refreshButton.addEventListener('click', refreshJulioChat);
+    }
+});
