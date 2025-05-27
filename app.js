@@ -572,14 +572,14 @@ async function startChat(userId, username) {
         const now = new Date();
         if (lastJulioMessageTime && (now - lastJulioMessageTime) > 20 * 60 * 1000) {
             julioConversationContext = [];
-            // Add timestamp message
-            const timestampMessage = {
-                content: `New conversation started at ${now.toLocaleTimeString()}`,
+            // Add welcome message
+            const welcomeMessage = {
+                content: `Hello, ${currentUser.displayName || 'there'}! How can I help you today?`,
                 senderId: JULIO_USER_ID,
                 timestamp: serverTimestamp(),
                 participants: [currentUser.uid, JULIO_USER_ID]
             };
-            await addDoc(collection(db, 'messages'), timestampMessage);
+            await addDoc(collection(db, 'messages'), welcomeMessage);
         }
         
         // Show refresh button for Julio
@@ -2423,16 +2423,32 @@ async function refreshJulioChat() {
         julioConversationContext = [];
         lastJulioMessageTime = null;
         
-        // Add timestamp message for new conversation
-        const now = new Date();
-        const timestampMessage = {
-            content: `New conversation started at ${now.toLocaleTimeString()}`,
+        // Get all messages between current user and Julio
+        const messagesQuery = query(
+            collection(db, 'messages'),
+            where('participants', 'array-contains', currentUser.uid),
+            where('participants', 'array-contains', JULIO_USER_ID)
+        );
+        
+        const messagesSnapshot = await getDocs(messagesQuery);
+        
+        // Delete all messages in a batch
+        const batch = writeBatch(db);
+        messagesSnapshot.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+        
+        await batch.commit();
+        
+        // Add welcome message
+        const welcomeMessage = {
+            content: `Hello, ${currentUser.displayName || 'there'}! How can I help you today?`,
             senderId: JULIO_USER_ID,
             timestamp: serverTimestamp(),
             participants: [currentUser.uid, JULIO_USER_ID]
         };
         
-        await addDoc(collection(db, 'messages'), timestampMessage);
+        await addDoc(collection(db, 'messages'), welcomeMessage);
         
         // Clear chat messages container
         const chatMessages = document.getElementById('chat-messages');
