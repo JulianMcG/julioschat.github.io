@@ -994,11 +994,28 @@ body {
 }
 
 .chat-header {
-    padding: 15px 20px;
-    border-bottom: 1px solid #1C1F28;
     display: flex;
     align-items: center;
-    gap: 10px;
+    padding: 1rem;
+    border-bottom: 1px solid #2a2a2a;
+    background-color: #1a1a1a;
+}
+
+.chat-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-left: auto;
+}
+
+.refresh-button {
+    cursor: pointer;
+    color: #e3e3e3;
+    transition: color 0.2s ease;
+}
+
+.refresh-button:hover {
+    color: #fff;
 }
 
 .chat-header svg {
