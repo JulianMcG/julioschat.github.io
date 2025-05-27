@@ -583,10 +583,16 @@ async function startChat(userId, username) {
         }
         
         // Show refresh button for Julio
-        document.querySelector('.refresh-button').style.display = 'block';
+        const refreshButton = document.querySelector('.refresh-button');
+        if (refreshButton) {
+            refreshButton.style.display = 'flex';
+        }
     } else {
         // Hide refresh button for other users
-        document.querySelector('.refresh-button').style.display = 'none';
+        const refreshButton = document.querySelector('.refresh-button');
+        if (refreshButton) {
+            refreshButton.style.display = 'none';
+        }
     }
 
     // Get current user's data to check for aliases and hidden conversations
@@ -2407,11 +2413,15 @@ async function sendWelcomeMessage() {
 
 // Add refresh chat functionality
 async function refreshJulioChat() {
-    if (!currentUser || !currentChatUser || currentChatUser.id !== JULIO_USER_ID) return;
+    if (!currentUser || !currentChatUser || currentChatUser.id !== JULIO_USER_ID) {
+        console.log('Cannot refresh: Not in Julio chat');
+        return;
+    }
 
     try {
         // Clear Julio's conversation context
         julioConversationContext = [];
+        lastJulioMessageTime = null;
         
         // Get all messages between current user and Julio
         const messagesQuery = query(
@@ -2441,8 +2451,14 @@ async function refreshJulioChat() {
         
         await addDoc(collection(db, 'messages'), timestampMessage);
         
+        // Clear chat messages container
+        const chatMessages = document.getElementById('chat-messages');
+        if (chatMessages) {
+            chatMessages.innerHTML = '';
+        }
+        
         // Reload messages
-        loadMessages();
+        await loadMessages();
         
     } catch (error) {
         console.error('Error refreshing Julio chat:', error);
@@ -2454,6 +2470,9 @@ async function refreshJulioChat() {
 document.addEventListener('DOMContentLoaded', () => {
     const refreshButton = document.querySelector('.refresh-button');
     if (refreshButton) {
-        refreshButton.addEventListener('click', refreshJulioChat);
+        refreshButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            refreshJulioChat();
+        });
     }
 });
