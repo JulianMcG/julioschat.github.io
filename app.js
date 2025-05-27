@@ -27,9 +27,7 @@ import {
     arrayRemove,
     writeBatch,
     updateDoc,
-    runTransaction,
-    limit,
-    startAfter
+    runTransaction
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
@@ -632,25 +630,8 @@ async function startChat(userId, username) {
     }
     window.currentTypingUnsubscribe = setupTypingListener();
 
-    // Reset pagination variables
-    lastLoadedMessage = null;
-    isLoadingMore = false;
-
     // Load messages
-    await loadMessages();
-
-    // Ensure scroll to bottom for Julio AI chat
-    if (userId === JULIO_USER_ID) {
-        const chatMessages = document.getElementById('chat-messages');
-        // Use requestAnimationFrame to ensure DOM is updated
-        requestAnimationFrame(() => {
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-            // Double check after a short delay to ensure all content is rendered
-            setTimeout(() => {
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            }, 100);
-        });
-    }
+    loadMessages();
 }
 
 // Function to convert markdown-style formatting to HTML
@@ -854,7 +835,7 @@ function formatReactions(reactions) {
     return reactionDiv;
 }
 
-// Modify the loadMessages function to implement better pagination
+// Modify the loadMessages function to include reactions
 async function loadMessages() {
     if (!currentUser || !currentChatUser) {
         console.log('No current user or chat user');
@@ -862,11 +843,7 @@ async function loadMessages() {
     }
 
     const chatMessages = document.getElementById('chat-messages');
-    
-    // Only clear messages if this is a new chat
-    if (!lastLoadedMessage) {
-        chatMessages.innerHTML = '';
-    }
+    chatMessages.innerHTML = '';
 
     try {
         // Get current user's blocked users list
@@ -874,71 +851,53 @@ async function loadMessages() {
         const currentUserData = currentUserDoc.data();
         const blockedUsers = currentUserData?.blockedUsers || [];
 
-        // Create base query for messages between current user and chat user
-        let messagesQuery = query(
+        const messagesQuery = query(
             collection(db, 'messages'),
             where('participants', 'array-contains', currentUser.uid),
-            orderBy('timestamp', 'desc'),
-            limit(MESSAGES_PER_PAGE)
+            orderBy('timestamp', 'asc')
         );
-
-        // If we're loading more messages, start after the last loaded message
-        if (lastLoadedMessage && isLoadingMore) {
-            messagesQuery = query(
-                collection(db, 'messages'),
-                where('participants', 'array-contains', currentUser.uid),
-                orderBy('timestamp', 'desc'),
-                startAfter(lastLoadedMessage.timestamp),
-                limit(MESSAGES_PER_PAGE)
-            );
-        }
 
         if (window.currentMessageUnsubscribe) {
             window.currentMessageUnsubscribe();
         }
 
         const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
-            if (snapshot.empty) {
-                hasMoreMessages = false;
-                return;
-            }
-
-            const messages = [];
+            chatMessages.innerHTML = '';
+            let lastMessageTime = null;
+            let lastMessageSenderId = null;
+            
             snapshot.forEach(doc => {
-                messages.unshift({ id: doc.id, ...doc.data() });
-            });
-
-            // Update last loaded message
-            if (messages.length > 0) {
-                lastLoadedMessage = messages[messages.length - 1];
-            }
-
-            // Process messages
-            messages.forEach(message => {
+                const message = doc.data();
+                console.log('Message data:', message); // Debug log
+                
+                // Only show messages if:
+                // 1. The message is between current user and current chat user
+                // 2. The sender is not blocked
                 if (message.participants.includes(currentChatUser.id) && 
+                    message.participants.includes(currentUser.uid) &&
                     !blockedUsers.includes(message.senderId)) {
                     
                     const messageTime = message.timestamp.toDate();
                     
                     // Add timestamp or gap if needed
-                    if (chatMessages.lastElementChild) {
-                        const lastMessage = chatMessages.lastElementChild;
-                        const lastMessageTime = new Date(lastMessage.dataset.timestamp);
+                    if (lastMessageTime) {
                         const timeDiff = messageTime - lastMessageTime;
-                        const twentyMinutes = 20 * 60 * 1000;
+                        const twentyMinutes = 20 * 60 * 1000; // 20 minutes in milliseconds
                         
                         if (timeDiff > twentyMinutes) {
+                            // Add date separator
                             const dateSeparator = document.createElement('div');
                             dateSeparator.className = 'date-separator';
                             const today = new Date();
+                            const messageDate = messageTime;
                             
                             let dateText;
-                            if (messageTime.toDateString() === today.toDateString()) {
-                                dateText = `Today ${messageTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
-                            } else if (messageTime.toDateString() === new Date(today - 86400000).toDateString()) {
-                                dateText = `Yesterday ${messageTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+                            if (messageDate.toDateString() === today.toDateString()) {
+                                dateText = `Today ${messageDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+                            } else if (messageDate.toDateString() === new Date(today - 86400000).toDateString()) {
+                                dateText = `Yesterday ${messageDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
                             } else {
-                                dateText = messageTime.toLocaleDateString([], { 
+                                dateText = messageDate.toLocaleDateString([], { 
                                     month: 'short', 
                                     day: 'numeric',
                                     hour: 'numeric',
@@ -953,15 +912,19 @@ async function loadMessages() {
                     
                     const messageElement = document.createElement('div');
                     messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
-                    messageElement.dataset.messageId = message.id;
-                    messageElement.dataset.timestamp = messageTime.getTime();
+                    messageElement.dataset.messageId = doc.id;
                     
+                    // Create message content container
                     const contentContainer = document.createElement('div');
                     contentContainer.className = 'content';
                     contentContainer.innerHTML = formatMessageContent(message.content);
                     
+                    // Create reactions container
                     const reactionsContainer = document.createElement('div');
                     reactionsContainer.className = 'message-reactions';
+                    
+                    // Debug log for reactions
+                    console.log('Message reactions:', message.reactions);
                     
                     if (message.reactions && Object.keys(message.reactions).length > 0) {
                         reactionsContainer.classList.add('has-reactions');
@@ -969,72 +932,46 @@ async function loadMessages() {
                             const reaction = document.createElement('span');
                             reaction.className = 'reaction';
                             reaction.textContent = emoji;
+                            // Add click handler to remove reaction
                             reaction.onclick = (e) => {
                                 e.stopPropagation();
-                                addReaction(message.id, emoji);
+                                addReaction(doc.id, emoji);
                             };
                             reactionsContainer.appendChild(reaction);
                         });
                     }
                     
+                    // Create reaction button only for received messages
                     if (message.senderId !== currentUser.uid) {
                         const reactionButton = document.createElement('div');
                         reactionButton.className = 'reaction-button';
                         reactionButton.innerHTML = '<span class="material-symbols-outlined">add_reaction</span>';
                         reactionButton.onclick = (e) => {
                             e.stopPropagation();
-                            showReactionPicker(e, message.id);
+                            showReactionPicker(e, doc.id);
                         };
                         messageElement.appendChild(reactionButton);
                     }
                     
+                    // Append all elements
                     messageElement.appendChild(contentContainer);
                     messageElement.appendChild(reactionsContainer);
                     
                     chatMessages.appendChild(messageElement);
+                    
+                    lastMessageTime = messageTime;
+                    lastMessageSenderId = message.senderId;
                 }
             });
-
-            // Scroll to bottom only on initial load
-            if (!isLoadingMore) {
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            }
-
-            isLoadingMore = false;
+            
+            chatMessages.scrollTop = chatMessages.scrollHeight;
         }, (error) => {
             console.error('Error in message snapshot:', error);
-            isLoadingMore = false;
         });
 
         window.currentMessageUnsubscribe = unsubscribe;
-
-        // Add scroll event listener for loading more messages
-        const scrollHandler = async () => {
-            if (isLoadingMore || !hasMoreMessages) return;
-            
-            if (chatMessages.scrollTop < 100) {
-                isLoadingMore = true;
-                const scrollHeight = chatMessages.scrollHeight;
-                
-                // Trigger loading more messages
-                lastLoadedMessage = null;
-                await loadMessages();
-                
-                // Maintain scroll position
-                chatMessages.scrollTop = chatMessages.scrollHeight - scrollHeight;
-            }
-        };
-
-        chatMessages.addEventListener('scroll', scrollHandler);
-
-        // Clean up scroll listener when chat changes
-        return () => {
-            chatMessages.removeEventListener('scroll', scrollHandler);
-        };
-
     } catch (error) {
         console.error('Error loading messages:', error);
-        isLoadingMore = false;
     }
 }
 
@@ -2461,9 +2398,3 @@ async function sendWelcomeMessage() {
         console.error('Error sending welcome message:', error);
     }
 }
-
-// Add these variables at the top with other global variables
-let lastLoadedMessage = null;
-const MESSAGES_PER_PAGE = 50; // Increased for better performance
-let isLoadingMore = false;
-let hasMoreMessages = true;
