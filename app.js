@@ -2413,9 +2413,14 @@ async function sendWelcomeMessage() {
 
 // Add refresh chat functionality
 async function refreshJulioChat() {
-    if (!currentUser || !currentChatUser || currentChatUser.id !== JULIO_USER_ID) return;
+    console.log('Refresh button clicked');
+    if (!currentUser || !currentChatUser || currentChatUser.id !== JULIO_USER_ID) {
+        console.log('Cannot refresh: Not in Julio chat', { currentUser, currentChatUser });
+        return;
+    }
 
     try {
+        console.log('Starting refresh process');
         // Clear Julio's conversation context
         julioConversationContext = [];
         lastJulioMessageTime = null;
@@ -2423,18 +2428,24 @@ async function refreshJulioChat() {
         // Get all messages between current user and Julio
         const messagesQuery = query(
             collection(db, 'messages'),
-            where('participants', 'array-contains', currentUser.uid),
-            where('participants', 'array-contains', JULIO_USER_ID)
+            where('participants', 'array-contains', currentUser.uid)
         );
         
+        console.log('Fetching messages to delete');
         const messagesSnapshot = await getDocs(messagesQuery);
+        console.log('Found messages to delete:', messagesSnapshot.size);
         
         // Delete all messages in a batch
         const batch = writeBatch(db);
         messagesSnapshot.forEach(doc => {
-            batch.delete(doc.ref);
+            const message = doc.data();
+            // Only delete messages that are between current user and Julio
+            if (message.participants.includes(JULIO_USER_ID)) {
+                batch.delete(doc.ref);
+            }
         });
         
+        console.log('Committing batch delete');
         await batch.commit();
         
         // Add welcome message
@@ -2445,21 +2456,39 @@ async function refreshJulioChat() {
             participants: [currentUser.uid, JULIO_USER_ID]
         };
         
+        console.log('Adding welcome message');
         await addDoc(collection(db, 'messages'), welcomeMessage);
         
-        // Clear chat messages container and reload
-        document.getElementById('chat-messages').innerHTML = '';
+        // Clear chat messages container
+        const chatMessages = document.getElementById('chat-messages');
+        if (chatMessages) {
+            chatMessages.innerHTML = '';
+        }
+        
+        // Reload messages
+        console.log('Reloading messages');
         await loadMessages();
+        console.log('Refresh complete');
         
     } catch (error) {
         console.error('Error refreshing Julio chat:', error);
+        alert('Error refreshing chat. Please try again.');
     }
 }
 
 // Add event listener for refresh button
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('Setting up refresh button listener');
     const refreshButton = document.querySelector('.refresh-button');
     if (refreshButton) {
-        refreshButton.addEventListener('click', refreshJulioChat);
+        console.log('Refresh button found, adding click listener');
+        refreshButton.onclick = (e) => {
+            console.log('Refresh button clicked');
+            e.preventDefault();
+            e.stopPropagation();
+            refreshJulioChat();
+        };
+    } else {
+        console.log('Refresh button not found');
     }
 });
