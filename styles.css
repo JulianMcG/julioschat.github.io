@@ -994,17 +994,18 @@ body {
 }
 
 .chat-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #1C1F28;
     display: flex;
     align-items: center;
-    padding: 1rem;
-    border-bottom: 1px solid #2a2a2a;
-    background-color: #1a1a1a;
+    gap: 10px;
+    background-color: transparent;
 }
 
 .chat-header-actions {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 10px;
     margin-left: auto;
 }
 
@@ -1012,6 +1013,10 @@ body {
     cursor: pointer;
     color: #e3e3e3;
     transition: color 0.2s ease;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .refresh-button:hover {
