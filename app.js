@@ -632,8 +632,25 @@ async function startChat(userId, username) {
     }
     window.currentTypingUnsubscribe = setupTypingListener();
 
+    // Reset pagination variables
+    lastLoadedMessage = null;
+    isLoadingMore = false;
+
     // Load messages
-    loadMessages();
+    await loadMessages();
+
+    // Ensure scroll to bottom for Julio AI chat
+    if (userId === JULIO_USER_ID) {
+        const chatMessages = document.getElementById('chat-messages');
+        // Use requestAnimationFrame to ensure DOM is updated
+        requestAnimationFrame(() => {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            // Double check after a short delay to ensure all content is rendered
+            setTimeout(() => {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }, 100);
+        });
+    }
 }
 
 // Function to convert markdown-style formatting to HTML
