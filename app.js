@@ -2423,23 +2423,6 @@ async function refreshJulioChat() {
         julioConversationContext = [];
         lastJulioMessageTime = null;
         
-        // Get all messages between current user and Julio
-        const messagesQuery = query(
-            collection(db, 'messages'),
-            where('participants', 'array-contains', currentUser.uid),
-            where('participants', 'array-contains', JULIO_USER_ID)
-        );
-        
-        const messagesSnapshot = await getDocs(messagesQuery);
-        
-        // Delete all messages in a batch
-        const batch = writeBatch(db);
-        messagesSnapshot.forEach(doc => {
-            batch.delete(doc.ref);
-        });
-        
-        await batch.commit();
-        
         // Add timestamp message for new conversation
         const now = new Date();
         const timestampMessage = {
