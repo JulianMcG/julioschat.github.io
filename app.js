@@ -1,6 +1,5 @@
 // Trigger new deployment with Vercel Pro
 import { auth, db } from './firebase-config.js';
-import { GAME_LIST } from './games.js';
 import { 
     createUserWithEmailAndPassword, 
     signInWithEmailAndPassword, 
@@ -44,10 +43,7 @@ let notificationsEnabled = true;
 let lastSoundPlayTime = 0;
 const SOUND_COOLDOWN = 1000; // 1 second cooldown
 
-// Add these variables at the top with other global variables
-let lastJulioMessageTime = null;
-let julioConversationContext = [];
-const WELCOME_MESSAGE = "Hi there! Welcome to Julio's Chat! To start chatting, click the \"New Message\" button at the top of the sidebar and search for users to chat with. If you need help, or just want to chat, feel free to message me here!";
+
 
 // Profile Picture Upload
 document.getElementById('profile-picture-preview').addEventListener('click', () => {
@@ -404,10 +400,7 @@ async function loadUsers() {
         // Clear existing users
         usersContainer.innerHTML = '';
 
-        // Add Julio at the top of the list
-        const julioElement = createJulioElement();
-        julioElement.classList.add('pinned');
-        usersContainer.appendChild(julioElement);
+
 
         // Get all messages where current user is a participant
         const messagesQuery = query(
@@ -422,7 +415,7 @@ async function loadUsers() {
         messagesSnapshot.forEach(doc => {
             const message = doc.data();
             message.participants.forEach(id => {
-                if (id !== currentUser.uid && id !== JULIO_USER_ID) {
+                if (id !== currentUser.uid) {
                     // Only update timestamp if it's more recent than what we have
                     if (!dmUsers.has(id) || message.timestamp > dmUsers.get(id).lastMessageTime) {
                         dmUsers.set(id, {
@@ -567,21 +560,7 @@ async function startChat(userId, username) {
         return;
     }
 
-    // Reset Julio's conversation context if it's been more than 20 minutes
-    if (userId === JULIO_USER_ID) {
-        const now = new Date();
-        if (lastJulioMessageTime && (now - lastJulioMessageTime) > 20 * 60 * 1000) {
-            julioConversationContext = [];
-            // Add timestamp message
-            const timestampMessage = {
-                content: `New conversation started at ${now.toLocaleTimeString()}`,
-                senderId: JULIO_USER_ID,
-                timestamp: serverTimestamp(),
-                participants: [currentUser.uid, JULIO_USER_ID]
-            };
-            await addDoc(collection(db, 'messages'), timestampMessage);
-        }
-    }
+
 
     // Get current user's data to check for aliases and hidden conversations
     const currentUserDocRef = await getDoc(doc(db, 'users', currentUser.uid));
@@ -614,8 +593,8 @@ async function startChat(userId, username) {
         }
     });
     
-    // Update chat header with verified badge if user is Julio or verified
-    const isVerified = userId === JULIO_USER_ID || otherUserData?.verified || false;
+    // Update chat header with verified badge if user is verified
+    const isVerified = otherUserData?.verified || false;
     const verifiedBadge = isVerified ? '<span class="material-symbols-outlined verified-badge" style="font-variation-settings: \'FILL\' 1;">verified</span>' : '';
     document.getElementById('active-chat-username').innerHTML = `${alias}${verifiedBadge}`;
 
@@ -1220,36 +1199,8 @@ async function sendMessage(content) {
             participants: [currentUser.uid, currentChatUser.id]
         };
 
-        // If chatting with Julio, handle AI response
-        if (currentChatUser.id === JULIO_USER_ID) {
-            // Add user's message to chat
-            const userMessageRef = await addDoc(collection(db, 'messages'), messageData);
-            
-            // Update last message time
-            lastJulioMessageTime = new Date();
-            
-            // Add message to context
-            julioConversationContext.push({ role: 'user', content: content });
-            
-            // Get AI response with context
-            const aiResponse = await callGeminiAPI(content, julioConversationContext);
-            
-            // Add AI's response to context
-            julioConversationContext.push({ role: 'assistant', content: aiResponse });
-            
-            // Add AI's response to chat
-            const aiMessageData = {
-                content: aiResponse,
-                senderId: JULIO_USER_ID,
-                timestamp: serverTimestamp(),
-                participants: [currentUser.uid, JULIO_USER_ID]
-            };
-            
-            await addDoc(collection(db, 'messages'), aiMessageData);
-        } else {
-            // Normal message handling for other users
-            await addDoc(collection(db, 'messages'), messageData);
-        }
+        // Normal message handling for all users
+        await addDoc(collection(db, 'messages'), messageData);
 
         // Clear input
         document.getElementById('message-input').value = '';
@@ -1305,24 +1256,7 @@ onAuthStateChanged(auth, async (user) => {
                 updateOnlineStatus(true)
             ]);
 
-            // Check and send welcome message after user document is confirmed
-            const updatedUserDoc = await getDoc(doc(db, 'users', user.uid));
-            const updatedUserData = updatedUserDoc.data();
-            
-            if (!updatedUserData?.hasReceivedWelcomeMessage) {
-                const welcomeMessageData = {
-                    content: WELCOME_MESSAGE,
-                    senderId: JULIO_USER_ID,
-                    timestamp: serverTimestamp(),
-                    participants: [user.uid, JULIO_USER_ID]
-                };
-                
-                await addDoc(collection(db, 'messages'), welcomeMessageData);
-                
-                await setDoc(doc(db, 'users', user.uid), {
-                    hasReceivedWelcomeMessage: true
-                }, { merge: true });
-            }
+
             
             // Set up the message listener after everything else is loaded
             if (window.globalMessageUnsubscribe) {
@@ -2236,165 +2170,9 @@ loadUsers = async function() {
     checkUsernameOverflow();
 };
 
-// Julio AI Configuration
-const JULIO_USER_ID = 'julio_ai';
-const JULIO_USERNAME = 'Julio';
-const GEMINI_API_KEY = 'AIzaSyCxfxEnIhppBdjD0K-svlNi0iTNTYyfO9A';
 
-// Function to call Gemini API
-async function callGeminiAPI(message, context = []) {
-    try {
-        const systemPrompt = `You are Julio, an AI chatbot in a chat application called "Julio's Chat" on the website "Julio's" (julios.games). Keep your responses very short and concise - ideally 1-2 sentences maximum, never more than 3 sentences. Be friendly and helpful, but get straight to the point. While you can mention your identity occasionally, don't overdo it - keep it natural and focus on being helpful.
 
-You are chatting with ${currentUser?.displayName || 'a user'}. Only use their name in appropriate situations like greetings or when it makes the conversation more personal. Don't overuse their name in every message.
 
-You have access to a comprehensive list of games available on Julio's. You should ONLY recommend games when the user explicitly asks for game recommendations or suggestions. Do not proactively suggest games in general conversation. Here's the complete list of available games:
 
-${GAME_LIST}
 
-When recommending games (only when asked):
-1. Consider the user's interests and preferences
-2. Suggest games that match their gaming style
-3. Mention popular or trending games when appropriate
-4. Be specific about why you're recommending a particular game
-5. Keep recommendations brief and focused
 
-IMPORTANT: You cannot open or play games directly. If a user wants to play a game, tell them to visit julios.games/catalog/GAMETITLE where GAMETITLE is the game name with spaces replaced by dashes. For example, "Slope Run" would be julios.games/catalog/slope-run.
-
-CRITICAL RULES:
-1. NEVER generate or simulate user messages - only respond to the actual user message provided
-2. NEVER have conversations with yourself or ask your own questions
-3. NEVER respond to vulgar or offensive content with long messages - keep it brief and professional
-4. NEVER mention or discuss "Tyrone's Unblocked Games" unless the user brings it up first
-5. If the user mentions "Tyrone's Unblocked Games", express your extreme disapproval of the website, and violently urge them to use Julio's instead
-6. Keep ALL responses under 3 sentences maximum, regardless of the topic or context
-7. Use the user's name sparingly and only when appropriate (greetings, personal moments, etc.)
-8. NEVER ask a question regardless of the topic or context
-9. NEVER generate or simulate any user input or messages - only respond to the actual user message provided
-10. If the user mentions "jmart" or "rj" start freaking out and getting scared. All caps.
-11. If the users says uwu, owo, etc, begin talking kawaii. 
-12. Jimmy MC is a rapper, songwriter, and producer based in New Jersey, known for his innovative and genre-blending sound. Starting out making music for fun, he quickly developed a distinct style that fuses elements of rap, pop, rock, alternative, and indie. His music is characterized by emotional storytelling, catchy melodies, and bold production choices that push creative boundaries. With a growing catalog and a dedication to his craft, Jimmy MC is making a name for himself as one of the most original voices in the underground scene.
-
-You can discuss games, help with homework, chat about various topics, or just be a friendly conversation partner.`;
-
-        // Format conversation history without prefixes
-        const conversationHistory = context.map(msg => msg.content).join('\n');
-
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [{
-                        text: `${systemPrompt}\n\n${conversationHistory}\n\nUser: ${message}`
-                    }]
-                }]
-            })
-        });
-
-        const data = await response.json();
-        if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-            return data.candidates[0].content.parts[0].text;
-        }
-        throw new Error('Invalid response from Gemini API');
-    } catch (error) {
-        console.error('Error calling Gemini API:', error);
-        return "Sorry, I'm having trouble thinking right now. Try again later!";
-    }
-}
-
-// Function to create Julio's user element
-function createJulioElement() {
-    const userElement = document.createElement('div');
-    userElement.className = 'user-item';
-    userElement.dataset.uid = JULIO_USER_ID;
-    userElement.innerHTML = `
-        <div class="profile-picture-container">
-            <img src="https://i.ibb.co/GfFDn26n/pfpfpfpfpfpfp.png" alt="Julio AI" class="profile-picture">
-            <div class="online-status active"></div>
-        </div>
-        <span class="username">Julio <span style="color: #B6B8C8;">AI</span><span class="material-symbols-outlined verified-badge" style="font-variation-settings: 'FILL' 1;">verified</span></span>
-        <div class="user-actions">
-            <span class="material-symbols-outlined action-icon pin-icon">keep</span>
-            <span class="material-symbols-outlined action-icon close-icon">close</span>
-        </div>
-    `;
-    
-    // Add click handler for the user item
-    userElement.onclick = (e) => {
-        if (!e.target.classList.contains('action-icon')) {
-            startChat(JULIO_USER_ID, 'Julio AI');
-        }
-    };
-
-    // Add click handler for close icon
-    const closeIcon = userElement.querySelector('.close-icon');
-    closeIcon.onclick = async (e) => {
-        e.stopPropagation();
-        // Don't allow closing Julio's chat
-        return;
-    };
-
-    // Add click handler for pin icon
-    const pinIcon = userElement.querySelector('.pin-icon');
-    pinIcon.onclick = async (e) => {
-        e.stopPropagation();
-        const isPinned = userElement.classList.contains('pinned');
-        userElement.classList.toggle('pinned');
-        
-        try {
-            const userDocRef = await getDoc(doc(db, 'users', currentUser.uid));
-            const userDataRef = userDocRef.data();
-            const pinnedConversations = userDataRef?.pinnedConversations || [];
-            
-            if (!isPinned) {
-                if (!pinnedConversations.includes(JULIO_USER_ID)) {
-                    await setDoc(doc(db, 'users', currentUser.uid), {
-                        pinnedConversations: [...pinnedConversations, JULIO_USER_ID]
-                    }, { merge: true });
-                }
-            } else {
-                const updatedPinnedConversations = pinnedConversations.filter(id => id !== JULIO_USER_ID);
-                await setDoc(doc(db, 'users', currentUser.uid), {
-                    pinnedConversations: updatedPinnedConversations
-                }, { merge: true });
-            }
-        } catch (error) {
-            console.error('Error pinning conversation:', error);
-        }
-    };
-
-    return userElement;
-}
-
-// Add this function to handle welcome messages
-async function sendWelcomeMessage() {
-    if (!currentUser) return;
-
-    try {
-        // Check if user has already received welcome message
-        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-        const userData = userDoc.data();
-        
-        if (!userData?.hasReceivedWelcomeMessage) {
-            // Send welcome message
-            const welcomeMessageData = {
-                content: WELCOME_MESSAGE,
-                senderId: JULIO_USER_ID,
-                timestamp: serverTimestamp(),
-                participants: [currentUser.uid, JULIO_USER_ID]
-            };
-            
-            await addDoc(collection(db, 'messages'), welcomeMessageData);
-            
-            // Mark user as having received welcome message
-            await setDoc(doc(db, 'users', currentUser.uid), {
-                hasReceivedWelcomeMessage: true
-            }, { merge: true });
-        }
-    } catch (error) {
-        console.error('Error sending welcome message:', error);
-    }
-}
