@@ -263,6 +263,36 @@ body {
     height: 100vh;
     overflow: hidden;
     transition: all 0.3s ease;
+    /* Prevent flickering during loading */
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Add loading state for sidebar */
+.sidebar.loading {
+    opacity: 0.8;
+}
+
+.sidebar.loading .users-list {
+    opacity: 0.6;
+}
+
+/* Ensure users list is always visible */
+.users-list {
+    flex: 1;
+    overflow-y: auto;
+    margin-bottom: 20px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding-bottom: 80px;
+    /* Prevent flickering */
+    min-height: 200px;
+    opacity: 1;
+    transition: opacity 0.2s ease;
+}
+
+.users-list::-webkit-scrollbar {
+    display: none;
 }
 
 .sidebar.collapsed {
@@ -456,19 +486,6 @@ body {
     display: block;
 }
 
-.users-list {
-    flex: 1;
-    overflow-y: auto;
-    margin-bottom: 20px;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    padding-bottom: 80px;
-}
-
-.users-list::-webkit-scrollbar {
-    display: none;
-}
-
 .user-item {
     display: flex;
     align-items: center;
@@ -478,6 +495,8 @@ body {
     width: 100%;
     position: relative;
     min-width: 0;
+    /* Smooth transitions to prevent flickering */
+    transition: background-color 0.2s ease, opacity 0.2s ease;
 }
 
 .user-item:hover {
