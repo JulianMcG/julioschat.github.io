@@ -391,6 +391,12 @@ function showAuthSection() {
         sidebarUnsubscribe();
         sidebarUnsubscribe = null;
     }
+    
+    // Clear any skeleton loaders when going back to auth
+    const usersContainer = document.getElementById('users-container');
+    if (usersContainer) {
+        usersContainer.innerHTML = '';
+    }
 }
 
 function showChatSection() {
@@ -399,6 +405,9 @@ function showChatSection() {
     
     // Pre-initialize sidebar structure to prevent flickering
     preInitializeSidebar();
+    
+    // Ensure skeleton loaders are shown if sidebar is empty
+    ensureSkeletonLoaders();
     
     // Immediately start loading users if we have a current user
     if (currentUser && !isSidebarInitialized) {
@@ -410,6 +419,9 @@ function showChatSection() {
 function preInitializeSidebar() {
     const usersContainer = document.getElementById('users-container');
     if (!usersContainer || usersContainer.children.length > 0) return;
+    
+    // Add skeleton loaders
+    addSkeletonLoaders(usersContainer);
     
     // Add a subtle loading state
     const sidebar = document.querySelector('.sidebar');
@@ -423,6 +435,37 @@ function preInitializeSidebar() {
             sidebar.classList.remove('loading');
         }
     }, 100);
+}
+
+// Add skeleton loaders to the sidebar
+function addSkeletonLoaders(container) {
+    // Clear any existing content
+    container.innerHTML = '';
+    
+    // Add 5 skeleton loaders
+    for (let i = 0; i < 5; i++) {
+        const skeletonLoader = document.createElement('div');
+        skeletonLoader.className = 'skeleton-loader';
+        skeletonLoader.innerHTML = `
+            <div class="skeleton-avatar"></div>
+            <div class="skeleton-text">
+                <div class="skeleton-name"></div>
+                <div class="skeleton-subtitle"></div>
+            </div>
+        `;
+        container.appendChild(skeletonLoader);
+    }
+}
+
+// Ensure skeleton loaders are shown when needed
+function ensureSkeletonLoaders() {
+    const usersContainer = document.getElementById('users-container');
+    if (!usersContainer) return;
+    
+    // If container is empty and we're in chat section, add skeleton loaders
+    if (usersContainer.children.length === 0 && document.getElementById('chat-section').style.display !== 'none') {
+        addSkeletonLoaders(usersContainer);
+    }
 }
 
 // Chat Functions
@@ -537,7 +580,7 @@ function updateSidebarUsers(users) {
         }
     });
 
-    // Clear container
+    // Clear container (this will also remove skeleton loaders)
     usersContainer.innerHTML = '';
 
     // Add users in correct order
@@ -1275,6 +1318,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     userItems.forEach(userItem => {
                         userItem.style.display = 'flex';
                     });
+                    
+                    // If no users are visible, show skeleton loaders
+                    const visibleUsers = Array.from(userItems).filter(item => item.style.display !== 'none');
+                    if (visibleUsers.length === 0) {
+                        const usersContainer = document.getElementById('users-container');
+                        if (usersContainer) {
+                            addSkeletonLoaders(usersContainer);
+                        }
+                    }
                 } else {
                     await searchUsers(searchTerm);
                 }
@@ -1291,6 +1343,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 userItems.forEach(userItem => {
                     userItem.style.display = 'flex';
                 });
+                
+                // If no users are visible, show skeleton loaders
+                const visibleUsers = Array.from(userItems).filter(item => item.style.display !== 'none');
+                if (visibleUsers.length === 0) {
+                    const usersContainer = document.getElementById('users-container');
+                    if (usersContainer) {
+                        addSkeletonLoaders(usersContainer);
+                    }
+                }
             }
         });
     }
@@ -1589,17 +1650,30 @@ async function searchUsers(searchTerm) {
         userItems.forEach(userItem => {
             userItem.style.display = 'flex';
         });
+        
+        // If no users are visible, show skeleton loaders
+        const visibleUsers = Array.from(userItems).filter(item => item.style.display !== 'none');
+        if (visibleUsers.length === 0) {
+            addSkeletonLoaders(usersContainer);
+        }
         return;
     }
     
+    let hasVisibleUsers = false;
     userItems.forEach(userItem => {
         const username = userItem.querySelector('.username').textContent.toLowerCase();
         if (username.includes(searchTerm.toLowerCase())) {
             userItem.style.display = 'flex';
+            hasVisibleUsers = true;
         } else {
             userItem.style.display = 'none';
         }
     });
+    
+    // If no users match the search, show skeleton loaders
+    if (!hasVisibleUsers) {
+        addSkeletonLoaders(usersContainer);
+    }
 }
 
 // Compose Modal Functions
@@ -1692,6 +1766,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     userItems.forEach(userItem => {
                         userItem.style.display = 'flex';
                     });
+                    
+                    // If no users are visible, show skeleton loaders
+                    const visibleUsers = Array.from(userItems).filter(item => item.style.display !== 'none');
+                    if (visibleUsers.length === 0) {
+                        const usersContainer = document.getElementById('users-container');
+                        if (usersContainer) {
+                            addSkeletonLoaders(usersContainer);
+                        }
+                    }
                 } else {
                     await searchUsers(searchTerm);
                 }
@@ -1708,6 +1791,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 userItems.forEach(userItem => {
                     userItem.style.display = 'flex';
                 });
+                
+                // If no users are visible, show skeleton loaders
+                const visibleUsers = Array.from(userItems).filter(item => item.style.display !== 'none');
+                if (visibleUsers.length === 0) {
+                    const usersContainer = document.getElementById('users-container');
+                    if (usersContainer) {
+                        addSkeletonLoaders(usersContainer);
+                    }
+                }
             }
         });
     }
