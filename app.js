@@ -43,9 +43,6 @@ let notificationsEnabled = true;
 let lastSoundPlayTime = 0;
 const SOUND_COOLDOWN = 1000; // 1 second cooldown
 
-// Compact Mode
-let compactModeEnabled = false;
-
 
 
 // Profile Picture Upload
@@ -901,57 +898,6 @@ async function loadMessages() {
                     contentContainer.className = 'content';
                     contentContainer.innerHTML = formatMessageContent(message.content);
                     
-                    // Create compact mode elements only when needed
-                    if (compactModeEnabled) {
-                        // Create profile picture for compact mode
-                        const profilePicture = document.createElement('img');
-                        profilePicture.className = 'profile-picture';
-                        if (message.senderId === currentUser.uid) {
-                            // Get current user's profile picture from current user data
-                            profilePicture.src = currentUser.photoURL || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
-                            profilePicture.alt = 'You';
-                        } else {
-                            // Get other user's profile picture from current chat user data
-                            profilePicture.src = currentChatUser.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
-                            profilePicture.alt = currentChatUser.username || 'Unknown User';
-                        }
-                        
-                        // Create message header for compact mode (sender name + timestamp)
-                        const messageHeader = document.createElement('div');
-                        messageHeader.className = 'message-header';
-                        
-                        const senderElement = document.createElement('div');
-                        senderElement.className = 'sender';
-                        if (message.senderId === currentUser.uid) {
-                            senderElement.textContent = 'You';
-                        } else {
-                            senderElement.textContent = currentChatUser.username || 'Unknown User';
-                        }
-                        
-                        const timestampElement = document.createElement('div');
-                        timestampElement.className = 'timestamp';
-                        timestampElement.textContent = messageTime.toLocaleTimeString([], { 
-                            hour: 'numeric', 
-                            minute: '2-digit' 
-                        });
-                        
-                        messageHeader.appendChild(senderElement);
-                        messageHeader.appendChild(timestampElement);
-                        
-                        // Create message content wrapper for compact mode
-                        const messageContentWrapper = document.createElement('div');
-                        messageContentWrapper.className = 'message-content-wrapper';
-                        
-                        // Append compact mode elements
-                        messageElement.appendChild(profilePicture);
-                        messageElement.appendChild(messageContentWrapper);
-                        messageContentWrapper.appendChild(messageHeader);
-                        messageContentWrapper.appendChild(contentContainer);
-                    } else {
-                        // Bubble mode - just append content directly
-                        messageElement.appendChild(contentContainer);
-                    }
-                    
                     // Create reactions container
                     const reactionsContainer = document.createElement('div');
                     reactionsContainer.className = 'message-reactions';
@@ -986,12 +932,9 @@ async function loadMessages() {
                         messageElement.appendChild(reactionButton);
                     }
                     
-                    // Append reactions based on mode
-                    if (compactModeEnabled) {
-                        messageContentWrapper.appendChild(reactionsContainer);
-                    } else {
-                        messageElement.appendChild(reactionsContainer);
-                    }
+                    // Append all elements
+                    messageElement.appendChild(contentContainer);
+                    messageElement.appendChild(reactionsContainer);
                     
                     chatMessages.appendChild(messageElement);
                     
@@ -1006,9 +949,6 @@ async function loadMessages() {
         });
 
         window.currentMessageUnsubscribe = unsubscribe;
-        
-        // Apply compact mode after loading messages
-        applyCompactMode();
     } catch (error) {
         console.error('Error loading messages:', error);
     }
@@ -1923,7 +1863,6 @@ async function loadNotificationSoundPreference() {
         const userData = userDoc.data();
         const selectedSound = userData?.notificationSound || 'Birdy.mp3';
         notificationsEnabled = userData?.notificationsEnabled ?? true;
-        compactModeEnabled = userData?.compactModeEnabled ?? false;
         
         // Update audio source
         notificationSound = new Audio(`NotifSounds/${selectedSound}`);
@@ -1932,7 +1871,6 @@ async function loadNotificationSoundPreference() {
         // Update UI elements if they exist
         const soundSelect = document.getElementById('notification-sound');
         const notificationToggle = document.getElementById('notification-toggle');
-        const compactToggle = document.getElementById('compact-toggle');
         
         if (soundSelect) {
             soundSelect.value = selectedSound;
@@ -1942,20 +1880,11 @@ async function loadNotificationSoundPreference() {
             notificationToggle.checked = notificationsEnabled;
         }
         
-        if (compactToggle) {
-            compactToggle.checked = compactModeEnabled;
-        }
-        
-        // Apply compact mode if enabled
-        applyCompactMode();
-        
         console.log('Loaded notification preferences:', {
             selectedSound,
             notificationsEnabled,
-            compactModeEnabled,
             soundSelectValue: soundSelect?.value,
-            toggleChecked: notificationToggle?.checked,
-            compactToggleChecked: compactToggle?.checked
+            toggleChecked: notificationToggle?.checked
         });
     } catch (error) {
         console.error('Error loading notification sound preference:', error);
@@ -1971,22 +1900,19 @@ async function saveNotificationSoundPreference() {
     
     const soundSelect = document.getElementById('notification-sound');
     const notificationToggle = document.getElementById('notification-toggle');
-    const compactToggle = document.getElementById('compact-toggle');
     
-    if (!soundSelect || !notificationToggle || !compactToggle) {
-        console.error('Settings UI elements not found');
+    if (!soundSelect || !notificationToggle) {
+        console.error('Notification UI elements not found');
         return;
     }
     
     const selectedSound = soundSelect.value;
     notificationsEnabled = notificationToggle.checked;
-    compactModeEnabled = compactToggle.checked;
     
     try {
         await setDoc(doc(db, 'users', currentUser.uid), {
             notificationSound: selectedSound,
-            notificationsEnabled: notificationsEnabled,
-            compactModeEnabled: compactModeEnabled
+            notificationsEnabled: notificationsEnabled
         }, { merge: true });
         
         // Update audio source and play preview
@@ -1996,28 +1922,12 @@ async function saveNotificationSoundPreference() {
             console.error('Error playing notification sound:', error);
         });
         
-        // Apply compact mode
-        applyCompactMode();
-        
-        console.log('Saved settings preferences:', {
+        console.log('Saved notification preferences:', {
             selectedSound,
-            notificationsEnabled,
-            compactModeEnabled
+            notificationsEnabled
         });
     } catch (error) {
-        console.error('Error saving settings preferences:', error);
-    }
-}
-
-// Apply compact mode to chat messages
-function applyCompactMode() {
-    const chatMessages = document.getElementById('chat-messages');
-    if (!chatMessages) return;
-    
-    if (compactModeEnabled) {
-        chatMessages.classList.add('compact-mode');
-    } else {
-        chatMessages.classList.remove('compact-mode');
+        console.error('Error saving notification sound preference:', error);
     }
 }
 
@@ -2057,12 +1967,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (soundSelect && notificationToggle) {
         soundSelect.addEventListener('change', saveNotificationSoundPreference);
         notificationToggle.addEventListener('change', saveNotificationSoundPreference);
-    }
-    
-    // Add compact mode toggle event listener
-    const compactToggle = document.getElementById('compact-toggle');
-    if (compactToggle) {
-        compactToggle.addEventListener('change', saveNotificationSoundPreference);
     }
     
     // Load notification preferences when DOM is ready
