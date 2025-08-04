@@ -792,6 +792,7 @@ body {
     font-weight: 500;
     margin-bottom: 5px;
     font-size: 14px;
+    display: none;
 }
 
 .message .content {
@@ -799,6 +800,18 @@ body {
     word-wrap: break-word;
     max-width: 100%;
     padding: 4px 0;
+}
+
+.message .profile-picture {
+    display: none;
+}
+
+.message .message-header {
+    display: none;
+}
+
+.message .message-content-wrapper {
+    display: none;
 }
 
 /* Text Formatting Styles */
@@ -856,10 +869,9 @@ body {
 }
 
 .chat-messages.compact-mode .message .sender {
-    display: block;
-    font-size: 12px;
-    color: #8A8D9A;
-    margin-bottom: 2px;
+    display: inline;
+    font-size: 14px;
+    color: #ECEBF7;
     font-weight: 500;
 }
 
@@ -928,6 +940,71 @@ body {
     align-items: center;
     gap: 12px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Discord-style compact mode */
+.chat-messages.compact-mode .message {
+    flex-direction: row;
+    text-align: left;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.chat-messages.compact-mode .message.sent {
+    flex-direction: row;
+    text-align: left;
+}
+
+.chat-messages.compact-mode .message.received {
+    flex-direction: row;
+    text-align: left;
+}
+
+.chat-messages.compact-mode .message .profile-picture {
+    display: block;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.chat-messages.compact-mode .message .sender {
+    display: inline;
+    font-size: 14px;
+    color: #ECEBF7;
+    font-weight: 500;
+}
+
+.chat-messages.compact-mode .message .timestamp {
+    display: inline;
+    font-size: 12px;
+    color: #8A8D9A;
+    font-weight: 400;
+}
+
+.chat-messages.compact-mode .message .message-content-wrapper {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+}
+
+.chat-messages.compact-mode .message .message-header {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.chat-messages.compact-mode .message .content {
+    background: none;
+    color: #ECEBF7;
+    padding: 0;
+    font-size: 14px;
+    line-height: 1.4;
+    max-width: none;
+    word-wrap: break-word;
 }
 
 /* Profile Section */
