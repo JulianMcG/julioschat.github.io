@@ -677,8 +677,19 @@ body {
     margin-top: 2px;
 }
 
+/* For consecutive messages, only the last one gets the 5px lower corner */
 .message-bubble.consecutive:last-child {
-    border-radius: 5px;
+    border-radius: 15px 15px 5px 15px;
+}
+
+/* For sent messages that are consecutive, only the last one gets the 5px lower corner */
+.message-bubble.sent.consecutive:last-child {
+    border-radius: 15px 15px 5px 15px;
+}
+
+/* For received messages that are consecutive, only the last one gets the 5px lower corner */
+.message-bubble.received.consecutive:last-child {
+    border-radius: 15px 15px 15px 5px;
 }
 
 .message-gap {
