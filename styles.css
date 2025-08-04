@@ -7,27 +7,6 @@
     color: #ECEBF7;
 }
 
-/* Performance optimizations */
-* {
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
-}
-
-/* Hardware acceleration for smooth animations */
-.chat-container,
-.sidebar,
-.chat-area,
-.message,
-.user-item,
-.modal-content,
-.button-wrapper button,
-.auth-form button {
-    transform: translateZ(0);
-    will-change: transform;
-    backface-visibility: hidden;
-}
-
 body {
     margin: 0;
     padding: 0;
@@ -114,12 +93,7 @@ body {
     font-size: 16px;
     background-color: #10121B;
     color: #ECEBF7;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.form-group input:focus {
-    border-color: #1F49C7;
-    box-shadow: 0 0 0 2px rgba(31, 73, 199, 0.2);
+    transition: border-color 0.3s;
 }
 
 .form-group input::placeholder {
@@ -152,18 +126,13 @@ body {
     cursor: pointer;
     font-size: 16px;
     font-weight: 500;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform 0.1s ease;
     box-shadow: 0 5px 0 #13296D;
 }
 
-.button-wrapper button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 7px 0 #13296D;
-}
-
 .button-wrapper button:active {
-    transform: translateY(3px);
-    box-shadow: 0 2px 0 #13296D;
+    transform: translateY(5px);
+    box-shadow: 0 0 0 #13296D;
 }
 
 .button-wrapper::after {
@@ -193,7 +162,6 @@ body {
 .auth-form button:hover {
     background-color: #1a3db0;
     transform: translateY(-2px);
-    box-shadow: 0 7px 0 #13296D;
 }
 
 .auth-form button.loading {
@@ -294,7 +262,7 @@ body {
     position: relative;
     height: 100vh;
     overflow: hidden;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.3s ease;
 }
 
 .sidebar.collapsed {
@@ -495,10 +463,6 @@ body {
     scrollbar-width: none;
     -ms-overflow-style: none;
     padding-bottom: 80px;
-    /* Smooth scrolling */
-    scroll-behavior: smooth;
-    /* Optimize scrolling performance */
-    -webkit-overflow-scrolling: touch;
 }
 
 .users-list::-webkit-scrollbar {
@@ -514,7 +478,6 @@ body {
     width: 100%;
     position: relative;
     min-width: 0;
-    transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .user-item:hover {
@@ -639,10 +602,6 @@ body {
     flex-direction: column;
     scrollbar-width: none;
     -ms-overflow-style: none;
-    /* Smooth scrolling */
-    scroll-behavior: smooth;
-    /* Optimize scrolling performance */
-    -webkit-overflow-scrolling: touch;
 }
 
 .chat-messages::-webkit-scrollbar {
@@ -666,12 +625,10 @@ body {
     color: #ECEBF7;
     font-size: 14px;
     padding: 8px;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .message-input input:focus {
     outline: none;
-    background-color: rgba(255, 255, 255, 0.05);
 }
 
 .message-input input::placeholder {
@@ -695,19 +652,6 @@ body {
     line-height: 1.4;
     word-wrap: break-word;
     display: inline-block;
-    /* Smooth animations for messages */
-    animation: messageSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@keyframes messageSlideIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
 }
 
 .message-bubble {
@@ -946,12 +890,6 @@ body {
     height: 100%;
     background-color: rgba(0, 0, 0, 0.5);
     z-index: 1000;
-    opacity: 0;
-    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.modal.show {
-    opacity: 1;
 }
 
 .modal-content {
@@ -1150,7 +1088,7 @@ body {
     left: 50%;
     transform: translate(-50%, -50%) scale(0.9);
     opacity: 0;
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), top 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform 0.3s ease, opacity 0.3s ease, top 0.3s ease;
     padding: 0;
     margin: 0;
     will-change: transform, opacity, top;
@@ -1588,9 +1526,6 @@ body {
 .compose-results {
     scrollbar-width: none;
     -ms-overflow-style: none;
-    /* Optimize scrolling performance */
-    -webkit-overflow-scrolling: touch;
-    scroll-behavior: smooth;
 }
 
 .users-list::-webkit-scrollbar,
@@ -1599,17 +1534,9 @@ body {
     display: none;
 }
 
-/* Optimize button interactions */
-button {
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
+/* Remove button hover effects sitewide */
 button:hover {
-    transform: translateY(-1px);
-}
-
-button:active {
-    transform: translateY(1px);
+    transform: none !important;
 }
 
 .unblock-button {
@@ -1883,44 +1810,6 @@ input:checked + .slider:before {
     color: #ECEBF7;
     line-height: 1;
     transform: translateY(1px);
-}
-
-/* Loading states */
-.loading {
-    opacity: 0.7;
-    pointer-events: none;
-}
-
-.loading-spinner {
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-    border: 2px solid #B6B8C8;
-    border-radius: 50%;
-    border-top-color: transparent;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-/* Smooth fade in for new elements */
-.fade-in {
-    animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
 }
 
 /* Media query for auto-collapse */
