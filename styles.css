@@ -792,7 +792,6 @@ body {
     font-weight: 500;
     margin-bottom: 5px;
     font-size: 14px;
-    display: none;
 }
 
 .message .content {
@@ -800,18 +799,6 @@ body {
     word-wrap: break-word;
     max-width: 100%;
     padding: 4px 0;
-}
-
-.message .profile-picture {
-    display: none;
-}
-
-.message .message-header {
-    display: none;
-}
-
-.message .message-content-wrapper {
-    display: none;
 }
 
 /* Text Formatting Styles */
@@ -836,175 +823,6 @@ body {
 
 .message .content s {
     text-decoration: line-through;
-}
-
-/* Compact Mode Styles */
-.chat-messages.compact-mode {
-    padding: 0;
-}
-
-.chat-messages.compact-mode .message {
-    background: none;
-    border-radius: 0;
-    margin: 0;
-    padding: 8px 20px;
-    position: relative;
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.chat-messages.compact-mode .message:last-child {
-    border-bottom: none;
-}
-
-.chat-messages.compact-mode .message.sent {
-    flex-direction: row-reverse;
-    text-align: right;
-}
-
-.chat-messages.compact-mode .message.received {
-    text-align: left;
-}
-
-.chat-messages.compact-mode .message .sender {
-    display: inline;
-    font-size: 14px;
-    color: #ECEBF7;
-    font-weight: 500;
-}
-
-.chat-messages.compact-mode .message .content {
-    background: none;
-    color: #ECEBF7;
-    padding: 0;
-    font-size: 14px;
-    line-height: 1.4;
-    max-width: 70%;
-}
-
-.chat-messages.compact-mode .message.sent .content {
-    color: #ECEBF7;
-}
-
-.chat-messages.compact-mode .message.received .content {
-    color: #ECEBF7;
-}
-
-.chat-messages.compact-mode .message-actions {
-    position: static;
-    transform: none;
-    display: none;
-    gap: 4px;
-    margin-left: 8px;
-}
-
-.chat-messages.compact-mode .message:hover .message-actions {
-    display: flex;
-}
-
-.chat-messages.compact-mode .reaction-button {
-    position: static;
-    margin-left: 8px;
-    opacity: 0;
-    transition: opacity 0.2s;
-}
-
-.chat-messages.compact-mode .message:hover .reaction-button {
-    opacity: 1;
-}
-
-.chat-messages.compact-mode .message-reactions {
-    position: static;
-    margin-top: 4px;
-    margin-left: 0;
-}
-
-.chat-messages.compact-mode .date-separator {
-    background: rgba(255, 255, 255, 0.05);
-    margin: 0;
-    padding: 8px 20px;
-    text-align: center;
-    font-size: 12px;
-    color: #8A8D9A;
-    border-radius: 0;
-}
-
-.chat-messages.compact-mode .typing-indicator {
-    background: none;
-    border-radius: 0;
-    margin: 0;
-    padding: 8px 20px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-/* Discord-style compact mode */
-.chat-messages.compact-mode .message {
-    flex-direction: row;
-    text-align: left;
-    align-items: flex-start;
-    gap: 12px;
-}
-
-.chat-messages.compact-mode .message.sent {
-    flex-direction: row;
-    text-align: left;
-}
-
-.chat-messages.compact-mode .message.received {
-    flex-direction: row;
-    text-align: left;
-}
-
-.chat-messages.compact-mode .message .profile-picture {
-    display: block;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    flex-shrink: 0;
-    margin-top: 2px;
-}
-
-.chat-messages.compact-mode .message .sender {
-    display: inline;
-    font-size: 14px;
-    color: #ECEBF7;
-    font-weight: 500;
-}
-
-.chat-messages.compact-mode .message .timestamp {
-    display: inline;
-    font-size: 12px;
-    color: #8A8D9A;
-    font-weight: 400;
-}
-
-.chat-messages.compact-mode .message .message-content-wrapper {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-width: 0;
-}
-
-.chat-messages.compact-mode .message .message-header {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    margin-bottom: 4px;
-}
-
-.chat-messages.compact-mode .message .content {
-    background: none;
-    color: #ECEBF7;
-    padding: 0;
-    font-size: 14px;
-    line-height: 1.4;
-    max-width: none;
-    word-wrap: break-word;
 }
 
 /* Profile Section */
@@ -1564,33 +1382,6 @@ body {
 #settings-modal .signout-button:active {
     transform: translateY(5px);
     box-shadow: 0 0 0 #8A1315;
-}
-
-/* Compact Mode Toggle Styles */
-#settings-modal .compact-mode {
-    margin-top: 20px;
-    padding-top: 20px;
-    border-top: 1px solid #1C1F28;
-}
-
-#settings-modal .compact-toggle {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-}
-
-#settings-modal .compact-toggle label {
-    color: #B6B8C8;
-    font-size: 16px;
-    font-weight: 500;
-}
-
-#settings-modal .setting-description {
-    color: #8A8D9A;
-    font-size: 14px;
-    margin: 0;
-    line-height: 1.4;
 }
 
 /* User Options Modal Styles */
