@@ -277,6 +277,78 @@ body {
     opacity: 0.6;
 }
 
+/* Skeleton loader styles */
+.skeleton-loader {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.skeleton-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(90deg, #1C1F28 25%, #2A2D36 50%, #1C1F28 75%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s ease-in-out infinite;
+    flex-shrink: 0;
+}
+
+.skeleton-text {
+    margin-left: 10px;
+    flex: 1;
+}
+
+.skeleton-name {
+    width: 60%;
+    height: 14px;
+    background: linear-gradient(90deg, #1C1F28 25%, #2A2D36 50%, #1C1F28 75%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s ease-in-out infinite;
+    border-radius: 4px;
+    margin-bottom: 6px;
+}
+
+.skeleton-subtitle {
+    width: 40%;
+    height: 12px;
+    background: linear-gradient(90deg, #1C1F28 25%, #2A2D36 50%, #1C1F28 75%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s ease-in-out infinite;
+    border-radius: 3px;
+}
+
+@keyframes skeleton-pulse {
+    0%, 100% {
+        opacity: 0.6;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
+@keyframes skeleton-shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+/* Hide skeleton when users are loaded */
+.users-list:has(.user-item) .skeleton-loader {
+    display: none;
+}
+
+/* Show skeleton when no users are loaded */
+.users-list:not(:has(.user-item)) .skeleton-loader {
+    display: flex;
+}
+
 /* Ensure users list is always visible */
 .users-list {
     flex: 1;
