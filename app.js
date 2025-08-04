@@ -896,20 +896,61 @@ async function loadMessages() {
                     messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
                     messageElement.dataset.messageId = doc.id;
                     
-                    // Create sender element for compact mode
-                    const senderElement = document.createElement('div');
-                    senderElement.className = 'sender';
-                    if (message.senderId === currentUser.uid) {
-                        senderElement.textContent = 'You';
-                    } else {
-                        // Get sender's username from current chat user or fetch it
-                        senderElement.textContent = currentChatUser.username || 'Unknown User';
-                    }
-                    
                     // Create message content container
                     const contentContainer = document.createElement('div');
                     contentContainer.className = 'content';
                     contentContainer.innerHTML = formatMessageContent(message.content);
+                    
+                    // Create compact mode elements only when needed
+                    if (compactModeEnabled) {
+                        // Create profile picture for compact mode
+                        const profilePicture = document.createElement('img');
+                        profilePicture.className = 'profile-picture';
+                        if (message.senderId === currentUser.uid) {
+                            // Get current user's profile picture from current user data
+                            profilePicture.src = currentUser.photoURL || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
+                            profilePicture.alt = 'You';
+                        } else {
+                            // Get other user's profile picture from current chat user data
+                            profilePicture.src = currentChatUser.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
+                            profilePicture.alt = currentChatUser.username || 'Unknown User';
+                        }
+                        
+                        // Create message header for compact mode (sender name + timestamp)
+                        const messageHeader = document.createElement('div');
+                        messageHeader.className = 'message-header';
+                        
+                        const senderElement = document.createElement('div');
+                        senderElement.className = 'sender';
+                        if (message.senderId === currentUser.uid) {
+                            senderElement.textContent = 'You';
+                        } else {
+                            senderElement.textContent = currentChatUser.username || 'Unknown User';
+                        }
+                        
+                        const timestampElement = document.createElement('div');
+                        timestampElement.className = 'timestamp';
+                        timestampElement.textContent = messageTime.toLocaleTimeString([], { 
+                            hour: 'numeric', 
+                            minute: '2-digit' 
+                        });
+                        
+                        messageHeader.appendChild(senderElement);
+                        messageHeader.appendChild(timestampElement);
+                        
+                        // Create message content wrapper for compact mode
+                        const messageContentWrapper = document.createElement('div');
+                        messageContentWrapper.className = 'message-content-wrapper';
+                        
+                        // Append compact mode elements
+                        messageElement.appendChild(profilePicture);
+                        messageElement.appendChild(messageContentWrapper);
+                        messageContentWrapper.appendChild(messageHeader);
+                        messageContentWrapper.appendChild(contentContainer);
+                    } else {
+                        // Bubble mode - just append content directly
+                        messageElement.appendChild(contentContainer);
+                    }
                     
                     // Create reactions container
                     const reactionsContainer = document.createElement('div');
@@ -945,10 +986,12 @@ async function loadMessages() {
                         messageElement.appendChild(reactionButton);
                     }
                     
-                    // Append all elements
-                    messageElement.appendChild(senderElement);
-                    messageElement.appendChild(contentContainer);
-                    messageElement.appendChild(reactionsContainer);
+                    // Append reactions based on mode
+                    if (compactModeEnabled) {
+                        messageContentWrapper.appendChild(reactionsContainer);
+                    } else {
+                        messageElement.appendChild(reactionsContainer);
+                    }
                     
                     chatMessages.appendChild(messageElement);
                     
