@@ -384,12 +384,45 @@ async function logout() {
 function showAuthSection() {
     document.getElementById('auth-section').style.display = 'block';
     document.getElementById('chat-section').style.display = 'none';
+    // Reset sidebar state when showing auth
+    isSidebarInitialized = false;
+    sidebarUsers.clear();
+    if (sidebarUnsubscribe) {
+        sidebarUnsubscribe();
+        sidebarUnsubscribe = null;
+    }
 }
 
 function showChatSection() {
     document.getElementById('auth-section').style.display = 'none';
     document.getElementById('chat-section').style.display = 'block';
-    loadUsers();
+    
+    // Pre-initialize sidebar structure to prevent flickering
+    preInitializeSidebar();
+    
+    // Immediately start loading users if we have a current user
+    if (currentUser && !isSidebarInitialized) {
+        loadUsers();
+    }
+}
+
+// Pre-initialize sidebar structure
+function preInitializeSidebar() {
+    const usersContainer = document.getElementById('users-container');
+    if (!usersContainer || usersContainer.children.length > 0) return;
+    
+    // Add a subtle loading state
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) {
+        sidebar.classList.add('loading');
+    }
+    
+    // Remove loading state after a short delay
+    setTimeout(() => {
+        if (sidebar) {
+            sidebar.classList.remove('loading');
+        }
+    }, 100);
 }
 
 // Chat Functions
@@ -401,10 +434,15 @@ async function loadUsers() {
             return;
         }
 
-        // Clear existing users
-        usersContainer.innerHTML = '';
+        // If sidebar is already initialized, don't reload
+        if (isSidebarInitialized) {
+            return;
+        }
 
-
+        // Set up real-time listener for sidebar updates
+        if (sidebarUnsubscribe) {
+            sidebarUnsubscribe();
+        }
 
         // Get all messages where current user is a participant
         const messagesQuery = query(
@@ -412,59 +450,128 @@ async function loadUsers() {
             where('participants', 'array-contains', currentUser.uid),
             orderBy('timestamp', 'desc')
         );
-        const messagesSnapshot = await getDocs(messagesQuery);
 
-        // Get unique user IDs from messages with their latest message timestamp
-        const dmUsers = new Map();
-        messagesSnapshot.forEach(doc => {
-            const message = doc.data();
-            message.participants.forEach(id => {
-                if (id !== currentUser.uid) {
-                    // Only update timestamp if it's more recent than what we have
-                    if (!dmUsers.has(id) || message.timestamp > dmUsers.get(id).lastMessageTime) {
-                        dmUsers.set(id, {
-                            lastMessageTime: message.timestamp
-                        });
+        sidebarUnsubscribe = onSnapshot(messagesQuery, async (snapshot) => {
+            // Get unique user IDs from messages with their latest message timestamp
+            const dmUsers = new Map();
+            snapshot.forEach(doc => {
+                const message = doc.data();
+                message.participants.forEach(id => {
+                    if (id !== currentUser.uid) {
+                        // Only update timestamp if it's more recent than what we have
+                        if (!dmUsers.has(id) || message.timestamp > dmUsers.get(id).lastMessageTime) {
+                            dmUsers.set(id, {
+                                lastMessageTime: message.timestamp
+                            });
+                        }
                     }
-                }
+                });
             });
+
+            // Get user data for each DM user
+            const userPromises = Array.from(dmUsers.keys()).map(async (userId) => {
+                // Check if we already have this user in cache
+                if (sidebarUsers.has(userId)) {
+                    const cachedUser = sidebarUsers.get(userId);
+                    return {
+                        ...cachedUser,
+                        lastMessageTime: dmUsers.get(userId).lastMessageTime
+                    };
+                }
+
+                const userDoc = await getDoc(doc(db, 'users', userId));
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    const user = {
+                        id: userId,
+                        username: userData.username || 'Unknown User',
+                        profilePicture: userData.profilePicture,
+                        verified: userData.verified || false,
+                        alias: userData.alias,
+                        lastMessageTime: dmUsers.get(userId).lastMessageTime
+                    };
+                    
+                    // Cache the user data
+                    sidebarUsers.set(userId, user);
+                    return user;
+                }
+                return null;
+            });
+
+            const users = (await Promise.all(userPromises)).filter(user => user !== null);
+
+            // Sort users by last message timestamp
+            users.sort((a, b) => {
+                if (!a.lastMessageTime || !b.lastMessageTime) return 0;
+                return b.lastMessageTime.toMillis() - a.lastMessageTime.toMillis();
+            });
+
+            // Efficiently update the sidebar
+            updateSidebarUsers(users);
+            
+            // Mark sidebar as initialized
+            isSidebarInitialized = true;
+            
+            // Check for username overflow after loading users
+            checkUsernameOverflow();
+        }, (error) => {
+            console.error('Error in sidebar listener:', error);
         });
 
-        // Get user data for each DM user
-        const userPromises = Array.from(dmUsers.keys()).map(async (userId) => {
-            const userDoc = await getDoc(doc(db, 'users', userId));
-            if (userDoc.exists()) {
-                const userData = userDoc.data();
-                return {
-                    id: userId,
-                    username: userData.username || 'Unknown User',
-                    profilePicture: userData.profilePicture,
-                    verified: userData.verified || false,
-                    alias: userData.alias,
-                    lastMessageTime: dmUsers.get(userId).lastMessageTime
-                };
-            }
-            return null;
-        });
-
-        const users = (await Promise.all(userPromises)).filter(user => user !== null);
-
-        // Sort users by last message timestamp
-        users.sort((a, b) => {
-            if (!a.lastMessageTime || !b.lastMessageTime) return 0;
-            return b.lastMessageTime.toMillis() - a.lastMessageTime.toMillis();
-        });
-
-        // Add users to the sidebar
-        users.forEach(user => {
-            const userElement = createUserElement(user);
-            usersContainer.appendChild(userElement);
-        });
-
-        // Check for username overflow after loading users
-        checkUsernameOverflow();
     } catch (error) {
         console.error('Error loading users:', error);
+    }
+}
+
+// New function to efficiently update sidebar users
+function updateSidebarUsers(users) {
+    const usersContainer = document.getElementById('users-container');
+    if (!usersContainer) return;
+
+    // Get existing user elements
+    const existingElements = new Map();
+    usersContainer.querySelectorAll('.user-item').forEach(element => {
+        const uid = element.dataset.uid;
+        if (uid) {
+            existingElements.set(uid, element);
+        }
+    });
+
+    // Clear container
+    usersContainer.innerHTML = '';
+
+    // Add users in correct order
+    users.forEach(user => {
+        let userElement = existingElements.get(user.id);
+        
+        if (userElement) {
+            // Update existing element
+            updateUserElement(userElement, user);
+        } else {
+            // Create new element
+            userElement = createUserElement(user);
+        }
+        
+        usersContainer.appendChild(userElement);
+    });
+}
+
+// New function to update existing user element
+function updateUserElement(userElement, user) {
+    const displayName = user.alias || user.username;
+    const profilePicture = userElement.querySelector('.profile-picture');
+    const username = userElement.querySelector('.username');
+    
+    // Update profile picture if different
+    if (profilePicture.src !== (user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png')) {
+        profilePicture.src = user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
+        profilePicture.alt = displayName;
+    }
+    
+    // Update username if different
+    const newUsername = `${displayName}${user.verified ? '<span class="material-symbols-outlined verified-badge" style="font-variation-settings: \'FILL\' 1;">verified</span>' : ''}`;
+    if (username.innerHTML !== newUsername) {
+        username.innerHTML = newUsername;
     }
 }
 
@@ -1163,8 +1270,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // Set a new timeout to debounce the search
             searchTimeout = setTimeout(async () => {
                 if (!searchTerm) {
-                    // If search is empty, reload all users
-                    await loadUsers();
+                    // If search is empty, show all users (don't reload)
+                    const userItems = document.querySelectorAll('.user-item');
+                    userItems.forEach(userItem => {
+                        userItem.style.display = 'flex';
+                    });
                 } else {
                     await searchUsers(searchTerm);
                 }
@@ -1176,8 +1286,11 @@ document.addEventListener('DOMContentLoaded', () => {
         clearSearch.addEventListener('click', async () => {
             if (searchInput) {
                 searchInput.value = '';
-                // Force reload all users when clear button is clicked
-                await loadUsers();
+                // Show all users when clear button is clicked (don't reload)
+                const userItems = document.querySelectorAll('.user-item');
+                userItems.forEach(userItem => {
+                    userItem.style.display = 'flex';
+                });
             }
         });
     }
@@ -1252,16 +1365,13 @@ onAuthStateChanged(auth, async (user) => {
                 });
             }
 
-            // Now run other operations in parallel
+            // Run all operations in parallel for faster loading
             await Promise.all([
-                loadUsers(),
                 updateCurrentUserProfile(user),
                 loadNotificationSoundPreference(),
                 updateOnlineStatus(true)
             ]);
 
-
-            
             // Set up the message listener after everything else is loaded
             if (window.globalMessageUnsubscribe) {
                 window.globalMessageUnsubscribe();
@@ -1475,8 +1585,10 @@ async function searchUsers(searchTerm) {
     const userItems = usersContainer.querySelectorAll('.user-item');
     
     if (!searchTerm) {
-        // If search is empty, reload all users
-        await loadUsers();
+        // If search is empty, show all users (don't reload)
+        userItems.forEach(userItem => {
+            userItem.style.display = 'flex';
+        });
         return;
     }
     
@@ -1575,8 +1687,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // Set a new timeout to debounce the search
             searchTimeout = setTimeout(async () => {
                 if (!searchTerm) {
-                    // If search is empty, reload all users
-                    await loadUsers();
+                    // If search is empty, show all users (don't reload)
+                    const userItems = document.querySelectorAll('.user-item');
+                    userItems.forEach(userItem => {
+                        userItem.style.display = 'flex';
+                    });
                 } else {
                     await searchUsers(searchTerm);
                 }
@@ -1588,8 +1703,11 @@ document.addEventListener('DOMContentLoaded', () => {
         clearSearch.addEventListener('click', async () => {
             if (searchInput) {
                 searchInput.value = '';
-                // Force reload all users when clear button is clicked
-                await loadUsers();
+                // Show all users when clear button is clicked (don't reload)
+                const userItems = document.querySelectorAll('.user-item');
+                userItems.forEach(userItem => {
+                    userItem.style.display = 'flex';
+                });
             }
         });
     }
@@ -2167,12 +2285,7 @@ function checkUsernameOverflow() {
 // Add event listeners for window resize and after loading users
 window.addEventListener('resize', checkUsernameOverflow);
 
-// Modify your loadUsers function to call checkUsernameOverflow after loading
-const originalLoadUsers = loadUsers;
-loadUsers = async function() {
-    await originalLoadUsers();
-    checkUsernameOverflow();
-};
+// The checkUsernameOverflow is now called within the loadUsers function itself
 
 
 
