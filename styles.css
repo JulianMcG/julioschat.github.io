@@ -999,30 +999,6 @@ body {
     display: flex;
     align-items: center;
     gap: 10px;
-    background-color: transparent;
-}
-
-.chat-header-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-left: auto;
-}
-
-.refresh-button {
-    cursor: pointer;
-    color: #e3e3e3;
-    transition: color 0.2s ease;
-    font-size: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-}
-
-.refresh-button:hover {
-    color: #fff;
 }
 
 .chat-header svg {
@@ -1073,25 +1049,7 @@ body {
     margin-top: 2px;
 }
 
-/* Julio AI specific styles */
-.user[data-user-id="julio_ai"] {
-    background-color: rgba(29, 161, 242, 0.1);
-    border-left: 3px solid #1DA1F2;
-}
 
-.user[data-user-id="julio_ai"] .user-avatar {
-    border: 2px solid #1DA1F2;
-}
-
-/* AI message styling */
-.message[data-sender-id="julio_ai"] {
-    background-color: #f0f7ff;
-    border-left: 3px solid #1DA1F2;
-}
-
-.message[data-sender-id="julio_ai"] .message-content {
-    color: #1a1a1a;
-}
 
 /* Compose Modal Styles */
 #compose-modal {
