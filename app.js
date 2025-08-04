@@ -43,6 +43,9 @@ let notificationsEnabled = true;
 let lastSoundPlayTime = 0;
 const SOUND_COOLDOWN = 1000; // 1 second cooldown
 
+// Compact Mode
+let compactModeEnabled = false;
+
 
 
 // Profile Picture Upload
@@ -893,6 +896,16 @@ async function loadMessages() {
                     messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
                     messageElement.dataset.messageId = doc.id;
                     
+                    // Create sender element for compact mode
+                    const senderElement = document.createElement('div');
+                    senderElement.className = 'sender';
+                    if (message.senderId === currentUser.uid) {
+                        senderElement.textContent = 'You';
+                    } else {
+                        // Get sender's username from current chat user or fetch it
+                        senderElement.textContent = currentChatUser.username || 'Unknown User';
+                    }
+                    
                     // Create message content container
                     const contentContainer = document.createElement('div');
                     contentContainer.className = 'content';
@@ -933,6 +946,7 @@ async function loadMessages() {
                     }
                     
                     // Append all elements
+                    messageElement.appendChild(senderElement);
                     messageElement.appendChild(contentContainer);
                     messageElement.appendChild(reactionsContainer);
                     
@@ -949,6 +963,9 @@ async function loadMessages() {
         });
 
         window.currentMessageUnsubscribe = unsubscribe;
+        
+        // Apply compact mode after loading messages
+        applyCompactMode();
     } catch (error) {
         console.error('Error loading messages:', error);
     }
@@ -1863,6 +1880,7 @@ async function loadNotificationSoundPreference() {
         const userData = userDoc.data();
         const selectedSound = userData?.notificationSound || 'Birdy.mp3';
         notificationsEnabled = userData?.notificationsEnabled ?? true;
+        compactModeEnabled = userData?.compactModeEnabled ?? false;
         
         // Update audio source
         notificationSound = new Audio(`NotifSounds/${selectedSound}`);
@@ -1871,6 +1889,7 @@ async function loadNotificationSoundPreference() {
         // Update UI elements if they exist
         const soundSelect = document.getElementById('notification-sound');
         const notificationToggle = document.getElementById('notification-toggle');
+        const compactToggle = document.getElementById('compact-toggle');
         
         if (soundSelect) {
             soundSelect.value = selectedSound;
@@ -1880,11 +1899,20 @@ async function loadNotificationSoundPreference() {
             notificationToggle.checked = notificationsEnabled;
         }
         
+        if (compactToggle) {
+            compactToggle.checked = compactModeEnabled;
+        }
+        
+        // Apply compact mode if enabled
+        applyCompactMode();
+        
         console.log('Loaded notification preferences:', {
             selectedSound,
             notificationsEnabled,
+            compactModeEnabled,
             soundSelectValue: soundSelect?.value,
-            toggleChecked: notificationToggle?.checked
+            toggleChecked: notificationToggle?.checked,
+            compactToggleChecked: compactToggle?.checked
         });
     } catch (error) {
         console.error('Error loading notification sound preference:', error);
@@ -1900,19 +1928,22 @@ async function saveNotificationSoundPreference() {
     
     const soundSelect = document.getElementById('notification-sound');
     const notificationToggle = document.getElementById('notification-toggle');
+    const compactToggle = document.getElementById('compact-toggle');
     
-    if (!soundSelect || !notificationToggle) {
-        console.error('Notification UI elements not found');
+    if (!soundSelect || !notificationToggle || !compactToggle) {
+        console.error('Settings UI elements not found');
         return;
     }
     
     const selectedSound = soundSelect.value;
     notificationsEnabled = notificationToggle.checked;
+    compactModeEnabled = compactToggle.checked;
     
     try {
         await setDoc(doc(db, 'users', currentUser.uid), {
             notificationSound: selectedSound,
-            notificationsEnabled: notificationsEnabled
+            notificationsEnabled: notificationsEnabled,
+            compactModeEnabled: compactModeEnabled
         }, { merge: true });
         
         // Update audio source and play preview
@@ -1922,12 +1953,28 @@ async function saveNotificationSoundPreference() {
             console.error('Error playing notification sound:', error);
         });
         
-        console.log('Saved notification preferences:', {
+        // Apply compact mode
+        applyCompactMode();
+        
+        console.log('Saved settings preferences:', {
             selectedSound,
-            notificationsEnabled
+            notificationsEnabled,
+            compactModeEnabled
         });
     } catch (error) {
-        console.error('Error saving notification sound preference:', error);
+        console.error('Error saving settings preferences:', error);
+    }
+}
+
+// Apply compact mode to chat messages
+function applyCompactMode() {
+    const chatMessages = document.getElementById('chat-messages');
+    if (!chatMessages) return;
+    
+    if (compactModeEnabled) {
+        chatMessages.classList.add('compact-mode');
+    } else {
+        chatMessages.classList.remove('compact-mode');
     }
 }
 
@@ -1967,6 +2014,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (soundSelect && notificationToggle) {
         soundSelect.addEventListener('change', saveNotificationSoundPreference);
         notificationToggle.addEventListener('change', saveNotificationSoundPreference);
+    }
+    
+    // Add compact mode toggle event listener
+    const compactToggle = document.getElementById('compact-toggle');
+    if (compactToggle) {
+        compactToggle.addEventListener('change', saveNotificationSoundPreference);
     }
     
     // Load notification preferences when DOM is ready
