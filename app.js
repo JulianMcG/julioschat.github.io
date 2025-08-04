@@ -451,9 +451,10 @@ async function loadUsers() {
             return b.lastMessageTime.toMillis() - a.lastMessageTime.toMillis();
         });
 
-        // Add users to the sidebar
-        users.forEach(user => {
+        // Add users to the sidebar with staggered animation
+        users.forEach((user, index) => {
             const userElement = createUserElement(user);
+            userElement.style.animationDelay = `${index * 50}ms`;
             usersContainer.appendChild(userElement);
         });
 
@@ -466,12 +467,12 @@ async function loadUsers() {
 
 function createUserElement(user) {
     const userElement = document.createElement('div');
-    userElement.className = 'user-item';
+    userElement.className = 'user-item fade-in';
     userElement.dataset.uid = user.id;
     const displayName = user.alias || user.username;
     userElement.innerHTML = `
         <div class="profile-picture-container">
-            <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${displayName}" class="profile-picture">
+            <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${displayName}" class="profile-picture" loading="lazy">
             <div class="online-status"></div>
         </div>
         <span class="username">${displayName}${user.verified ? '<span class="material-symbols-outlined verified-badge" style="font-variation-settings: \'FILL\' 1;">verified</span>' : ''}</span>
@@ -841,13 +842,13 @@ async function loadMessages() {
         }
 
         const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
-            chatMessages.innerHTML = '';
+            // Use DocumentFragment for better performance
+            const fragment = document.createDocumentFragment();
             let lastMessageTime = null;
             let lastMessageSenderId = null;
             
             snapshot.forEach(doc => {
                 const message = doc.data();
-                console.log('Message data:', message); // Debug log
                 
                 // Only show messages if:
                 // 1. The message is between current user and current chat user
@@ -885,7 +886,7 @@ async function loadMessages() {
                             }
                             
                             dateSeparator.textContent = dateText;
-                            chatMessages.appendChild(dateSeparator);
+                            fragment.appendChild(dateSeparator);
                         }
                     }
                     
@@ -901,9 +902,6 @@ async function loadMessages() {
                     // Create reactions container
                     const reactionsContainer = document.createElement('div');
                     reactionsContainer.className = 'message-reactions';
-                    
-                    // Debug log for reactions
-                    console.log('Message reactions:', message.reactions);
                     
                     if (message.reactions && Object.keys(message.reactions).length > 0) {
                         reactionsContainer.classList.add('has-reactions');
@@ -936,13 +934,16 @@ async function loadMessages() {
                     messageElement.appendChild(contentContainer);
                     messageElement.appendChild(reactionsContainer);
                     
-                    chatMessages.appendChild(messageElement);
+                    fragment.appendChild(messageElement);
                     
                     lastMessageTime = messageTime;
                     lastMessageSenderId = message.senderId;
                 }
             });
             
+            // Clear and append all messages at once for better performance
+            chatMessages.innerHTML = '';
+            chatMessages.appendChild(fragment);
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }, (error) => {
             console.error('Error in message snapshot:', error);
@@ -967,9 +968,10 @@ function checkFirebaseConnection() {
 function openComposeModal() {
     const modal = document.getElementById('compose-modal');
     modal.style.display = 'block';
-    // Trigger reflow
-    modal.offsetHeight;
-    modal.classList.add('active');
+    // Trigger reflow and add smooth animation
+    requestAnimationFrame(() => {
+        modal.classList.add('show', 'active');
+    });
     // Focus the search input
     const searchInput = document.getElementById('compose-search');
     searchInput.focus();
@@ -977,7 +979,7 @@ function openComposeModal() {
 
 function closeComposeModal() {
     const modal = document.getElementById('compose-modal');
-    modal.classList.remove('active');
+    modal.classList.remove('show', 'active');
     // Wait for animation to complete before hiding
     setTimeout(() => {
         modal.style.display = 'none';
@@ -1144,10 +1146,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Search input event listener
+    // Search input event listener with improved debouncing
     const searchInput = document.getElementById('search-user');
     if (searchInput) {
-        let searchTimeout;
         searchInput.addEventListener('input', (e) => {
             const searchTerm = e.target.value.trim();
             
@@ -1164,7 +1165,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     await searchUsers(searchTerm);
                 }
-            }, 300); // 300ms debounce
+            }, 200); // Reduced to 200ms for more responsive feel
         });
     }
 
@@ -1199,9 +1200,23 @@ async function sendMessage(content) {
             participants: [currentUser.uid, currentChatUser.id]
         };
 
-        // Normal message handling for all users
+        // Optimistic UI update - add message immediately for better perceived performance
+        const chatMessages = document.getElementById('chat-messages');
+        const tempMessage = document.createElement('div');
+        tempMessage.className = 'message sent';
+        tempMessage.style.opacity = '0.7';
+        tempMessage.innerHTML = `
+            <div class="content">${formatMessageContent(content)}</div>
+        `;
+        chatMessages.appendChild(tempMessage);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        // Send message to Firebase
         await addDoc(collection(db, 'messages'), messageData);
 
+        // Remove temporary message and let the real one appear
+        tempMessage.remove();
+        
         // Clear input
         document.getElementById('message-input').value = '';
         
@@ -1221,6 +1236,12 @@ onAuthStateChanged(auth, async (user) => {
         
         // Show chat section immediately to improve perceived performance
         showChatSection();
+        
+        // Add loading state
+        const usersContainer = document.getElementById('users-container');
+        if (usersContainer) {
+            usersContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #B6B8C8;">Loading...</div>';
+        }
         
         try {
             // First, ensure user document exists and is up to date
@@ -1248,7 +1269,7 @@ onAuthStateChanged(auth, async (user) => {
                 });
             }
 
-            // Now run other operations in parallel
+            // Now run other operations in parallel for better performance
             await Promise.all([
                 loadUsers(),
                 updateCurrentUserProfile(user),
@@ -1256,8 +1277,6 @@ onAuthStateChanged(auth, async (user) => {
                 updateOnlineStatus(true)
             ]);
 
-
-            
             // Set up the message listener after everything else is loaded
             if (window.globalMessageUnsubscribe) {
                 window.globalMessageUnsubscribe();
@@ -1266,6 +1285,10 @@ onAuthStateChanged(auth, async (user) => {
             
         } catch (error) {
             console.error('Error in auth state change:', error);
+            // Show error state
+            if (usersContainer) {
+                usersContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #E85658;">Error loading chat. Please refresh the page.</div>';
+            }
         }
     } else {
         currentUser = null;
@@ -1463,7 +1486,8 @@ document.querySelector('.save-button').addEventListener('click', async () => {
     }
 });
 
-// Search Functions
+// Search Functions with debouncing
+let searchTimeout;
 async function searchUsers(searchTerm) {
     const usersContainer = document.getElementById('users-container');
     if (!usersContainer) return;
@@ -1476,13 +1500,16 @@ async function searchUsers(searchTerm) {
         return;
     }
     
-    userItems.forEach(userItem => {
-        const username = userItem.querySelector('.username').textContent.toLowerCase();
-        if (username.includes(searchTerm.toLowerCase())) {
-            userItem.style.display = 'flex';
-        } else {
-            userItem.style.display = 'none';
-        }
+    // Use requestAnimationFrame for smoother UI updates
+    requestAnimationFrame(() => {
+        userItems.forEach(userItem => {
+            const username = userItem.querySelector('.username').textContent.toLowerCase();
+            if (username.includes(searchTerm.toLowerCase())) {
+                userItem.style.display = 'flex';
+            } else {
+                userItem.style.display = 'none';
+            }
+        });
     });
 }
 
@@ -2160,14 +2187,21 @@ function checkUsernameOverflow() {
     });
 }
 
-// Add event listeners for window resize and after loading users
-window.addEventListener('resize', checkUsernameOverflow);
+// Add event listeners for window resize and after loading users with throttling
+let resizeTimeout;
+window.addEventListener('resize', () => {
+    if (resizeTimeout) {
+        clearTimeout(resizeTimeout);
+    }
+    resizeTimeout = setTimeout(checkUsernameOverflow, 100);
+});
 
 // Modify your loadUsers function to call checkUsernameOverflow after loading
 const originalLoadUsers = loadUsers;
 loadUsers = async function() {
     await originalLoadUsers();
-    checkUsernameOverflow();
+    // Use requestAnimationFrame for smoother UI updates
+    requestAnimationFrame(checkUsernameOverflow);
 };
 
 
