@@ -424,7 +424,7 @@ body {
     cursor: pointer;
     color: #B6B8C8;
     transition: color 0.3s ease;
-    font-size: 22px;
+    font-size: 18px;
     font-variation-settings: 'FILL' 0;
 }
 
@@ -484,7 +484,7 @@ body {
 }
 
 .new-message-button .material-symbols-outlined {
-    font-size: 18px;
+    font-size: 22px;
     font-variation-settings: 'FILL' 1;
     padding: 1px;
     color: #B6B8C8;
@@ -1952,4 +1952,4 @@ input:checked + .slider:before {
     .sidebar .profile-info {
         display: none;
     }
-} 
+}
