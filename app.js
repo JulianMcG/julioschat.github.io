@@ -36,11 +36,6 @@ let typingTimeout = null;
 let isTyping = false;
 const storage = getStorage();
 
-// Group chat variables
-let selectedUsers = []; // Array to store selected users for group chat
-let isGroupChatMode = false; // Flag to track if we're in group chat mode
-const GROUP_CHAT_PREFIX = 'group_'; // Prefix for group chat IDs
-
 // Notification Sound
 let notificationSound = null;
 let isTabFocused = document.visibilityState === 'visible';
@@ -52,8 +47,6 @@ const SOUND_COOLDOWN = 1000; // 1 second cooldown
 let sidebarUsers = new Map(); // Cache for user data
 let sidebarUnsubscribe = null; // Real-time listener for sidebar updates
 let isSidebarInitialized = false; // Track if sidebar has been initialized
-
-// Global variables
 
 
 // Profile Picture Upload
@@ -502,37 +495,20 @@ async function loadUsers() {
         );
 
         sidebarUnsubscribe = onSnapshot(messagesQuery, async (snapshot) => {
-            // Get unique user IDs and group IDs from messages with their latest message timestamp
+            // Get unique user IDs from messages with their latest message timestamp
             const dmUsers = new Map();
-            const groups = new Map();
-            
             snapshot.forEach(doc => {
                 const message = doc.data();
-                
-                // Check if this is a group message
-                if (message.isGroupMessage && message.groupId) {
-                    // Handle group message
-                    const groupId = message.groupId;
-                    if (!groups.has(groupId) || message.timestamp > groups.get(groupId).lastMessageTime) {
-                        groups.set(groupId, {
-                            lastMessageTime: message.timestamp,
-                            lastMessage: message.content
-                        });
-                    }
-                } else {
-                    // Handle direct message
-                    message.participants.forEach(id => {
-                        if (id !== currentUser.uid) {
-                            // Only update timestamp if it's more recent than what we have
-                            if (!dmUsers.has(id) || message.timestamp > dmUsers.get(id).lastMessageTime) {
-                                dmUsers.set(id, {
-                                    lastMessageTime: message.timestamp,
-                                    lastMessage: message.content
-                                });
-                            }
+                message.participants.forEach(id => {
+                    if (id !== currentUser.uid) {
+                        // Only update timestamp if it's more recent than what we have
+                        if (!dmUsers.has(id) || message.timestamp > dmUsers.get(id).lastMessageTime) {
+                            dmUsers.set(id, {
+                                lastMessageTime: message.timestamp
+                            });
                         }
-                    });
-                }
+                    }
+                });
             });
 
             // Get user data for each DM user
@@ -542,9 +518,7 @@ async function loadUsers() {
                     const cachedUser = sidebarUsers.get(userId);
                     return {
                         ...cachedUser,
-                        lastMessageTime: dmUsers.get(userId).lastMessageTime,
-                        lastMessage: dmUsers.get(userId).lastMessage,
-                        isGroup: false
+                        lastMessageTime: dmUsers.get(userId).lastMessageTime
                     };
                 }
 
@@ -557,9 +531,7 @@ async function loadUsers() {
                         profilePicture: userData.profilePicture,
                         verified: userData.verified || false,
                         alias: userData.alias,
-                        lastMessageTime: dmUsers.get(userId).lastMessageTime,
-                        lastMessage: dmUsers.get(userId).lastMessage,
-                        isGroup: false
+                        lastMessageTime: dmUsers.get(userId).lastMessageTime
                     };
                     
                     // Cache the user data
@@ -568,43 +540,8 @@ async function loadUsers() {
                 }
                 return null;
             });
-            
-            // Get group data for each group
-            const groupPromises = Array.from(groups.keys()).map(async (groupId) => {
-                // Check if we already have this group in cache
-                if (sidebarUsers.has(groupId)) {
-                    const cachedGroup = sidebarUsers.get(groupId);
-                    return {
-                        ...cachedGroup,
-                        lastMessageTime: groups.get(groupId).lastMessageTime,
-                        lastMessage: groups.get(groupId).lastMessage,
-                        isGroup: true
-                    };
-                }
-                
-                const groupDoc = await getDoc(doc(db, 'groups', groupId));
-                if (groupDoc.exists()) {
-                    const groupData = groupDoc.data();
-                    const group = {
-                        id: groupId,
-                        username: groupData.name || 'Unnamed Group',
-                        profilePicture: groupData.photoURL || 'default-avatar.png',
-                        members: groupData.members || [],
-                        createdBy: groupData.createdBy,
-                        lastMessageTime: groups.get(groupId).lastMessageTime,
-                        lastMessage: groups.get(groupId).lastMessage,
-                        isGroup: true
-                    };
-                    
-                    // Cache the group data
-                    sidebarUsers.set(groupId, group);
-                    return group;
-                }
-                return null;
-            });
-            
-            // Combine users and groups
-            const users = (await Promise.all([...userPromises, ...groupPromises])).filter(item => item !== null);
+
+            const users = (await Promise.all(userPromises)).filter(user => user !== null);
 
             // Sort users by last message timestamp
             users.sort((a, b) => {
@@ -668,28 +605,14 @@ function updateUserElement(userElement, user) {
     const profilePicture = userElement.querySelector('.profile-picture');
     const username = userElement.querySelector('.username');
     
-    // Update group-chat class
-    if (user.isGroup) {
-        userElement.classList.add('group-chat');
-    } else {
-        userElement.classList.remove('group-chat');
-    }
-    
     // Update profile picture if different
-    const defaultPic = user.isGroup ? 'default-avatar.png' : 'https://i.ibb.co/Gf9VD2MN/pfp.png';
-    if (profilePicture.src !== (user.profilePicture || defaultPic)) {
-        profilePicture.src = user.profilePicture || defaultPic;
+    if (profilePicture.src !== (user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png')) {
+        profilePicture.src = user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
         profilePicture.alt = displayName;
     }
     
     // Update username if different
-    let newUsername;
-    if (user.isGroup) {
-        newUsername = displayName;
-    } else {
-        newUsername = `${displayName}${user.verified ? '<span class="material-symbols-outlined verified-badge" style="font-variation-settings: \'FILL\' 1;">verified</span>' : ''}`;
-    }
-    
+    const newUsername = `${displayName}${user.verified ? '<span class="material-symbols-outlined verified-badge" style="font-variation-settings: \'FILL\' 1;">verified</span>' : ''}`;
     if (username.innerHTML !== newUsername) {
         username.innerHTML = newUsername;
     }
@@ -698,46 +621,23 @@ function updateUserElement(userElement, user) {
 function createUserElement(user) {
     const userElement = document.createElement('div');
     userElement.className = 'user-item';
-    // Add group-chat class if it's a group
-    if (user.isGroup) {
-        userElement.classList.add('group-chat');
-    }
-    
     userElement.dataset.uid = user.id;
     const displayName = user.alias || user.username;
-    
-    // Different HTML structure for groups vs direct messages
-    if (user.isGroup) {
-        userElement.innerHTML = `
-            <div class="profile-picture-container">
-                <img src="${user.profilePicture || 'default-avatar.png'}" alt="${displayName}" class="profile-picture">
-            </div>
-            <span class="username">${displayName}</span>
-            <div class="user-actions">
-                <span class="material-symbols-outlined action-icon pin-icon">keep</span>
-                <span class="material-symbols-outlined action-icon close-icon">close</span>
-            </div>
-        `;
-    } else {
-        userElement.innerHTML = `
-            <div class="profile-picture-container">
-                <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${displayName}" class="profile-picture">
-                <div class="online-status"></div>
-            </div>
-            <span class="username">${displayName}${user.verified ? '<span class="material-symbols-outlined verified-badge" style="font-variation-settings: \'FILL\' 1;">verified</span>' : ''}</span>
-            <div class="user-actions">
-                <span class="material-symbols-outlined action-icon pin-icon">keep</span>
-                <span class="material-symbols-outlined action-icon close-icon">close</span>
-            </div>
-        `;
-    }
+    userElement.innerHTML = `
+        <div class="profile-picture-container">
+            <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${displayName}" class="profile-picture">
+            <div class="online-status"></div>
+        </div>
+        <span class="username">${displayName}${user.verified ? '<span class="material-symbols-outlined verified-badge" style="font-variation-settings: \'FILL\' 1;">verified</span>' : ''}</span>
+        <div class="user-actions">
+            <span class="material-symbols-outlined action-icon pin-icon">keep</span>
+            <span class="material-symbols-outlined action-icon close-icon">close</span>
+        </div>
+    `;
     
     // Add click handler for the user item
     userElement.onclick = (e) => {
-        // Different handling for groups vs direct messages
-        if (user.isGroup) {
-            startChat(user.id, user.username);
-        } else if (!e.target.classList.contains('action-icon')) {
+        if (!e.target.classList.contains('action-icon')) {
             startChat(user.id, displayName);
         }
     };
@@ -748,7 +648,6 @@ function createUserElement(user) {
         e.stopPropagation();
         userElement.remove();
         try {
-            // Same hiding logic for both direct messages and group chats
             await setDoc(doc(db, 'users', currentUser.uid), {
                 hiddenConversations: arrayUnion(user.id)
             }, { merge: true });
@@ -777,7 +676,6 @@ function createUserElement(user) {
             const userDataRef = userDocRef.data();
             const pinnedConversations = userDataRef?.pinnedConversations || [];
             
-            // Same pinning logic for both direct messages and group chats
             if (!isPinned) {
                 if (!pinnedConversations.includes(user.id)) {
                     await setDoc(doc(db, 'users', currentUser.uid), {
@@ -795,19 +693,17 @@ function createUserElement(user) {
         }
     };
 
-    // Set up online status listener (only for direct messages, not for groups)
-    if (!user.isGroup) {
-        const onlineStatusRef = doc(db, 'users', user.id);
-        onSnapshot(onlineStatusRef, (doc) => {
-            const userData = doc.data();
-            const onlineStatus = userElement.querySelector('.online-status');
-            if (userData?.isOnline && isUserActuallyOnline(userData.lastSeen)) {
-                onlineStatus.classList.add('active');
-            } else {
-                onlineStatus.classList.remove('active');
-            }
-        });
-    }
+    // Set up online status listener
+    const onlineStatusRef = doc(db, 'users', user.id);
+    onSnapshot(onlineStatusRef, (doc) => {
+        const userData = doc.data();
+        const onlineStatus = userElement.querySelector('.online-status');
+        if (userData?.isOnline && isUserActuallyOnline(userData.lastSeen)) {
+            onlineStatus.classList.add('active');
+        } else {
+            onlineStatus.classList.remove('active');
+        }
+    });
     
     return userElement;
 }
@@ -818,61 +714,28 @@ async function startChat(userId, username) {
         return;
     }
 
-    // Check if this is a group chat
-    const isGroup = userId.startsWith(GROUP_CHAT_PREFIX);
+
+
+    // Get current user's data to check for aliases and hidden conversations
+    const currentUserDocRef = await getDoc(doc(db, 'users', currentUser.uid));
+    const currentUserDataRef = currentUserDocRef.data();
+    const userAliases = currentUserDataRef?.userAliases || {};
+    const hiddenConversations = currentUserDataRef?.hiddenConversations || [];
     
-    if (isGroup) {
-        // Handle group chat
-        const groupDoc = await getDoc(doc(db, 'groups', userId));
-        if (!groupDoc.exists()) {
-            console.error('Group not found:', userId);
-            return;
-        }
-        
-        const groupData = groupDoc.data();
-        currentChatUser = { 
-            id: userId, 
-            username: groupData.name,
-            isGroup: true,
-            members: groupData.members,
-            createdBy: groupData.createdBy,
-            photoURL: groupData.photoURL || 'default-avatar.png'
-        };
-        
-        // Update chat header with group info
-        updateChatHeader(currentChatUser);
-    } else {
-        // Handle direct message chat
-        // Get current user's data to check for aliases and hidden conversations
-        const currentUserDocRef = await getDoc(doc(db, 'users', currentUser.uid));
-        const currentUserDataRef = currentUserDocRef.data();
-        const userAliases = currentUserDataRef?.userAliases || {};
-        const hiddenConversations = currentUserDataRef?.hiddenConversations || [];
-        
-        // If this conversation was hidden, remove it from hiddenConversations
-        if (hiddenConversations.includes(userId)) {
-            await setDoc(doc(db, 'users', currentUser.uid), {
-                hiddenConversations: arrayRemove(userId)
-            }, { merge: true });
-        }
-        
-        // Get the other user's data
-        const otherUserDoc = await getDoc(doc(db, 'users', userId));
-        const otherUserData = otherUserDoc.data();
-        const actualUsername = otherUserData?.username || username;
-        const alias = userAliases[userId] || actualUsername;
-        
-        currentChatUser = { 
-            id: userId, 
-            username: alias,
-            isGroup: false,
-            photoURL: otherUserData?.profilePicture || 'default-avatar.png',
-            verified: otherUserData?.verified || false
-        };
-        
-        // Update chat header with user info
-        updateChatHeader(currentChatUser);
+    // If this conversation was hidden, remove it from hiddenConversations
+    if (hiddenConversations.includes(userId)) {
+        await setDoc(doc(db, 'users', currentUser.uid), {
+            hiddenConversations: arrayRemove(userId)
+        }, { merge: true });
     }
+    
+    // Get the other user's data
+    const otherUserDoc = await getDoc(doc(db, 'users', userId));
+    const otherUserData = otherUserDoc.data();
+    const actualUsername = otherUserData?.username || username;
+    const alias = userAliases[userId] || actualUsername;
+    
+    currentChatUser = { id: userId, username: alias };
     
     // Update active user in sidebar
     const userItems = document.querySelectorAll('.user-item');
@@ -1105,7 +968,7 @@ function formatReactions(reactions) {
     return reactionDiv;
 }
 
-// Modify the loadMessages function to include reactions and handle group chats
+// Modify the loadMessages function to include reactions
 async function loadMessages() {
     if (!currentUser || !currentChatUser) {
         console.log('No current user or chat user');
@@ -1140,21 +1003,12 @@ async function loadMessages() {
                 const message = doc.data();
                 console.log('Message data:', message); // Debug log
                 
-                // Check if this message belongs to the current chat
-                let isRelevantMessage = false;
-                
-                if (currentChatUser.isGroup) {
-                    // For group chats, check if the message has the correct groupId
-                    isRelevantMessage = message.groupId === currentChatUser.id;
-                } else {
-                    // For direct messages, check if both users are participants
-                    isRelevantMessage = message.participants.includes(currentChatUser.id) && 
-                                       message.participants.includes(currentUser.uid) &&
-                                       !message.isGroupMessage;
-                }
-                
-                // Only show messages if they're relevant and sender is not blocked
-                if (isRelevantMessage && !blockedUsers.includes(message.senderId)) {
+                // Only show messages if:
+                // 1. The message is between current user and current chat user
+                // 2. The sender is not blocked
+                if (message.participants.includes(currentChatUser.id) && 
+                    message.participants.includes(currentUser.uid) &&
+                    !blockedUsers.includes(message.senderId)) {
                     
                     const messageTime = message.timestamp.toDate();
                     
@@ -1192,34 +1046,6 @@ async function loadMessages() {
                     const messageElement = document.createElement('div');
                     messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
                     messageElement.dataset.messageId = doc.id;
-                    
-                    // For group chats, add sender name for messages not from current user
-                    if (message.isGroupMessage && message.senderId !== currentUser.uid) {
-                        const senderElement = document.createElement('div');
-                        senderElement.className = 'sender';
-                        
-                        // Get sender's display name from cache or set a placeholder
-                        let senderName = 'Unknown User';
-                        if (userCache[message.senderId]) {
-                            senderName = userCache[message.senderId].displayName || userCache[message.senderId].username;
-                        } else {
-                            // Fetch user data if not in cache
-                            getDoc(doc(db, 'users', message.senderId))
-                                .then(userDoc => {
-                                    if (userDoc.exists()) {
-                                        const userData = userDoc.data();
-                                        senderName = userData.displayName || userData.username;
-                                        senderElement.textContent = senderName;
-                                        // Cache the user data
-                                        userCache[message.senderId] = userData;
-                                    }
-                                })
-                                .catch(error => console.error('Error fetching sender data:', error));
-                        }
-                        
-                        senderElement.textContent = senderName;
-                        messageElement.appendChild(senderElement);
-                    }
                     
                     // Create message content container
                     const contentContainer = document.createElement('div');
@@ -1301,10 +1127,6 @@ function openComposeModal() {
     // Focus the search input
     const searchInput = document.getElementById('compose-search');
     searchInput.focus();
-    
-    // Reset to direct message tab by default
-    const directTab = document.querySelector('.tab-button[data-tab="direct"]');
-    if (directTab) directTab.click();
 }
 
 function closeComposeModal() {
@@ -1319,18 +1141,6 @@ function closeComposeModal() {
         // Clear search input
         const searchInput = document.getElementById('compose-search');
         searchInput.value = '';
-        // Reset selected users
-        selectedUsers = [];
-        const selectedUsersContainer = document.getElementById('selected-users');
-        selectedUsersContainer.innerHTML = '';
-        selectedUsersContainer.style.display = 'none';
-        // Reset group options
-        const groupOptions = document.querySelector('.group-options');
-        groupOptions.style.display = 'none';
-        const groupNameInput = document.getElementById('group-name');
-        if (groupNameInput) groupNameInput.value = '';
-        // Reset to direct message mode
-        isGroupChatMode = false;
     }, 300);
 }
 
@@ -1407,57 +1217,6 @@ document.addEventListener('DOMContentLoaded', () => {
         closeModal.addEventListener('click', closeComposeModal);
     }
 
-    // Tab switching functionality
-    const tabButtons = document.querySelectorAll('.tab-button');
-    if (tabButtons.length) {
-        tabButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                // Remove active class from all tabs
-                tabButtons.forEach(btn => btn.classList.remove('active'));
-                // Add active class to clicked tab
-                button.classList.add('active');
-                
-                const tabType = button.getAttribute('data-tab');
-                isGroupChatMode = tabType === 'group';
-                
-                // Show/hide appropriate elements based on tab
-                const selectedUsersContainer = document.getElementById('selected-users');
-                const groupOptions = document.querySelector('.group-options');
-                
-                if (isGroupChatMode) {
-                    // Group chat mode
-                    selectedUsersContainer.style.display = 'flex';
-                    groupOptions.style.display = 'block';
-                } else {
-                    // Direct message mode
-                    selectedUsersContainer.style.display = 'none';
-                    groupOptions.style.display = 'none';
-                }
-                
-                // Clear selected users when switching to direct message
-                if (!isGroupChatMode) {
-                    selectedUsers = [];
-                    selectedUsersContainer.innerHTML = '';
-                }
-                
-                // Update create group button state
-                updateCreateGroupButtonState();
-            });
-        });
-    }
-    
-    // Create group button functionality
-    const createGroupButton = document.getElementById('create-group-button');
-    if (createGroupButton) {
-        createGroupButton.addEventListener('click', createGroupChat);
-    }
-    
-    // Group name input event listener
-    const groupNameInput = document.getElementById('group-name');
-    if (groupNameInput) {
-        groupNameInput.addEventListener('input', updateCreateGroupButtonState);
-    }
-
     // Compose search event listener
     const composeSearch = document.getElementById('compose-search');
     if (composeSearch) {
@@ -1508,27 +1267,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (suggestions.length > 0) {
                         modalContent.classList.add('has-results');
                         suggestions.forEach(user => {
-                            // Check if user is already selected (for group chat)
-                            const isSelected = selectedUsers.some(selectedUser => selectedUser.id === user.id);
-                            
                             const userElement = document.createElement('div');
                             userElement.className = 'compose-user-item';
-                            if (isSelected) userElement.classList.add('selected');
-                            
                             userElement.innerHTML = `
                                 <img src="${user.profilePicture}" alt="${user.username}" class="user-avatar">
                                 <span>${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
                             `;
-                            
                             userElement.onclick = () => {
-                                if (isGroupChatMode) {
-                                    // Group chat: add/remove user from selection
-                                    toggleUserSelection(user);
-                                } else {
-                                    // Direct message: start chat immediately
-                                    startChat(user.id, user.username);
-                                    closeComposeModal();
-                                }
+                                startChat(user.id, user.username);
+                                closeComposeModal();
                             };
                             composeResults.appendChild(userElement);
                         });
@@ -1553,7 +1300,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Search input event listener
     const searchInput = document.getElementById('search-user');
-    // Define clearSearch by querying the DOM
     if (searchInput) {
         let searchTimeout;
         searchInput.addEventListener('input', (e) => {
@@ -1588,7 +1334,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const clearSearch = document.querySelector('.clear-search');
     if (clearSearch) {
         clearSearch.addEventListener('click', async () => {
             if (searchInput) {
@@ -1612,141 +1357,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Helper functions for group chat
-function toggleUserSelection(user) {
-    // Check if user is already selected
-    const index = selectedUsers.findIndex(selectedUser => selectedUser.id === user.id);
-    
-    if (index !== -1) {
-        // User is already selected, remove them
-        selectedUsers.splice(index, 1);
-    } else {
-        // Add user to selection
-        selectedUsers.push(user);
-    }
-    
-    // Update the selected users display
-    updateSelectedUsersDisplay();
-    
-    // Update the compose results to reflect selection state
-    const userElements = document.querySelectorAll('.compose-user-item');
-    userElements.forEach(element => {
-        const username = element.querySelector('span').textContent.replace('verified', '').trim();
-        if (username === user.username) {
-            if (index !== -1) {
-                element.classList.remove('selected');
-            } else {
-                element.classList.add('selected');
-            }
-        }
-    });
-    
-    // Update create group button state
-    updateCreateGroupButtonState();
-}
-
-function updateSelectedUsersDisplay() {
-    const selectedUsersContainer = document.getElementById('selected-users');
-    selectedUsersContainer.innerHTML = '';
-    
-    if (selectedUsers.length > 0) {
-        selectedUsersContainer.style.display = 'flex';
-        
-        selectedUsers.forEach(user => {
-            const userChip = document.createElement('div');
-            userChip.className = 'selected-user-chip';
-            userChip.innerHTML = `
-                <img src="${user.profilePicture}" alt="${user.username}" class="user-avatar small">
-                <span>${user.username}</span>
-                <button class="remove-user" data-id="${user.id}">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
-            `;
-            selectedUsersContainer.appendChild(userChip);
-            
-            // Add event listener to remove button
-            const removeButton = userChip.querySelector('.remove-user');
-            removeButton.addEventListener('click', (e) => {
-                e.stopPropagation(); // Prevent event bubbling
-                const userId = removeButton.getAttribute('data-id');
-                const userToRemove = selectedUsers.find(u => u.id === userId);
-                if (userToRemove) {
-                    toggleUserSelection(userToRemove);
-                }
-            });
-        });
-    } else {
-        selectedUsersContainer.style.display = 'none';
-    }
-}
-
-function updateCreateGroupButtonState() {
-    const createGroupButton = document.getElementById('create-group-button');
-    const groupNameInput = document.getElementById('group-name');
-    
-    if (createGroupButton && groupNameInput) {
-        // Enable button only if there are at least 2 selected users and group name is not empty
-        const hasEnoughUsers = selectedUsers.length >= 2;
-        const hasGroupName = groupNameInput.value.trim().length > 0;
-        
-        createGroupButton.disabled = !(hasEnoughUsers && hasGroupName);
-    }
-}
-
-async function createGroupChat() {
-    if (selectedUsers.length < 2) {
-        alert('Please select at least 2 users for a group chat');
-        return;
-    }
-    
-    const groupNameInput = document.getElementById('group-name');
-    const groupName = groupNameInput.value.trim();
-    
-    if (!groupName) {
-        alert('Please enter a group name');
-        return;
-    }
-    
-    try {
-        // Create a unique group ID
-        const groupId = GROUP_CHAT_PREFIX + Date.now();
-        
-        // Get all member IDs including current user
-        const memberIds = selectedUsers.map(user => user.id);
-        memberIds.push(currentUser.uid); // Add current user
-        
-        // Create group document in Firestore
-        await setDoc(doc(db, 'groups', groupId), {
-            name: groupName,
-            members: memberIds,
-            createdBy: currentUser.uid,
-            createdAt: serverTimestamp(),
-            lastMessage: null,
-            lastMessageTimestamp: serverTimestamp()
-        });
-        
-        // Send a system message to the group chat
-        await addDoc(collection(db, 'messages'), {
-            content: `Group "${groupName}" created by ${currentUser.displayName || 'User'}`,
-            senderId: 'system',
-            timestamp: serverTimestamp(),
-            participants: memberIds,
-            groupId: groupId,
-            isGroupMessage: true,
-            isSystemMessage: true
-        });
-        
-        // Start the group chat
-        startChat(groupId, groupName);
-        
-        // Close the compose modal
-        closeComposeModal();
-    } catch (error) {
-        console.error('Error creating group chat:', error);
-        alert('Failed to create group chat. Please try again.');
-    }
-}
-
 // Close compose modal when clicking outside
 window.addEventListener('click', (event) => {
     const modal = document.getElementById('compose-modal');
@@ -1760,41 +1370,21 @@ async function sendMessage(content) {
     if (!content.trim() || !currentChatUser) return;
 
     try {
-        let messageData = {
+        const messageData = {
             content: content,
             senderId: currentUser.uid,
             timestamp: serverTimestamp(),
+            participants: [currentUser.uid, currentChatUser.id]
         };
-        
-        // Check if this is a group chat
-        if (currentChatUser.id.startsWith(GROUP_CHAT_PREFIX)) {
-            // For group chats, get the participants from the group data
-            const groupDoc = await getDoc(doc(db, 'groups', currentChatUser.id));
-            if (groupDoc.exists()) {
-                const groupData = groupDoc.data();
-                messageData.participants = groupData.members;
-                messageData.groupId = currentChatUser.id;
-                messageData.isGroupMessage = true;
-            } else {
-                console.error('Group not found');
-                return;
-            }
-        } else {
-            // For direct messages, just include the two participants
-            messageData.participants = [currentUser.uid, currentChatUser.id];
-            messageData.isGroupMessage = false;
-        }
 
-        // Add the message to Firestore
+        // Normal message handling for all users
         await addDoc(collection(db, 'messages'), messageData);
 
         // Clear input
         document.getElementById('message-input').value = '';
         
-        // Update typing status (only for direct messages)
-        if (!messageData.isGroupMessage) {
-            await updateTypingStatus(false);
-        }
+        // Update typing status
+        await updateTypingStatus(false);
         
     } catch (error) {
         console.error('Error sending message:', error);
@@ -2155,7 +1745,7 @@ async function searchAllUsers(searchTerm) {
 // Add event listeners for search
 document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('search-user');
-    // Define clearSearch by querying the DOM
+    const clearSearch = document.querySelector('.clear-search');
     const usersContainer = document.getElementById('users-container');
 
     if (searchInput) {
@@ -2192,7 +1782,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const clearSearch = document.querySelector('.clear-search');
     if (clearSearch) {
         clearSearch.addEventListener('click', async () => {
             if (searchInput) {
@@ -2232,24 +1821,10 @@ function updateChatHeader(user) {
     const chatHeader = document.querySelector('.chat-header');
     if (!chatHeader) return;
     
-    if (user.isGroup) {
-        // Group chat header
-        chatHeader.innerHTML = `
-            <div class="group-chat-header">
-                <img src="${user.photoURL || 'default-avatar.png'}" alt="${user.username}" class="profile-picture group-picture">
-                <div class="group-info">
-                    <span class="username">${user.username}</span>
-                    <span class="group-members">${user.members ? user.members.length : 0} members</span>
-                </div>
-            </div>
-        `;
-    } else {
-        // Direct message header
-        chatHeader.innerHTML = `
-            <img src="${user.photoURL || 'default-avatar.png'}" alt="${user.username}" class="profile-picture">
-            <span class="username">${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
-        `;
-    }
+    chatHeader.innerHTML = `
+        <img src="${user.photoURL || 'default-avatar.png'}" alt="${user.username}" class="profile-picture">
+        <span class="username">${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
+    `;
 }
 
 // User Options Modal
@@ -2717,18 +2292,10 @@ function setupMessageListener() {
                 
                 // Only play sound if:
                 // 1. Message is from someone else
-                // 2. We're not currently in a chat with this person
-                let shouldNotify = message.senderId !== currentUser.uid;
-                
-                // For group messages, check if we're in that group chat
-                if (message.isGroupMessage) {
-                    shouldNotify = shouldNotify && (!currentChatUser || currentChatUser.id !== message.groupId);
-                } else {
-                    // For direct messages, check if we're chatting with the sender
-                    shouldNotify = shouldNotify && (!currentChatUser || currentChatUser.id !== message.senderId);
-                }
-                
-                if (shouldNotify) {
+                // 2. Sender is not blocked
+                // 3. We're not currently in a chat with this person
+                if (message.senderId !== currentUser.uid && 
+                    !message.participants.includes(currentChatUser?.id)) {
                     playNotificationSound();
                 }
             }
