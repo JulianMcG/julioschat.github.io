@@ -125,27 +125,11 @@
     <!-- Compose Modal -->
     <div id="compose-modal" class="modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h2>New Message</h2>
-                <span class="material-symbols-outlined close-modal">close</span>
-            </div>
-            <div class="modal-tabs">
-                <button class="tab-button active" data-tab="direct">Direct Message</button>
-                <button class="tab-button" data-tab="group">Group Chat</button>
-            </div>
             <div class="search-container">
                 <span class="material-symbols-outlined search-icon">search</span>
                 <input type="text" id="compose-search" placeholder="Search users...">
             </div>
             <div id="compose-results" class="compose-results"></div>
-            <div id="selected-users" class="selected-users" style="display: none;"></div>
-            <div class="group-options" style="display: none;">
-                <div class="form-group">
-                    <label for="group-name">Group Name</label>
-                    <input type="text" id="group-name" placeholder="Enter a group name">
-                </div>
-                <button id="create-group-button" class="create-group-button" disabled>Create Group Chat</button>
-            </div>
         </div>
     </div>
 
