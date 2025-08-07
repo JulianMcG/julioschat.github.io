@@ -424,8 +424,8 @@ body {
     cursor: pointer;
     color: #B6B8C8;
     transition: color 0.3s ease;
-    font-size: 18px;
-    font-variation-settings: 'FILL' 0;
+    font-size: 22px;
+    font-variation-settings: 'FILL' 1;
 }
 
 .toggle-sidebar:hover {
@@ -520,7 +520,7 @@ body {
 .search-icon {
     color: #B6B8C8;
     margin-right: 8px;
-    font-size: 18px;
+    font-size: 22px;
     font-variation-settings: 'FILL' 1;
 }
 
@@ -545,7 +545,7 @@ body {
     right: 10px;
     color: #B6B8C8;
     cursor: pointer;
-    font-size: 18px;
+    font-size: 22px;
     font-variation-settings: 'FILL' 1;
     display: none;
 }
@@ -668,7 +668,7 @@ body {
 .action-icon {
     color: #B6B8C8;
     cursor: pointer;
-    font-size: 18px;
+    font-size: 22px;
     font-variation-settings: 'FILL' 1;
 }
 
@@ -1009,7 +1009,8 @@ body {
 .close-modal {
     color: #B6B8C8;
     cursor: pointer;
-    font-size: 24px;
+    font-size: 22px;
+    font-variation-settings: 'FILL' 1;
 }
 
 .modal-body {
@@ -1229,7 +1230,7 @@ body {
 #compose-modal .search-icon {
     color: #B6B8C8;
     margin-left: 12px;
-    font-size: 20px;
+    font-size: 22px;
     font-variation-settings: 'FILL' 1;
     transition: color 0.3s ease;
 }
@@ -1763,8 +1764,8 @@ input:checked + .slider:before {
     transform: translateY(-50%);
     color: #B6B8C8;
     pointer-events: none;
-    font-size: 18px;
-    font-variation-settings: 'wght' 300;
+    font-size: 22px;
+    font-variation-settings: 'FILL' 1;
 }
 
 .divider {
