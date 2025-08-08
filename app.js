@@ -2385,3 +2385,22 @@ window.addEventListener('resize', checkUsernameOverflow);
 
 
 
+
+
+// Group chat creation helper
+document.getElementById('new-group-button').addEventListener('click', () => {
+    const groupName = prompt("Enter group name:");
+    if (!groupName) return;
+    const participantIds = prompt("Enter comma-separated user IDs to add:").split(',').map(id => id.trim()).filter(Boolean);
+    participantIds.push(currentUser.uid);
+    const convRef = collection(db, 'conversations');
+    addDoc(convRef, {
+        name: groupName,
+        isGroup: true,
+        participants: participantIds,
+        createdAt: serverTimestamp(),
+        createdBy: currentUser.uid
+    }).then(docRef => {
+        console.log("Group chat created with ID:", docRef.id);
+    }).catch(console.error);
+});
