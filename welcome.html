@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome - Julio's Chat</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,500;0,700;1,500;1,700&display=swap" rel="stylesheet">
+    <script type="module" src="firebase-config.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: #0c0e16;
+            color: #ecebf7;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .welcome-container {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .welcome-text {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 500;
+            font-size: 2.5rem;
+            color: #ecebf7;
+            text-align: left;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .loading {
+            font-size: 1.2rem;
+            color: #B6B8C8;
+        }
+
+        .login-prompt {
+            font-size: 1.2rem;
+            color: #B6B8C8;
+            margin-top: 20px;
+        }
+
+        .login-link {
+            color: #ecebf7;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .welcome-text {
+                font-size: 2rem;
+                padding: 0 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="welcome-container">
+        <h1 class="welcome-text" id="welcome-text">Loading...</h1>
+    </div>
+
+    <script type="module">
+        import { auth, db } from './firebase-config.js';
+        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const welcomeText = document.getElementById('welcome-text');
+
+        // Listen for authentication state changes
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                try {
+                    // Get user data from Firestore
+                    const userDoc = await getDoc(doc(db, 'users', user.uid));
+                    const userData = userDoc.data();
+                    const username = userData?.username || user.displayName || 'Home';
+                    
+                    // Update the welcome text
+                    welcomeText.textContent = `Welcome back, ${username}!`;
+                } catch (error) {
+                    console.error('Error fetching user data:', error);
+                    welcomeText.textContent = 'Welcome back, Home!';
+                }
+            } else {
+                // User is not logged in
+                welcomeText.innerHTML = `
+                    <div class="login-prompt">
+                        Please <a href="index.html" class="login-link">log in</a> to continue
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>
