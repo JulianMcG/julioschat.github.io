@@ -31,7 +31,7 @@
 
         .welcome-container {
             text-align: left;
-            padding: 20px;
+            padding: 10px;
             position: relative;
             max-width: 100%;
         }
@@ -119,11 +119,7 @@
                 }
             } else {
                 // User is not logged in
-                welcomeText.innerHTML = `
-                    <div class="login-prompt">
-                        Please <a href="index.html" class="login-link">log in</a> to continue
-                    </div>
-                `;
+                welcomeText.textContent = 'Welcome back, Home!';
             }
         });
     </script>
