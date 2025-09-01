@@ -161,7 +161,7 @@
                         profilePicture.style.display = 'none';
                     } else {
                         const verifiedBadge = isVerified ? '<span class="material-symbols-outlined verified-badge" style="font-variation-settings: \'FILL\' 1;">verified</span>' : '';
-                        welcomeText.innerHTML = `Welcome back, ${username}!${verifiedBadge}`;
+                        welcomeText.innerHTML = `Welcome back, ${username}${verifiedBadge}`;
                         profilePicture.src = profilePic;
                         profilePicture.style.display = 'block';
                     }
