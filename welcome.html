@@ -153,12 +153,18 @@
                     const userData = userDoc.data();
                     const username = userData?.username || user.displayName || 'Home';
                     const profilePic = userData?.profilePicture || user.photoURL || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
+                    const isVerified = userData?.verified || false;
                     
                     // Update the welcome text and show profile picture
-                    const verifiedBadge = isVerified ? '<span class="material-symbols-outlined verified-badge" style="font-variation-settings: \'FILL\' 1;">verified</span>' : '';
-                    welcomeText.innerHTML = `Welcome back, ${username}!${verifiedBadge}`;
-                    profilePicture.src = profilePic;
-                    profilePicture.style.display = 'block';
+                    if (username === 'Home') {
+                        welcomeText.textContent = 'Home';
+                        profilePicture.style.display = 'none';
+                    } else {
+                        const verifiedBadge = isVerified ? '<span class="material-symbols-outlined verified-badge" style="font-variation-settings: \'FILL\' 1;">verified</span>' : '';
+                        welcomeText.innerHTML = `Welcome back, ${username}!${verifiedBadge}`;
+                        profilePicture.src = profilePic;
+                        profilePicture.style.display = 'block';
+                    }
                 } catch (error) {
                     console.error('Error fetching user data:', error);
                     welcomeText.innerHTML = 'Welcome back, Home!';
