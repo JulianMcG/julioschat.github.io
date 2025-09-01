@@ -1086,21 +1086,26 @@ async function loadMessages() {
                         messageElement.appendChild(reactionButton);
                     }
                     
-                    // Add read receipt for sent messages
+                    // Add read receipt only for the most recent sent message
                     if (message.senderId === currentUser.uid) {
-                        const readReceipt = document.createElement('div');
-                        readReceipt.className = 'read-receipt';
+                        // Check if this is the last message in the chat
+                        const isLastMessage = doc === snapshot.docs[snapshot.docs.length - 1];
                         
-                        // Check if the message has been read by the recipient
-                        if (message.readBy && message.readBy.includes(currentChatUser.id)) {
-                            readReceipt.textContent = 'Read';
-                            readReceipt.classList.add('read');
-                        } else {
-                            readReceipt.textContent = 'Sent';
-                            readReceipt.classList.add('sent');
+                        if (isLastMessage) {
+                            const readReceipt = document.createElement('div');
+                            readReceipt.className = 'read-receipt';
+                            
+                            // Check if the message has been read by the recipient
+                            if (message.readBy && message.readBy.includes(currentChatUser.id)) {
+                                readReceipt.textContent = 'Read';
+                                readReceipt.classList.add('read');
+                            } else {
+                                readReceipt.textContent = 'Sent';
+                                readReceipt.classList.add('sent');
+                            }
+                            
+                            messageElement.appendChild(readReceipt);
                         }
-                        
-                        messageElement.appendChild(readReceipt);
                     }
                     
                     // Append all elements
@@ -1118,6 +1123,9 @@ async function loadMessages() {
             
             // Mark messages as read after they're displayed
             markMessagesAsRead(currentChatUser.id);
+            
+            // Ensure read receipt is only on the most recent sent message
+            ensureReadReceiptOnLatestMessage();
         }, (error) => {
             console.error('Error in message snapshot:', error);
         });
@@ -1451,18 +1459,17 @@ function updateReadReceipts(chatUserId) {
     const chatMessages = document.getElementById('chat-messages');
     if (!chatMessages) return;
     
-    // Find all sent messages and update their read receipts
+    // Find only the most recent sent message and update its read receipt
     const sentMessages = chatMessages.querySelectorAll('.message.sent');
-    sentMessages.forEach(messageElement => {
-        const readReceipt = messageElement.querySelector('.read-receipt');
+    if (sentMessages.length > 0) {
+        const lastSentMessage = sentMessages[sentMessages.length - 1];
+        const readReceipt = lastSentMessage.querySelector('.read-receipt');
         if (readReceipt) {
-            // For now, we'll just update to "Read" since we know the user is viewing the chat
-            // In a more sophisticated implementation, you could check the actual readBy status
             readReceipt.textContent = 'Read';
             readReceipt.classList.remove('sent');
             readReceipt.classList.add('read');
         }
-    });
+    }
 }
 
 // Function to update read receipt for a specific message
@@ -1485,6 +1492,37 @@ function updateReadReceiptForMessage(messageId, messageData) {
             readReceipt.classList.remove('read');
             readReceipt.classList.add('sent');
         }
+    }
+}
+
+// Function to ensure read receipt is only on the most recent sent message
+function ensureReadReceiptOnLatestMessage() {
+    const chatMessages = document.getElementById('chat-messages');
+    if (!chatMessages) return;
+    
+    // Remove read receipts from all sent messages
+    const allSentMessages = chatMessages.querySelectorAll('.message.sent');
+    allSentMessages.forEach(messageElement => {
+        const existingReceipt = messageElement.querySelector('.read-receipt');
+        if (existingReceipt) {
+            existingReceipt.remove();
+        }
+    });
+    
+    // Add read receipt only to the most recent sent message
+    if (allSentMessages.length > 0) {
+        const lastSentMessage = allSentMessages[allSentMessages.length - 1];
+        const readReceipt = document.createElement('div');
+        readReceipt.className = 'read-receipt';
+        
+        // Check if this message has been read
+        const messageId = lastSentMessage.dataset.messageId;
+        // For now, we'll assume it's read since the user is viewing the chat
+        // In a more sophisticated implementation, you could check the actual readBy status
+        readReceipt.textContent = 'Read';
+        readReceipt.classList.add('read');
+        
+        lastSentMessage.appendChild(readReceipt);
     }
 }
 
