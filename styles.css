@@ -927,6 +927,25 @@ body {
     text-decoration: line-through;
 }
 
+/* Read Receipt Styles */
+.read-receipt {
+    font-size: 11px;
+    color: #B6B8C8;
+    margin-top: 4px;
+    text-align: right;
+    font-weight: 400;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
+
+.read-receipt.sent {
+    color: #B6B8C8;
+}
+
+.read-receipt.read {
+    color: #1DA1F2;
+}
+
 /* Profile Section */
 .profile-section {
     position: absolute;
