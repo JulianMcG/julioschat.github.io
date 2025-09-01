@@ -31,9 +31,23 @@
 
         .welcome-container {
             text-align: left;
-            padding: 0px;
+            padding: 20px;
             position: relative;
             max-width: 100%;
+        }
+
+        .welcome-content {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .profile-picture {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            flex-shrink: 0;
         }
 
         .welcome-text {
@@ -92,7 +106,10 @@
 </head>
 <body>
     <div class="welcome-container">
-        <h1 class="welcome-text" id="welcome-text"></h1>
+        <div class="welcome-content">
+            <img id="profile-picture" class="profile-picture" style="display: none;" src="https://i.ibb.co/Gf9VD2MN/pfp.png" alt="Profile Picture">
+            <h1 class="welcome-text" id="welcome-text"></h1>
+        </div>
     </div>
 
     <script type="module">
@@ -101,6 +118,7 @@
         import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const welcomeText = document.getElementById('welcome-text');
+        const profilePicture = document.getElementById('profile-picture');
 
         // Listen for authentication state changes
         onAuthStateChanged(auth, async (user) => {
@@ -110,16 +128,21 @@
                     const userDoc = await getDoc(doc(db, 'users', user.uid));
                     const userData = userDoc.data();
                     const username = userData?.username || user.displayName || 'Home';
+                    const profilePic = userData?.profilePicture || user.photoURL || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
                     
-                    // Update the welcome text
+                    // Update the welcome text and show profile picture
                     welcomeText.textContent = `Welcome back, ${username}!`;
+                    profilePicture.src = profilePic;
+                    profilePicture.style.display = 'block';
                 } catch (error) {
                     console.error('Error fetching user data:', error);
                     welcomeText.textContent = 'Welcome back, Home!';
+                    profilePicture.style.display = 'none';
                 }
             } else {
                 // User is not logged in
                 welcomeText.textContent = 'Home';
+                profilePicture.style.display = 'none';
             }
         });
     </script>
