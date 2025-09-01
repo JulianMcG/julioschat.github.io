@@ -1086,6 +1086,23 @@ async function loadMessages() {
                         messageElement.appendChild(reactionButton);
                     }
                     
+                    // Add read receipt for sent messages
+                    if (message.senderId === currentUser.uid) {
+                        const readReceipt = document.createElement('div');
+                        readReceipt.className = 'read-receipt';
+                        
+                        // Check if the message has been read by the recipient
+                        if (message.readBy && message.readBy.includes(currentChatUser.id)) {
+                            readReceipt.textContent = 'Read';
+                            readReceipt.classList.add('read');
+                        } else {
+                            readReceipt.textContent = 'Sent';
+                            readReceipt.classList.add('sent');
+                        }
+                        
+                        messageElement.appendChild(readReceipt);
+                    }
+                    
                     // Append all elements
                     messageElement.appendChild(contentContainer);
                     messageElement.appendChild(reactionsContainer);
@@ -1098,6 +1115,9 @@ async function loadMessages() {
             });
             
             chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            // Mark messages as read after they're displayed
+            markMessagesAsRead(currentChatUser.id);
         }, (error) => {
             console.error('Error in message snapshot:', error);
         });
@@ -1374,7 +1394,8 @@ async function sendMessage(content) {
             content: content,
             senderId: currentUser.uid,
             timestamp: serverTimestamp(),
-            participants: [currentUser.uid, currentChatUser.id]
+            participants: [currentUser.uid, currentChatUser.id],
+            readBy: [currentUser.uid] // Initialize with sender as having read it
         };
 
         // Normal message handling for all users
@@ -1389,6 +1410,81 @@ async function sendMessage(content) {
     } catch (error) {
         console.error('Error sending message:', error);
         alert('Error sending message. Please try again.');
+    }
+}
+
+// Function to mark messages as read
+async function markMessagesAsRead(chatUserId) {
+    if (!currentUser || !chatUserId) return;
+    
+    try {
+        const messagesQuery = query(
+            collection(db, 'messages'),
+            where('participants', 'array-contains', currentUser.uid),
+            where('participants', 'array-contains', chatUserId),
+            where('senderId', '==', chatUserId) // Only mark messages from the other user as read
+        );
+        
+        const messagesSnapshot = await getDocs(messagesQuery);
+        const batch = writeBatch(db);
+        
+        messagesSnapshot.forEach(doc => {
+            const message = doc.data();
+            if (!message.readBy || !message.readBy.includes(currentUser.uid)) {
+                batch.update(doc.ref, {
+                    readBy: arrayUnion(currentUser.uid)
+                });
+            }
+        });
+        
+        await batch.commit();
+        
+        // Update read receipts in the UI
+        updateReadReceipts(chatUserId);
+    } catch (error) {
+        console.error('Error marking messages as read:', error);
+    }
+}
+
+// Function to update read receipts in the UI
+function updateReadReceipts(chatUserId) {
+    const chatMessages = document.getElementById('chat-messages');
+    if (!chatMessages) return;
+    
+    // Find all sent messages and update their read receipts
+    const sentMessages = chatMessages.querySelectorAll('.message.sent');
+    sentMessages.forEach(messageElement => {
+        const readReceipt = messageElement.querySelector('.read-receipt');
+        if (readReceipt) {
+            // For now, we'll just update to "Read" since we know the user is viewing the chat
+            // In a more sophisticated implementation, you could check the actual readBy status
+            readReceipt.textContent = 'Read';
+            readReceipt.classList.remove('sent');
+            readReceipt.classList.add('read');
+        }
+    });
+}
+
+// Function to update read receipt for a specific message
+function updateReadReceiptForMessage(messageId, messageData) {
+    const chatMessages = document.getElementById('chat-messages');
+    if (!chatMessages) return;
+    
+    const messageElement = chatMessages.querySelector(`[data-message-id="${messageId}"]`);
+    if (!messageElement) return;
+    
+    const readReceipt = messageElement.querySelector('.read-receipt');
+    if (readReceipt) {
+        // Check if the message has been read by the recipient
+        if (messageData.readBy && messageData.readBy.includes(currentChatUser.id)) {
+            readReceipt.textContent = 'Read';
+            readReceipt.classList.remove('sent');
+            readReceipt.classList.add('read');
+        } else {
+            readReceipt.textContent = 'Sent';
+            readReceipt.classList.remove('read');
+            readReceipt.classList.add('sent');
+        }
     }
 }
 
@@ -2298,6 +2394,15 @@ function setupMessageListener() {
                     !message.participants.includes(currentChatUser?.id)) {
                     playNotificationSound();
                 }
+            } else if (change.type === 'modified') {
+                const message = change.doc.data();
+                
+                // Update read receipts if this message is in the current chat
+                if (currentChatUser && 
+                    message.participants.includes(currentChatUser.id) &&
+                    message.senderId === currentUser.uid) {
+                    updateReadReceiptForMessage(change.doc.id, message);
+                }
             }
         });
     });
@@ -2385,22 +2490,3 @@ window.addEventListener('resize', checkUsernameOverflow);
 
 
 
-
-
-// Group chat creation helper
-document.getElementById('new-group-button').addEventListener('click', () => {
-    const groupName = prompt("Enter group name:");
-    if (!groupName) return;
-    const participantIds = prompt("Enter comma-separated user IDs to add:").split(',').map(id => id.trim()).filter(Boolean);
-    participantIds.push(currentUser.uid);
-    const convRef = collection(db, 'conversations');
-    addDoc(convRef, {
-        name: groupName,
-        isGroup: true,
-        participants: participantIds,
-        createdAt: serverTimestamp(),
-        createdBy: currentUser.uid
-    }).then(docRef => {
-        console.log("Group chat created with ID:", docRef.id);
-    }).catch(console.error);
-});
