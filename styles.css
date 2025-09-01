@@ -822,9 +822,6 @@ body {
     text-align: right;
     border-radius: 15px 15px 5px 15px;
     position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
 }
 
 .message-actions {
@@ -928,31 +925,6 @@ body {
 
 .message .content s {
     text-decoration: line-through;
-}
-
-/* Read Receipt Styles */
-.read-receipt {
-    font-size: 11px;
-    color: #B6B8C8;
-    margin-top: 8px;
-    text-align: right;
-    font-weight: 400;
-    opacity: 0.8;
-    transition: opacity 0.2s ease;
-    position: relative;
-    z-index: 1;
-    display: block;
-    width: auto;
-    padding-right: 0;
-    margin-bottom: 4px;
-}
-
-.read-receipt.sent {
-    color: #B6B8C8;
-}
-
-.read-receipt.read {
-    color: #1DA1F2;
 }
 
 /* Profile Section */
