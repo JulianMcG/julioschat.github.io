@@ -694,6 +694,18 @@ function updateUserElement(userElement, user) {
     if (username.innerHTML !== newUsername) {
         username.innerHTML = newUsername;
     }
+
+    // Update last message
+    const lastMessageSpan = userElement.querySelector('.last-message');
+    if (lastMessageSpan) {
+        let messagePreview = user.lastMessageContent || '';
+        if (messagePreview.length > 30) {
+            messagePreview = messagePreview.substring(0, 30) + '...';
+        }
+        if (lastMessageSpan.textContent !== messagePreview) {
+            lastMessageSpan.textContent = messagePreview;
+        }
+    }
 }
 
 function createUserElement(user) {
