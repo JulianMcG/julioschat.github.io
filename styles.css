@@ -678,12 +678,14 @@ body {
     font-size: 14px;
     white-space: nowrap;
     overflow: hidden;
-    /* text-overflow: ellipsis; Removed for fade effect */
+    /* Replace ellipsis with fade out */
+    /* text-overflow: ellipsis; */
+    mask-image: linear-gradient(to right, black 85%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
+
     position: relative;
     display: flex;
     align-items: center;
-    mask-image: linear-gradient(to right, black 85%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
 }
 
 .last-message {
@@ -691,10 +693,12 @@ body {
     color: var(--label-color);
     white-space: nowrap;
     overflow: hidden;
-    /* text-overflow: ellipsis; Removed for fade effect */
-    margin-top: 2px;
+    /* Replace ellipsis with fade out */
+    /* text-overflow: ellipsis; */
     mask-image: linear-gradient(to right, black 85%, transparent 100%);
     -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
+
+    margin-top: 2px;
 }
 
 /* Remove old unread indicator */
@@ -702,22 +706,55 @@ body {
     display: none;
 }
 
-/* New unread indicator on the left */
+/* New unread indicator on the left - Absolute positioning */
 .unread-indicator {
+    position: absolute;
+    left: 8px;
+    /* Adjust based on padding */
+    top: 50%;
+    transform: translateY(-50%);
     width: 8px;
     height: 8px;
     background-color: var(--primary-color);
     border-radius: 50%;
-    margin-right: 10px;
-    flex-shrink: 0;
     display: none;
+    z-index: 2;
 }
 
 .user-item.unread .unread-indicator {
     display: block;
 }
 
-/* Chat header username should not truncate or fade */
+/* Adjust user item padding to make room for indicator if needed, 
+   but user asked to NOT shift content. 
+   So we just place it. But if it's on top of profile pic, that's bad.
+   User said "move unread indicator to left (blue dot)".
+   And "make sure the new message indicator doesnt move the persons profile picture... but instead store it outside of the container".
+   So it should be to the left of the profile picture.
+   
+   Let's check .user-item padding.
+   It has padding: 10px; (from .user-item.active or similar)
+   .user-item default has padding: 10px;
+   
+   If we put it at left: 4px, it might fit.
+*/
+
+.user-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 10px 10px 20px;
+    /* Add left padding to reserve space for dot if we want it "outside" the profile pic area visually */
+    margin-bottom: 2px;
+    cursor: pointer;
+    border-radius: 10px;
+    width: 100%;
+    position: relative;
+    min-width: 0;
+    /* Smooth transitions to prevent flickering */
+    transition: background-color 0.2s ease, opacity 0.2s ease;
+}
+
+/* Chat header username should not truncate */
 .chat-header .username {
     max-width: none;
     white-space: normal;
@@ -1758,70 +1795,6 @@ button:hover {
 
 .unblock-button:hover {
     background-color: #5a5d68;
-}
-
-/* Message Input Area */
-.chat-area .message-input-container {
-    padding: 20px;
-    background-color: var(--game-bg);
-    border-top: 1px solid var(--stroke-color);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.chat-area .message-input-wrapper {
-    flex: 1;
-    position: relative;
-    background-color: var(--background-dark);
-    border-radius: 12px;
-    padding: 2px;
-    /* For border if needed */
-}
-
-.chat-area input {
-    width: 100%;
-    padding: 12px 16px;
-    background-color: var(--background-dark);
-    border: 1px solid var(--stroke-color);
-    border-radius: 12px;
-    color: var(--text-light);
-    font-size: 14px;
-    outline: none;
-    transition: border-color 0.2s;
-}
-
-.chat-area input:focus {
-    border-color: var(--primary-color);
-}
-
-.send-message-button {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    background-color: var(--primary-color);
-    border: none;
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: background-color 0.2s, transform 0.1s;
-    flex-shrink: 0;
-}
-
-.send-message-button:hover {
-    background-color: var(--primary-hover);
-}
-
-.send-message-button:active {
-    transform: scale(0.95);
-}
-
-.send-message-button .material-symbols-outlined {
-    font-size: 20px;
-    margin-left: 2px;
-    /* Optical centering */
 }
 
 .unblock-button:active {
