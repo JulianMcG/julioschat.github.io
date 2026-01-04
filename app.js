@@ -575,7 +575,8 @@ async function loadUsers() {
                         // Only update timestamp if it's more recent than what we have
                         if (!dmUsers.has(id) || message.timestamp > dmUsers.get(id).lastMessageTime) {
                             dmUsers.set(id, {
-                                lastMessageTime: message.timestamp
+                                lastMessageTime: message.timestamp,
+                                lastMessageContent: message.content || 'Image/Attachment'
                             });
                         }
                     }
@@ -596,7 +597,8 @@ async function loadUsers() {
                 const userDoc = await getDoc(doc(db, 'users', userId));
                 if (userDoc.exists()) {
                     const userData = userDoc.data();
-                    const lastMessageTime = dmUsers.get(userId).lastMessageTime;
+                    const lastMessageInfo = dmUsers.get(userId);
+                    const lastMessageTime = lastMessageInfo.lastMessageTime;
                     const lastReadTime = lastReadTimes[userId] ? lastReadTimes[userId].toDate() : 0;
 
                     const user = {
@@ -606,6 +608,7 @@ async function loadUsers() {
                         verified: userData.verified || false,
                         alias: userData.alias,
                         lastMessageTime: lastMessageTime,
+                        lastMessageContent: lastMessageInfo.lastMessageContent,
                         isUnread: lastMessageTime.toDate() > lastReadTime
                     };
 
@@ -698,12 +701,23 @@ function createUserElement(user) {
     userElement.className = `user-item ${user.isUnread ? 'unread' : ''}`;
     userElement.dataset.uid = user.id;
     const displayName = user.alias || user.username;
+
+    // Truncate message content if needed
+    let messagePreview = user.lastMessageContent || '';
+    if (messagePreview.length > 30) {
+        messagePreview = messagePreview.substring(0, 30) + '...';
+    }
+
     userElement.innerHTML = `
+        <div class="unread-indicator"></div>
         <div class="profile-picture-container">
             <img src="${user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png'}" alt="${displayName}" class="profile-picture">
             <div class="online-status"></div>
         </div>
-        <span class="username">${displayName}${user.verified ? '<span class="material-symbols-outlined verified-badge" style="font-variation-settings: \'FILL\' 1;">verified</span>' : ''}</span>
+        <div class="user-info">
+            <span class="username">${displayName}${user.verified ? '<span class="material-symbols-outlined verified-badge" style="font-variation-settings: \'FILL\' 1;">verified</span>' : ''}</span>
+            <span class="last-message">${messagePreview}</span>
+        </div>
         <div class="user-actions">
             <span class="material-symbols-outlined action-icon pin-icon">keep</span>
             <span class="material-symbols-outlined action-icon close-icon">close</span>
@@ -1504,7 +1518,16 @@ window.addEventListener('click', (event) => {
 
 // Send message
 async function sendMessage(content) {
-    if (!content.trim() || !currentChatUser) return;
+    if (!content.trim() || !currentChatUser) {
+        console.warn('Cannot send message: content empty or no chat user selected');
+        return;
+    }
+
+    if (!currentUser) {
+        console.error('Cannot send message: User not logged in');
+        alert('You must be logged in to send messages.');
+        return;
+    }
 
     try {
         const messageData = {
@@ -1517,15 +1540,15 @@ async function sendMessage(content) {
         // Normal message handling for all users
         await addDoc(collection(db, 'messages'), messageData);
 
-        // Clear input
-        document.getElementById('message-input').value = '';
+        // Clear input (already cleared in keypress, but good backup)
+        // document.getElementById('message-input').value = '';
 
         // Update typing status
         await updateTypingStatus(false);
 
     } catch (error) {
         console.error('Error sending message:', error);
-        alert('Error sending message. Please try again.');
+        alert(`Error sending message: ${error.message}`);
     }
 }
 
