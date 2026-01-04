@@ -588,14 +588,9 @@ async function loadUsers() {
                 // Check if we already have this user in cache
                 if (sidebarUsers.has(userId)) {
                     const cachedUser = sidebarUsers.get(userId);
-                    const lastMessageInfo = dmUsers.get(userId);
-                    const lastReadTime = lastReadTimes[userId] ? lastReadTimes[userId].toDate() : 0;
-
                     return {
                         ...cachedUser,
-                        lastMessageTime: lastMessageInfo.lastMessageTime,
-                        lastMessageContent: lastMessageInfo.lastMessageContent,
-                        isUnread: lastMessageInfo.lastMessageTime.toDate() > lastReadTime
+                        lastMessageTime: dmUsers.get(userId).lastMessageTime
                     };
                 }
 
@@ -1545,9 +1540,8 @@ async function sendMessage(content) {
         // Normal message handling for all users
         await addDoc(collection(db, 'messages'), messageData);
 
-        // Clear input
-        const inputEl = document.getElementById('message-input');
-        if (inputEl) inputEl.value = '';
+        // Clear input (already cleared in keypress, but good backup)
+        // document.getElementById('message-input').value = '';
 
         // Update typing status
         await updateTypingStatus(false);
