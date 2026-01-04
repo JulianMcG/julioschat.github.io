@@ -754,7 +754,8 @@ body {
     display: flex;
     align-items: center;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    border-top: none;
+    border-top: none !important;
+    border: none !important;
     /* Ensure no separator */
 }
 
