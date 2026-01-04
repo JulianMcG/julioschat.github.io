@@ -929,7 +929,57 @@ async function startChat(userId, username) {
         return;
     }
 
+    // 1. IMMEDIATE UI UPDATES
 
+    // Set current user data immediately
+    // Note: We'll look up the alias asynchronously, but start with what we have
+    // If we have an existing alias from the sidebar item, we could use that, but username/alias logic 
+    // is a bit mixed here. We will defer the perfect alias until the async part, 
+    // but usually 'username' passed in here is the alias if clicked from sidebar.
+    currentChatUser = { id: userId, username: username }; // Optimistic update
+
+    // update UI for sidebar immediately
+    const userItems = document.querySelectorAll('.user-item');
+    userItems.forEach(item => {
+        if (item.dataset.uid === userId) {
+            item.classList.add('active');
+            item.classList.remove('unread');
+
+            // Hide unread indicator immediately
+            const unreadIndicator = item.querySelector('.unread-indicator');
+            if (unreadIndicator) unreadIndicator.style.display = 'none';
+
+            // If we have an alias in the DOM, ensure we use that for the header
+            const nameEl = item.querySelector('.username');
+            // But 'username' arg is usually correct.
+        } else {
+            item.classList.remove('active');
+        }
+    });
+
+    // switch sections immediately
+    document.getElementById('auth-section').style.display = 'none';
+    document.getElementById('chat-section').style.display = 'block';
+
+    // Clear messages and show skeleton
+    const messagesContainer = document.querySelector('.chat-messages');
+    messagesContainer.innerHTML = '';
+    renderChatSkeleton(messagesContainer);
+
+    // Update Header immediately (loading identifier if needed? No, just show name)
+    // We might not know verified status yet if not passed, but that's a minor visual pop-in later.
+    document.getElementById('active-chat-username').textContent = username;
+
+    // Show input immediately
+    const messageInput = document.querySelector('.message-input');
+    messageInput.classList.add('visible');
+    document.querySelector('.chat-header svg').style.display = 'block';
+
+    // Disable input temporarily? Or let them type? 
+    // Let's let them type, but maybe queues messages? 
+    // For now, keep it simple, it's fast enough.
+
+    // 2. ASYNC BACKGROUND WORK
 
     // Get current user's data to check for aliases and hidden conversations
     const currentUserDocRef = await getDoc(doc(db, 'users', currentUser.uid));
@@ -939,9 +989,10 @@ async function startChat(userId, username) {
 
     // If this conversation was hidden, remove it from hiddenConversations
     if (hiddenConversations.includes(userId)) {
-        await setDoc(doc(db, 'users', currentUser.uid), {
+        // No await needed to block UI, just do it
+        setDoc(doc(db, 'users', currentUser.uid), {
             hiddenConversations: arrayRemove(userId)
-        }, { merge: true });
+        }, { merge: true }).catch(err => console.error('Error unhiding:', err));
     }
 
     // Get the other user's data
@@ -950,39 +1001,20 @@ async function startChat(userId, username) {
     const actualUsername = otherUserData?.username || username;
     const alias = userAliases[userId] || actualUsername;
 
+    // Update currentChatUser with the definitive alias
     currentChatUser = { id: userId, username: alias };
 
-    // Update active user in sidebar and mark as read
-    const userItems = document.querySelectorAll('.user-item');
-    userItems.forEach(item => {
-        if (item.dataset.uid === userId) {
-            item.classList.add('active');
-            item.classList.remove('unread');
-        } else {
-            item.classList.remove('active');
-        }
-    });
-
     // Update lastReadTime in Firestore
-    try {
-        await setDoc(doc(db, 'users', currentUser.uid), {
-            lastReadTimes: {
-                [userId]: serverTimestamp()
-            }
-        }, { merge: true });
-    } catch (error) {
-        console.error('Error updating read status:', error);
-    }
+    setDoc(doc(db, 'users', currentUser.uid), {
+        lastReadTimes: {
+            [userId]: serverTimestamp()
+        }
+    }, { merge: true }).catch(err => console.error('Error updating read status:', err));
 
     // Update chat header with verified badge if user is verified
     const isVerified = otherUserData?.verified || false;
     const verifiedBadge = isVerified ? '<span class="material-symbols-outlined verified-badge" style="font-variation-settings: \'FILL\' 1;">verified</span>' : '';
     document.getElementById('active-chat-username').innerHTML = `${alias}${verifiedBadge}`;
-
-    // Show message input and user options icon
-    const messageInput = document.querySelector('.message-input');
-    messageInput.classList.add('visible');
-    document.querySelector('.chat-header svg').style.display = 'block';
 
     // Set up typing listener
     if (window.currentTypingUnsubscribe) {
@@ -990,8 +1022,31 @@ async function startChat(userId, username) {
     }
     window.currentTypingUnsubscribe = setupTypingListener();
 
-    // Load messages
+    // Load messages (this will eventually clear the skeleton when it returns data)
     loadMessages();
+}
+
+// Function to render chat skeleton
+function renderChatSkeleton(container) {
+    const skeletonContainer = document.createElement('div');
+    skeletonContainer.className = 'chat-skeleton-container';
+
+    // Create a pattern of skeleton messages
+    const patterns = [
+        { type: 'received', width: 'short' },
+        { type: 'received', width: 'long' },
+        { type: 'sent', width: 'medium' },
+        { type: 'received', width: 'medium' },
+        { type: 'sent', width: 'long' }
+    ];
+
+    patterns.forEach(p => {
+        const msg = document.createElement('div');
+        msg.className = `chat-skeleton-message ${p.type} ${p.width || ''}`;
+        skeletonContainer.appendChild(msg);
+    });
+
+    container.appendChild(skeletonContainer);
 }
 
 // Function to convert markdown-style formatting to HTML
@@ -1253,7 +1308,8 @@ async function loadMessages() {
     }
 
     const chatMessages = document.getElementById('chat-messages');
-    chatMessages.innerHTML = '';
+    // Don't clear here -- let the skeleton persist until snapshot loads
+    // chatMessages.innerHTML = '';
 
     try {
         // Get current user's blocked users list
