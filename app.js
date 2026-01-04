@@ -1,25 +1,25 @@
 // Trigger new deployment with Vercel Pro
 import { auth, db } from './firebase-config.js';
-import { 
-    createUserWithEmailAndPassword, 
-    signInWithEmailAndPassword, 
-    signOut, 
+import {
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    signOut,
     onAuthStateChanged,
     updateProfile,
     GoogleAuthProvider,
     signInWithPopup,
     getAuth
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { 
-    collection, 
-    doc, 
-    setDoc, 
-    getDoc, 
-    getDocs, 
-    query, 
-    where, 
-    orderBy, 
-    onSnapshot, 
+import {
+    collection,
+    doc,
+    setDoc,
+    getDoc,
+    getDocs,
+    query,
+    where,
+    orderBy,
+    onSnapshot,
     addDoc,
     serverTimestamp,
     arrayUnion,
@@ -70,7 +70,7 @@ document.getElementById('profile-picture-input').addEventListener('change', asyn
             formData.append('key', 'b20dafa4db75ca192070ec47334a4a77');
 
             console.log('Uploading image to ImgBB...');
-            
+
             // Upload to ImgBB
             const response = await fetch('https://api.imgbb.com/1/upload', {
                 method: 'POST',
@@ -81,30 +81,30 @@ document.getElementById('profile-picture-input').addEventListener('change', asyn
 
             const data = await response.json();
             console.log('ImgBB data:', data);
-            
+
             if (!data.success) {
                 throw new Error(`ImgBB upload failed: ${data.error?.message || 'Unknown error'}`);
             }
 
             const imageUrl = data.data.url;
             console.log('Upload successful, image URL:', imageUrl);
-            
+
             // Update the preview
             document.getElementById('profile-picture-preview').src = imageUrl;
-            
+
             // Update Firebase Auth profile
             await updateProfile(currentUser, {
                 photoURL: imageUrl
             });
-            
+
             // Update Firestore
             await setDoc(doc(db, 'users', currentUser.uid), {
                 profilePicture: imageUrl
             }, { merge: true });
-            
+
             // Update UI
             document.getElementById('current-user-avatar').src = imageUrl;
-            
+
             alert('Profile picture updated successfully!');
         } catch (error) {
             console.error('Detailed error uploading profile picture:', error);
@@ -117,7 +117,7 @@ document.getElementById('profile-picture-input').addEventListener('change', asyn
 function showSignup() {
     const loginForm = document.getElementById('login-form');
     const signupForm = document.getElementById('signup-form');
-    
+
     if (loginForm && signupForm) {
         loginForm.style.display = 'none';
         signupForm.style.display = 'block';
@@ -128,7 +128,7 @@ function showSignup() {
 function showLogin() {
     const loginForm = document.getElementById('login-form');
     const signupForm = document.getElementById('signup-form');
-    
+
     if (loginForm && signupForm) {
         signupForm.style.display = 'none';
         loginForm.style.display = 'block';
@@ -193,19 +193,62 @@ document.addEventListener('DOMContentLoaded', () => {
         googleSignupButton.addEventListener('click', signInWithGoogle);
     }
 
+    // Sidebar Resizing Logic
+    const sidebar = document.querySelector('.sidebar');
+    const resizer = document.querySelector('.resizer');
+
+    if (resizer && sidebar) {
+        let isResizing = false;
+        let startX;
+        let startWidth;
+
+        resizer.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            startX = e.clientX;
+            startWidth = parseInt(window.getComputedStyle(sidebar).width, 10);
+            resizer.classList.add('resizing');
+            document.body.style.cursor = 'col-resize';
+            e.preventDefault(); // Prevent text selection
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            const width = startWidth + (e.clientX - startX);
+            if (width > 200 && width < 600) { // Min 200px, Max 600px
+                sidebar.style.width = `${width}px`;
+                sidebar.style.minWidth = `${width}px`; // Override min-width
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                resizer.classList.remove('resizing');
+                document.body.style.cursor = 'default';
+                localStorage.setItem('sidebarWidth', sidebar.style.width);
+            }
+        });
+
+        // Load saved width
+        const savedWidth = localStorage.getItem('sidebarWidth');
+        if (savedWidth) {
+            sidebar.style.width = savedWidth;
+            sidebar.style.minWidth = savedWidth;
+        }
+    }
+
     // Add sidebar toggle functionality
     const toggleSidebar = document.querySelector('.toggle-sidebar');
-    const sidebar = document.querySelector('.sidebar');
-    
+
     if (toggleSidebar && sidebar) {
         toggleSidebar.addEventListener('click', () => {
             sidebar.classList.toggle('collapsed');
-            
+
             // Save sidebar state to localStorage
             const isCollapsed = sidebar.classList.contains('collapsed');
             localStorage.setItem('sidebarCollapsed', isCollapsed);
         });
-        
+
         // Load saved sidebar state
         const savedState = localStorage.getItem('sidebarCollapsed');
         if (savedState === 'true') {
@@ -257,7 +300,7 @@ async function signup() {
 
     try {
         signupButton.classList.add('loading');
-        
+
         // Check if username is taken
         let usernameTaken;
         try {
@@ -274,16 +317,16 @@ async function signup() {
                 return;
             }
         }
-        
+
         if (usernameTaken) {
             showError(document.getElementById('signup-username'), 'Username is already taken');
             signupButton.classList.remove('loading');
             return;
         }
-        
+
         // Create user with email and password
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        
+
         // Create user document in Firestore
         await setDoc(doc(db, 'users', userCredential.user.uid), {
             username: username,
@@ -303,7 +346,7 @@ async function signup() {
     } catch (error) {
         console.error('Signup error:', error);
         let errorMessage = 'An error occurred during signup';
-        
+
         switch (error.code) {
             case 'auth/email-already-in-use':
                 errorMessage = 'Email is already in use';
@@ -350,7 +393,7 @@ async function login() {
     } catch (error) {
         console.error('Login error:', error);
         let errorMessage = 'An error occurred during login';
-        
+
         switch (error.code) {
             case 'auth/user-not-found':
             case 'auth/wrong-password':
@@ -391,7 +434,7 @@ function showAuthSection() {
         sidebarUnsubscribe();
         sidebarUnsubscribe = null;
     }
-    
+
     // Clear any skeleton loaders when going back to auth
     const usersContainer = document.getElementById('users-container');
     if (usersContainer) {
@@ -402,13 +445,13 @@ function showAuthSection() {
 function showChatSection() {
     document.getElementById('auth-section').style.display = 'none';
     document.getElementById('chat-section').style.display = 'block';
-    
+
     // Pre-initialize sidebar structure to prevent flickering
     preInitializeSidebar();
-    
+
     // Ensure skeleton loaders are shown if sidebar is empty
     ensureSkeletonLoaders();
-    
+
     // Immediately start loading users if we have a current user
     if (currentUser && !isSidebarInitialized) {
         loadUsers();
@@ -419,16 +462,16 @@ function showChatSection() {
 function preInitializeSidebar() {
     const usersContainer = document.getElementById('users-container');
     if (!usersContainer || usersContainer.children.length > 0) return;
-    
+
     // Add skeleton loaders
     addSkeletonLoaders(usersContainer);
-    
+
     // Add a subtle loading state
     const sidebar = document.querySelector('.sidebar');
     if (sidebar) {
         sidebar.classList.add('loading');
     }
-    
+
     // Remove loading state after a short delay
     setTimeout(() => {
         if (sidebar) {
@@ -441,7 +484,7 @@ function preInitializeSidebar() {
 function addSkeletonLoaders(container) {
     // Clear any existing content
     container.innerHTML = '';
-    
+
     // Add 5 skeleton loaders
     for (let i = 0; i < 5; i++) {
         const skeletonLoader = document.createElement('div');
@@ -461,7 +504,7 @@ function addSkeletonLoaders(container) {
 function ensureSkeletonLoaders() {
     const usersContainer = document.getElementById('users-container');
     if (!usersContainer) return;
-    
+
     // If container is empty and we're in chat section, add skeleton loaders
     if (usersContainer.children.length === 0 && document.getElementById('chat-section').style.display !== 'none') {
         addSkeletonLoaders(usersContainer);
@@ -495,6 +538,17 @@ async function loadUsers() {
         );
 
         sidebarUnsubscribe = onSnapshot(messagesQuery, async (snapshot) => {
+            // Get current user's last read times
+            let lastReadTimes = {};
+            try {
+                const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+                if (userDoc.exists()) {
+                    lastReadTimes = userDoc.data().lastReadTimes || {};
+                }
+            } catch (error) {
+                console.error('Error fetching user data for unread status:', error);
+            }
+
             // Get unique user IDs from messages with their latest message timestamp
             const dmUsers = new Map();
             snapshot.forEach(doc => {
@@ -525,15 +579,19 @@ async function loadUsers() {
                 const userDoc = await getDoc(doc(db, 'users', userId));
                 if (userDoc.exists()) {
                     const userData = userDoc.data();
+                    const lastMessageTime = dmUsers.get(userId).lastMessageTime;
+                    const lastReadTime = lastReadTimes[userId] ? lastReadTimes[userId].toDate() : 0;
+
                     const user = {
                         id: userId,
                         username: userData.username || 'Unknown User',
                         profilePicture: userData.profilePicture,
                         verified: userData.verified || false,
                         alias: userData.alias,
-                        lastMessageTime: dmUsers.get(userId).lastMessageTime
+                        lastMessageTime: lastMessageTime,
+                        isUnread: lastMessageTime.toDate() > lastReadTime
                     };
-                    
+
                     // Cache the user data
                     sidebarUsers.set(userId, user);
                     return user;
@@ -551,10 +609,10 @@ async function loadUsers() {
 
             // Efficiently update the sidebar
             updateSidebarUsers(users);
-            
+
             // Mark sidebar as initialized
             isSidebarInitialized = true;
-            
+
             // Check for username overflow after loading users
             checkUsernameOverflow();
         }, (error) => {
@@ -586,7 +644,7 @@ function updateSidebarUsers(users) {
     // Add users in correct order
     users.forEach(user => {
         let userElement = existingElements.get(user.id);
-        
+
         if (userElement) {
             // Update existing element
             updateUserElement(userElement, user);
@@ -594,7 +652,7 @@ function updateSidebarUsers(users) {
             // Create new element
             userElement = createUserElement(user);
         }
-        
+
         usersContainer.appendChild(userElement);
     });
 }
@@ -604,13 +662,13 @@ function updateUserElement(userElement, user) {
     const displayName = user.alias || user.username;
     const profilePicture = userElement.querySelector('.profile-picture');
     const username = userElement.querySelector('.username');
-    
+
     // Update profile picture if different
     if (profilePicture.src !== (user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png')) {
         profilePicture.src = user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
         profilePicture.alt = displayName;
     }
-    
+
     // Update username if different
     const newUsername = `${displayName}${user.verified ? '<span class="material-symbols-outlined verified-badge" style="font-variation-settings: \'FILL\' 1;">verified</span>' : ''}`;
     if (username.innerHTML !== newUsername) {
@@ -620,7 +678,7 @@ function updateUserElement(userElement, user) {
 
 function createUserElement(user) {
     const userElement = document.createElement('div');
-    userElement.className = 'user-item';
+    userElement.className = `user-item ${user.isUnread ? 'unread' : ''}`;
     userElement.dataset.uid = user.id;
     const displayName = user.alias || user.username;
     userElement.innerHTML = `
@@ -634,7 +692,7 @@ function createUserElement(user) {
             <span class="material-symbols-outlined action-icon close-icon">close</span>
         </div>
     `;
-    
+
     // Add click handler for the user item
     userElement.onclick = (e) => {
         if (!e.target.classList.contains('action-icon')) {
@@ -651,7 +709,7 @@ function createUserElement(user) {
             await setDoc(doc(db, 'users', currentUser.uid), {
                 hiddenConversations: arrayUnion(user.id)
             }, { merge: true });
-            
+
             // If this was the current chat, clear it
             if (currentChatUser && currentChatUser.id === user.id) {
                 currentChatUser = null;
@@ -670,12 +728,12 @@ function createUserElement(user) {
         e.stopPropagation();
         const isPinned = userElement.classList.contains('pinned');
         userElement.classList.toggle('pinned');
-        
+
         try {
             const userDocRef = await getDoc(doc(db, 'users', currentUser.uid));
             const userDataRef = userDocRef.data();
             const pinnedConversations = userDataRef?.pinnedConversations || [];
-            
+
             if (!isPinned) {
                 if (!pinnedConversations.includes(user.id)) {
                     await setDoc(doc(db, 'users', currentUser.uid), {
@@ -704,7 +762,7 @@ function createUserElement(user) {
             onlineStatus.classList.remove('active');
         }
     });
-    
+
     return userElement;
 }
 
@@ -721,32 +779,44 @@ async function startChat(userId, username) {
     const currentUserDataRef = currentUserDocRef.data();
     const userAliases = currentUserDataRef?.userAliases || {};
     const hiddenConversations = currentUserDataRef?.hiddenConversations || [];
-    
+
     // If this conversation was hidden, remove it from hiddenConversations
     if (hiddenConversations.includes(userId)) {
         await setDoc(doc(db, 'users', currentUser.uid), {
             hiddenConversations: arrayRemove(userId)
         }, { merge: true });
     }
-    
+
     // Get the other user's data
     const otherUserDoc = await getDoc(doc(db, 'users', userId));
     const otherUserData = otherUserDoc.data();
     const actualUsername = otherUserData?.username || username;
     const alias = userAliases[userId] || actualUsername;
-    
+
     currentChatUser = { id: userId, username: alias };
-    
-    // Update active user in sidebar
+
+    // Update active user in sidebar and mark as read
     const userItems = document.querySelectorAll('.user-item');
     userItems.forEach(item => {
         if (item.dataset.uid === userId) {
             item.classList.add('active');
+            item.classList.remove('unread');
         } else {
             item.classList.remove('active');
         }
     });
-    
+
+    // Update lastReadTime in Firestore
+    try {
+        await setDoc(doc(db, 'users', currentUser.uid), {
+            lastReadTimes: {
+                [userId]: serverTimestamp()
+            }
+        }, { merge: true });
+    } catch (error) {
+        console.error('Error updating read status:', error);
+    }
+
     // Update chat header with verified badge if user is verified
     const isVerified = otherUserData?.verified || false;
     const verifiedBadge = isVerified ? '<span class="material-symbols-outlined verified-badge" style="font-variation-settings: \'FILL\' 1;">verified</span>' : '';
@@ -792,7 +862,7 @@ function formatMessageContent(content) {
     // Create a temporary div to parse the HTML
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = formattedContent;
-    
+
     // Find all text nodes and convert URLs to links
     const walker = document.createTreeWalker(tempDiv, NodeFilter.SHOW_TEXT, null, false);
     const textNodes = [];
@@ -800,14 +870,14 @@ function formatMessageContent(content) {
     while (node = walker.nextNode()) {
         textNodes.push(node);
     }
-    
+
     textNodes.forEach(textNode => {
         const text = textNode.nodeValue;
         const urlRegex = /(https?:\/\/[^\s]+)/g;
         let match;
         let lastIndex = 0;
         let newHTML = '';
-        
+
         while ((match = urlRegex.exec(text)) !== null) {
             // Add text before the URL
             newHTML += text.substring(lastIndex, match.index);
@@ -816,16 +886,16 @@ function formatMessageContent(content) {
             newHTML += `<a href="${url}" target="_blank" style="color: #1F49C7; text-decoration: none;">${url}</a>`;
             lastIndex = match.index + match[0].length;
         }
-        
+
         // Add any remaining text
         newHTML += text.substring(lastIndex);
-        
+
         // Replace the text node with the new HTML
         const span = document.createElement('span');
         span.innerHTML = newHTML;
         textNode.parentNode.replaceChild(span, textNode);
     });
-    
+
     return tempDiv.innerHTML;
 }
 
@@ -842,7 +912,7 @@ function createReactionPicker(messageId) {
         <div class="reaction-option" data-emoji="😱">😱</div>
         <div class="reaction-option" data-emoji="🤔">🤔</div>
     `;
-    
+
     // Add click handlers for reactions
     picker.querySelectorAll('.reaction-option').forEach(option => {
         option.addEventListener('click', () => {
@@ -851,33 +921,83 @@ function createReactionPicker(messageId) {
             picker.remove();
         });
     });
-    
+
+    // Add custom reaction button
+    const customButton = document.createElement('div');
+    customButton.className = 'reaction-option custom-reaction';
+    customButton.innerHTML = '<span class="material-symbols-outlined" style="font-size: 20px;">add_reaction</span>';
+    customButton.title = "Custom Emoji";
+
+    customButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'custom-emoji-input';
+        input.placeholder = 'Emoji';
+
+        // Replace button with input
+        customButton.replaceWith(input);
+        input.focus();
+
+        const submitEmoji = () => {
+            const emoji = input.value.trim();
+            if (emoji) {
+                addReaction(messageId, emoji);
+            }
+            picker.remove();
+        };
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                submitEmoji();
+            }
+        });
+
+        input.addEventListener('blur', () => {
+            // Optional: submit on blur or just close? 
+            // Usually inputs commit on blur if there's content in this context
+            // But it might be annoying if accidental. Let's just close if empty, or submit?
+            // Let's stick to Enter to submit for safety, or just close.
+            // Actually user might click away to close.
+            // If they click inside input, it propagation stops.
+            // If they click outside, picker removes via global listener.
+            // So blur event might not be needed if global listener handles "outside" clicks.
+            // But if I want blur to remove picker:
+            // picker.remove(); 
+        });
+
+        // Prevent picker from closing when clicking input
+        input.addEventListener('click', (e) => e.stopPropagation());
+    });
+
+    picker.appendChild(customButton);
+
     return picker;
 }
 
 async function addReaction(messageId, emoji) {
     if (!currentUser || !currentChatUser) return;
-    
+
     try {
         const messageRef = doc(db, 'messages', messageId);
         const messageDoc = await getDoc(messageRef);
-        
+
         if (!messageDoc.exists()) {
             console.error('Message does not exist:', messageId);
             return;
         }
-        
+
         const messageData = messageDoc.data();
-        
+
         // Only allow reactions on other people's messages
         if (messageData.senderId === currentUser.uid) {
             console.log('Cannot react to your own message');
             return;
         }
-        
+
         // Initialize reactions if they don't exist
         const reactions = messageData.reactions || {};
-        
+
         // Check if user already has this reaction
         if (reactions[emoji]?.includes(currentUser.uid)) {
             // Remove the reaction
@@ -893,20 +1013,20 @@ async function addReaction(messageId, emoji) {
                     delete reactions[existingEmoji];
                 }
             });
-            
+
             // Add new reaction
             if (!reactions[emoji]) {
                 reactions[emoji] = [];
             }
             reactions[emoji].push(currentUser.uid);
         }
-        
+
         // Update message with new reactions
-        await updateDoc(messageRef, { 
+        await updateDoc(messageRef, {
             reactions: reactions,
             lastUpdated: serverTimestamp()
         });
-        
+
     } catch (error) {
         console.error('Error adding/removing reaction:', error);
     }
@@ -916,19 +1036,19 @@ async function addReaction(messageId, emoji) {
 function showReactionPicker(event, messageId) {
     const picker = createReactionPicker(messageId);
     const messageElement = event.currentTarget;
-    
+
     // Position the picker
     const rect = messageElement.getBoundingClientRect();
     picker.style.position = 'absolute';
     picker.style.top = `${rect.top - 50}px`;
     picker.style.left = `${rect.left}px`;
-    
+
     // Remove any existing picker
     document.querySelectorAll('.reaction-picker').forEach(p => p.remove());
-    
+
     // Add picker to document
     document.body.appendChild(picker);
-    
+
     // Close picker when clicking outside
     const closePicker = (e) => {
         if (!picker.contains(e.target) && e.target !== messageElement) {
@@ -936,22 +1056,22 @@ function showReactionPicker(event, messageId) {
             document.removeEventListener('click', closePicker);
         }
     };
-    
+
     document.addEventListener('click', closePicker);
 }
 
 // Format reactions for display
 function formatReactions(reactions) {
     if (!reactions || Object.keys(reactions).length === 0) return '';
-    
+
     const reactionDiv = document.createElement('div');
     reactionDiv.className = 'message-reactions';
-    
+
     // Add has-reactions class if there are any reactions
     if (Object.keys(reactions).length > 0) {
         reactionDiv.classList.add('has-reactions');
     }
-    
+
     // Just show the emoji without count
     Object.keys(reactions).forEach(emoji => {
         const reactionSpan = document.createElement('span');
@@ -964,7 +1084,7 @@ function formatReactions(reactions) {
         };
         reactionDiv.appendChild(reactionSpan);
     });
-    
+
     return reactionDiv;
 }
 
@@ -998,67 +1118,67 @@ async function loadMessages() {
             chatMessages.innerHTML = '';
             let lastMessageTime = null;
             let lastMessageSenderId = null;
-            
+
             snapshot.forEach(doc => {
                 const message = doc.data();
                 console.log('Message data:', message); // Debug log
-                
+
                 // Only show messages if:
                 // 1. The message is between current user and current chat user
                 // 2. The sender is not blocked
-                if (message.participants.includes(currentChatUser.id) && 
+                if (message.participants.includes(currentChatUser.id) &&
                     message.participants.includes(currentUser.uid) &&
                     !blockedUsers.includes(message.senderId)) {
-                    
+
                     const messageTime = message.timestamp.toDate();
-                    
+
                     // Add timestamp or gap if needed
                     if (lastMessageTime) {
                         const timeDiff = messageTime - lastMessageTime;
                         const twentyMinutes = 20 * 60 * 1000; // 20 minutes in milliseconds
-                        
+
                         if (timeDiff > twentyMinutes) {
                             // Add date separator
                             const dateSeparator = document.createElement('div');
                             dateSeparator.className = 'date-separator';
                             const today = new Date();
                             const messageDate = messageTime;
-                            
+
                             let dateText;
                             if (messageDate.toDateString() === today.toDateString()) {
                                 dateText = `Today ${messageDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
                             } else if (messageDate.toDateString() === new Date(today - 86400000).toDateString()) {
                                 dateText = `Yesterday ${messageDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
                             } else {
-                                dateText = messageDate.toLocaleDateString([], { 
-                                    month: 'short', 
+                                dateText = messageDate.toLocaleDateString([], {
+                                    month: 'short',
                                     day: 'numeric',
                                     hour: 'numeric',
                                     minute: '2-digit'
                                 });
                             }
-                            
+
                             dateSeparator.textContent = dateText;
                             chatMessages.appendChild(dateSeparator);
                         }
                     }
-                    
+
                     const messageElement = document.createElement('div');
                     messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
                     messageElement.dataset.messageId = doc.id;
-                    
+
                     // Create message content container
                     const contentContainer = document.createElement('div');
                     contentContainer.className = 'content';
                     contentContainer.innerHTML = formatMessageContent(message.content);
-                    
+
                     // Create reactions container
                     const reactionsContainer = document.createElement('div');
                     reactionsContainer.className = 'message-reactions';
-                    
+
                     // Debug log for reactions
                     console.log('Message reactions:', message.reactions);
-                    
+
                     if (message.reactions && Object.keys(message.reactions).length > 0) {
                         reactionsContainer.classList.add('has-reactions');
                         Object.keys(message.reactions).forEach(emoji => {
@@ -1073,7 +1193,7 @@ async function loadMessages() {
                             reactionsContainer.appendChild(reaction);
                         });
                     }
-                    
+
                     // Create reaction button only for received messages
                     if (message.senderId !== currentUser.uid) {
                         const reactionButton = document.createElement('div');
@@ -1085,18 +1205,18 @@ async function loadMessages() {
                         };
                         messageElement.appendChild(reactionButton);
                     }
-                    
+
                     // Append all elements
                     messageElement.appendChild(contentContainer);
                     messageElement.appendChild(reactionsContainer);
-                    
+
                     chatMessages.appendChild(messageElement);
-                    
+
                     lastMessageTime = messageTime;
                     lastMessageSenderId = message.senderId;
                 }
             });
-            
+
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }, (error) => {
             console.error('Error in message snapshot:', error);
@@ -1199,7 +1319,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Override the getPosition function if it exists
         if (typeof window.getPosition === 'function') {
             const originalGetPosition = window.getPosition;
-            window.getPosition = function(element) {
+            window.getPosition = function (element) {
                 return safeGetSelectionStart(element);
             };
         }
@@ -1240,15 +1360,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     const usersQuery = query(collection(db, 'users'));
                     const usersSnapshot = await getDocs(usersQuery);
                     const suggestions = [];
-                    
+
                     usersSnapshot.forEach(doc => {
                         if (doc.id !== currentUser.uid) {
                             const user = doc.data();
                             // Skip deleted users
                             if (user.deleted) return;
-                            
+
                             const username = user.username?.toLowerCase() || '';
-                            
+
                             if (username.includes(searchTerm)) {
                                 suggestions.push({
                                     id: doc.id,
@@ -1304,12 +1424,12 @@ document.addEventListener('DOMContentLoaded', () => {
         let searchTimeout;
         searchInput.addEventListener('input', (e) => {
             const searchTerm = e.target.value.trim();
-            
+
             // Clear any existing timeout
             if (searchTimeout) {
                 clearTimeout(searchTimeout);
             }
-            
+
             // Set a new timeout to debounce the search
             searchTimeout = setTimeout(async () => {
                 if (!searchTerm) {
@@ -1318,7 +1438,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     userItems.forEach(userItem => {
                         userItem.style.display = 'flex';
                     });
-                    
+
                     // If no users are visible, show skeleton loaders
                     const visibleUsers = Array.from(userItems).filter(item => item.style.display !== 'none');
                     if (visibleUsers.length === 0) {
@@ -1343,7 +1463,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 userItems.forEach(userItem => {
                     userItem.style.display = 'flex';
                 });
-                
+
                 // If no users are visible, show skeleton loaders
                 const visibleUsers = Array.from(userItems).filter(item => item.style.display !== 'none');
                 if (visibleUsers.length === 0) {
@@ -1382,10 +1502,10 @@ async function sendMessage(content) {
 
         // Clear input
         document.getElementById('message-input').value = '';
-        
+
         // Update typing status
         await updateTypingStatus(false);
-        
+
     } catch (error) {
         console.error('Error sending message:', error);
         alert('Error sending message. Please try again.');
@@ -1396,10 +1516,10 @@ async function sendMessage(content) {
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         currentUser = user;
-        
+
         // Show chat section immediately to improve perceived performance
         showChatSection();
-        
+
         try {
             // First, ensure user document exists and is up to date
             const userDoc = await getDoc(doc(db, 'users', user.uid));
@@ -1438,7 +1558,7 @@ onAuthStateChanged(auth, async (user) => {
                 window.globalMessageUnsubscribe();
             }
             window.globalMessageUnsubscribe = setupMessageListener();
-            
+
         } catch (error) {
             console.error('Error in auth state change:', error);
         }
@@ -1446,7 +1566,7 @@ onAuthStateChanged(auth, async (user) => {
         currentUser = null;
         showAuthSection();
         updateOnlineStatus(false);
-        
+
         if (window.globalMessageUnsubscribe) {
             window.globalMessageUnsubscribe();
         }
@@ -1462,7 +1582,7 @@ function updateCurrentUserProfile(user) {
             const isVerified = userData?.verified || false;
             const username = userData?.username || user.displayName || 'Username';
             const profilePicture = userData?.profilePicture || user.photoURL || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
-            
+
             // Update username with verified badge if user is verified
             const verifiedBadge = isVerified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : '';
             document.getElementById('current-username').innerHTML = `${username}${verifiedBadge}`;
@@ -1485,13 +1605,13 @@ function openSettingsModal() {
     const modal = document.getElementById('settings-modal');
     const currentUsername = document.getElementById('current-username').textContent;
     const currentProfilePicture = document.getElementById('current-user-avatar').src;
-    
+
     document.getElementById('settings-username').value = currentUsername;
     document.getElementById('settings-profile-picture').src = currentProfilePicture;
-    
+
     // Load notification preferences when opening settings
     loadNotificationSoundPreference();
-    
+
     modal.style.display = 'block';
 }
 
@@ -1532,7 +1652,7 @@ document.getElementById('settings-profile-picture-input').addEventListener('chan
             formData.append('key', 'b20dafa4db75ca192070ec47334a4a77');
 
             console.log('Uploading image to ImgBB...');
-            
+
             // Upload to ImgBB
             const response = await fetch('https://api.imgbb.com/1/upload', {
                 method: 'POST',
@@ -1543,30 +1663,30 @@ document.getElementById('settings-profile-picture-input').addEventListener('chan
 
             const data = await response.json();
             console.log('ImgBB data:', data);
-            
+
             if (!data.success) {
                 throw new Error(`ImgBB upload failed: ${data.error?.message || 'Unknown error'}`);
             }
 
             const imageUrl = data.data.url;
             console.log('Upload successful, image URL:', imageUrl);
-            
+
             // Update the preview
             document.getElementById('settings-profile-picture').src = imageUrl;
-            
+
             // Update Firebase Auth profile
             await updateProfile(currentUser, {
                 photoURL: imageUrl
             });
-            
+
             // Update Firestore
             await setDoc(doc(db, 'users', currentUser.uid), {
                 profilePicture: imageUrl
             }, { merge: true });
-            
+
             // Update UI
             document.getElementById('current-user-avatar').src = imageUrl;
-            
+
             alert('Profile picture updated successfully!');
         } catch (error) {
             console.error('Detailed error uploading profile picture:', error);
@@ -1597,7 +1717,7 @@ document.querySelector('.save-button').addEventListener('click', async () => {
             const usersQuery = query(collection(db, 'users'), where('username', '==', newUsername));
             const usersSnapshot = await getDocs(usersQuery);
             const userDoc = usersSnapshot.docs[0];
-            
+
             // If the username is taken by someone else
             if (userDoc.id !== currentUser.uid) {
                 showError(usernameInput, 'Username is already taken');
@@ -1642,15 +1762,15 @@ document.querySelector('.save-button').addEventListener('click', async () => {
 async function searchUsers(searchTerm) {
     const usersContainer = document.getElementById('users-container');
     if (!usersContainer) return;
-    
+
     const userItems = usersContainer.querySelectorAll('.user-item');
-    
+
     if (!searchTerm) {
         // If search is empty, show all users (don't reload)
         userItems.forEach(userItem => {
             userItem.style.display = 'flex';
         });
-        
+
         // If no users are visible, show skeleton loaders
         const visibleUsers = Array.from(userItems).filter(item => item.style.display !== 'none');
         if (visibleUsers.length === 0) {
@@ -1658,7 +1778,7 @@ async function searchUsers(searchTerm) {
         }
         return;
     }
-    
+
     let hasVisibleUsers = false;
     userItems.forEach(userItem => {
         const username = userItem.querySelector('.username').textContent.toLowerCase();
@@ -1669,7 +1789,7 @@ async function searchUsers(searchTerm) {
             userItem.style.display = 'none';
         }
     });
-    
+
     // If no users match the search, show skeleton loaders
     if (!hasVisibleUsers) {
         addSkeletonLoaders(usersContainer);
@@ -1703,7 +1823,7 @@ async function searchAllUsers(searchTerm) {
         // Get all users except current user
         const usersSnapshot = await getDocs(collection(db, 'users'));
         const users = [];
-        
+
         usersSnapshot.forEach(doc => {
             if (doc.id !== currentUser.uid) {
                 const user = {
@@ -1752,12 +1872,12 @@ document.addEventListener('DOMContentLoaded', () => {
         let searchTimeout;
         searchInput.addEventListener('input', (e) => {
             const searchTerm = e.target.value.trim();
-            
+
             // Clear any existing timeout
             if (searchTimeout) {
                 clearTimeout(searchTimeout);
             }
-            
+
             // Set a new timeout to debounce the search
             searchTimeout = setTimeout(async () => {
                 if (!searchTerm) {
@@ -1766,7 +1886,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     userItems.forEach(userItem => {
                         userItem.style.display = 'flex';
                     });
-                    
+
                     // If no users are visible, show skeleton loaders
                     const visibleUsers = Array.from(userItems).filter(item => item.style.display !== 'none');
                     if (visibleUsers.length === 0) {
@@ -1791,7 +1911,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 userItems.forEach(userItem => {
                     userItem.style.display = 'flex';
                 });
-                
+
                 // If no users are visible, show skeleton loaders
                 const visibleUsers = Array.from(userItems).filter(item => item.style.display !== 'none');
                 if (visibleUsers.length === 0) {
@@ -1820,7 +1940,7 @@ document.querySelector('.signout-button').addEventListener('click', async () => 
 function updateChatHeader(user) {
     const chatHeader = document.querySelector('.chat-header');
     if (!chatHeader) return;
-    
+
     chatHeader.innerHTML = `
         <img src="${user.photoURL || 'default-avatar.png'}" alt="${user.username}" class="profile-picture">
         <span class="username">${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
@@ -1837,16 +1957,16 @@ function openUserOptionsModal(userId, username) {
     const aliasInput = document.getElementById('user-alias');
     const blockButton = document.getElementById('block-user');
     const unblockButton = document.getElementById('unblock-user');
-    
+
     // Check if user is blocked
     getDoc(doc(db, 'users', currentUser.uid)).then(userDoc => {
         const userData = userDoc.data();
         const blockedUsers = userData?.blockedUsers || [];
         const userAliases = userData?.userAliases || {};
-        
+
         // Set alias input value if exists
         aliasInput.value = userAliases[userId] || '';
-        
+
         // Show appropriate block/unblock button
         if (blockedUsers.includes(userId)) {
             blockButton.style.display = 'none';
@@ -1856,7 +1976,7 @@ function openUserOptionsModal(userId, username) {
             unblockButton.style.display = 'none';
         }
     });
-    
+
     modal.style.display = 'block';
 }
 
@@ -1870,27 +1990,27 @@ function closeUserOptionsModal() {
 // Save user alias
 async function saveUserAlias() {
     if (!currentSelectedUser) return;
-    
+
     const aliasInput = document.getElementById('user-alias');
     const alias = aliasInput.value.trim();
-    
+
     try {
         // First get the current user's data to preserve existing aliases
         const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
         const currentUserData = currentUserDoc.data();
         const existingAliases = currentUserData?.userAliases || {};
-        
+
         // Create new aliases object with the updated alias
         const updatedAliases = {
             ...existingAliases,
             [currentSelectedUser.id]: alias
         };
-        
+
         // Update Firestore with the merged aliases
         await setDoc(doc(db, 'users', currentUser.uid), {
             userAliases: updatedAliases
         }, { merge: true });
-        
+
         // Update username display if this is the current chat
         if (currentChatUser && currentChatUser.id === currentSelectedUser.id) {
             const chatHeader = document.querySelector('.chat-header');
@@ -1903,7 +2023,7 @@ async function saveUserAlias() {
             // Update currentChatUser to use the new alias
             currentChatUser.username = alias || currentSelectedUser.username;
         }
-        
+
         // Update the user item in the sidebar
         const userItem = document.querySelector(`.user-item[data-uid="${currentSelectedUser.id}"]`);
         if (userItem) {
@@ -1917,7 +2037,7 @@ async function saveUserAlias() {
                 profilePicture.alt = alias || currentSelectedUser.username;
             }
         }
-        
+
         closeUserOptionsModal();
     } catch (error) {
         console.error('Error saving user alias:', error);
@@ -1927,12 +2047,12 @@ async function saveUserAlias() {
 // Block user
 async function blockUser() {
     if (!currentSelectedUser) return;
-    
+
     try {
         await setDoc(doc(db, 'users', currentUser.uid), {
             blockedUsers: arrayUnion(currentSelectedUser.id)
         }, { merge: true });
-        
+
         // Close the chat if it's with the blocked user
         if (currentChatUser && currentChatUser.id === currentSelectedUser.id) {
             currentChatUser = null;
@@ -1940,7 +2060,7 @@ async function blockUser() {
             document.getElementById('message-input').placeholder = 'Type a message...';
             document.querySelector('.message-input').classList.remove('visible');
         }
-        
+
         closeUserOptionsModal();
     } catch (error) {
         console.error('Error blocking user:', error);
@@ -1950,12 +2070,12 @@ async function blockUser() {
 // Unblock user
 async function unblockUser() {
     if (!currentSelectedUser) return;
-    
+
     try {
         await setDoc(doc(db, 'users', currentUser.uid), {
             blockedUsers: arrayRemove(currentSelectedUser.id)
         }, { merge: true });
-        
+
         closeUserOptionsModal();
     } catch (error) {
         console.error('Error unblocking user:', error);
@@ -1965,26 +2085,26 @@ async function unblockUser() {
 // Event Listeners
 document.addEventListener('DOMContentLoaded', () => {
     // ... existing event listeners ...
-    
+
     // User options modal event listeners
     const userOptionsModal = document.getElementById('user-options-modal');
     const closeUserOptionsBtn = userOptionsModal.querySelector('.close-modal');
     const saveAliasBtn = document.getElementById('save-alias');
     const blockUserBtn = document.getElementById('block-user');
     const unblockUserBtn = document.getElementById('unblock-user');
-    
+
     closeUserOptionsBtn.addEventListener('click', closeUserOptionsModal);
     saveAliasBtn.addEventListener('click', saveUserAlias);
     blockUserBtn.addEventListener('click', blockUser);
     unblockUserBtn.addEventListener('click', unblockUser);
-    
+
     // Add click handler for the user options icon
     document.querySelector('.chat-header svg').addEventListener('click', () => {
         if (currentChatUser) {
             openUserOptionsModal(currentChatUser.id, currentChatUser.username);
         }
     });
-    
+
     // Close modal when clicking outside
     window.addEventListener('click', (e) => {
         if (e.target === userOptionsModal) {
@@ -1996,24 +2116,24 @@ document.addEventListener('DOMContentLoaded', () => {
 // Update typing status in Firestore
 async function updateTypingStatus(typing) {
     if (!currentUser || !currentChatUser) return;
-    
+
     console.log('Updating typing status:', {
         typing,
         currentUser: currentUser.uid,
         currentChatUser: currentChatUser.id
     });
-    
+
     try {
         const docRef = doc(db, 'typing', `${currentUser.uid}_${currentChatUser.id}`);
         console.log('Document reference:', docRef.path);
-        
+
         await setDoc(docRef, {
             isTyping: typing,
             userId: currentUser.uid,
             otherUserId: currentChatUser.id,
             timestamp: serverTimestamp()
         }, { merge: true });
-        
+
         console.log('Typing status updated successfully');
     } catch (error) {
         console.error('Error updating typing status:', error);
@@ -2023,22 +2143,22 @@ async function updateTypingStatus(typing) {
 // Listen for typing status changes
 function setupTypingListener() {
     if (!currentUser || !currentChatUser) return;
-    
+
     console.log('Setting up typing listener:', {
         currentUser: currentUser.uid,
         currentChatUser: currentChatUser.id
     });
-    
+
     const typingRef = doc(db, 'typing', `${currentChatUser.id}_${currentUser.uid}`);
     console.log('Listening to document:', typingRef.path);
-    
+
     const unsubscribe = onSnapshot(typingRef, (doc) => {
         console.log('Typing status changed:', doc.data());
-        
+
         const data = doc.data();
         const chatMessages = document.getElementById('chat-messages');
         const existingIndicator = document.getElementById('typing-indicator');
-        
+
         if (data?.isTyping) {
             console.log('User is typing, adding indicator');
             if (!existingIndicator) {
@@ -2064,36 +2184,36 @@ function setupTypingListener() {
     }, (error) => {
         console.error('Error in typing listener:', error);
     });
-    
+
     return unsubscribe;
 }
 
 // Load user's notification sound preference
 async function loadNotificationSoundPreference() {
     if (!currentUser) return;
-    
+
     try {
         const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
         const userData = userDoc.data();
         const selectedSound = userData?.notificationSound || 'Birdy.mp3';
         notificationsEnabled = userData?.notificationsEnabled ?? true;
-        
+
         // Update audio source
         notificationSound = new Audio(`NotifSounds/${selectedSound}`);
         notificationSound.volume = 0.3; // Set volume to 30%
-        
+
         // Update UI elements if they exist
         const soundSelect = document.getElementById('notification-sound');
         const notificationToggle = document.getElementById('notification-toggle');
-        
+
         if (soundSelect) {
             soundSelect.value = selectedSound;
         }
-        
+
         if (notificationToggle) {
             notificationToggle.checked = notificationsEnabled;
         }
-        
+
         console.log('Loaded notification preferences:', {
             selectedSound,
             notificationsEnabled,
@@ -2111,31 +2231,31 @@ async function loadNotificationSoundPreference() {
 // Save notification sound preference
 async function saveNotificationSoundPreference() {
     if (!currentUser) return;
-    
+
     const soundSelect = document.getElementById('notification-sound');
     const notificationToggle = document.getElementById('notification-toggle');
-    
+
     if (!soundSelect || !notificationToggle) {
         console.error('Notification UI elements not found');
         return;
     }
-    
+
     const selectedSound = soundSelect.value;
     notificationsEnabled = notificationToggle.checked;
-    
+
     try {
         await setDoc(doc(db, 'users', currentUser.uid), {
             notificationSound: selectedSound,
             notificationsEnabled: notificationsEnabled
         }, { merge: true });
-        
+
         // Update audio source and play preview
         notificationSound = new Audio(`NotifSounds/${selectedSound}`);
         notificationSound.volume = 0.3; // Set volume to 30%
         notificationSound.play().catch(error => {
             console.error('Error playing notification sound:', error);
         });
-        
+
         console.log('Saved notification preferences:', {
             selectedSound,
             notificationsEnabled
@@ -2177,12 +2297,12 @@ document.addEventListener('visibilitychange', () => {
 document.addEventListener('DOMContentLoaded', () => {
     const soundSelect = document.getElementById('notification-sound');
     const notificationToggle = document.getElementById('notification-toggle');
-    
+
     if (soundSelect && notificationToggle) {
         soundSelect.addEventListener('change', saveNotificationSoundPreference);
         notificationToggle.addEventListener('change', saveNotificationSoundPreference);
     }
-    
+
     // Load notification preferences when DOM is ready
     if (currentUser) {
         loadNotificationSoundPreference();
@@ -2197,11 +2317,11 @@ async function signInWithGoogle() {
 
         // Check if user document exists
         const userDoc = await getDoc(doc(db, 'users', user.uid));
-        
+
         if (!userDoc.exists()) {
             // Create new user document if it doesn't exist
             const username = user.displayName || user.email.split('@')[0];
-            
+
             // First update Firebase Auth profile
             await updateProfile(user, {
                 displayName: username,
@@ -2218,7 +2338,7 @@ async function signInWithGoogle() {
         } else {
             // Update existing user's profile with latest Google data
             const userData = userDoc.data();
-            
+
             // Update Firestore document with latest Google data
             await setDoc(doc(db, 'users', user.uid), {
                 email: user.email,
@@ -2289,12 +2409,12 @@ function setupMessageListener() {
         snapshot.docChanges().forEach(change => {
             if (change.type === 'added') {
                 const message = change.doc.data();
-                
+
                 // Only play sound if:
                 // 1. Message is from someone else
                 // 2. Sender is not blocked
                 // 3. We're not currently in a chat with this person
-                if (message.senderId !== currentUser.uid && 
+                if (message.senderId !== currentUser.uid &&
                     !message.participants.includes(currentChatUser?.id)) {
                     playNotificationSound();
                 }
@@ -2304,14 +2424,14 @@ function setupMessageListener() {
 }
 
 // Function to find username by email
-window.findUsernameByEmail = async function(email) {
+window.findUsernameByEmail = async function (email) {
     try {
         console.log('Searching for email:', email);
-        
+
         // Get all users and search through them
         const allUsers = await getDocs(collection(db, 'users'));
         console.log('Total users in database:', allUsers.size);
-        
+
         // Log the first few users to see their structure
         console.log('Sample of first few users:');
         allUsers.docs.slice(0, 3).forEach(doc => {
@@ -2320,18 +2440,18 @@ window.findUsernameByEmail = async function(email) {
                 data: doc.data()
             });
         });
-        
+
         // Try to find user with matching email
         const matchingUser = allUsers.docs.find(doc => {
             const userData = doc.data();
             const searchEmail = email.toLowerCase();
-            
+
             // Log the complete user data for debugging
             console.log('Checking user complete data:', {
                 id: doc.id,
                 ...userData
             });
-            
+
             // Check all possible email fields
             const possibleEmails = [
                 userData.email?.toLowerCase(),
@@ -2340,18 +2460,18 @@ window.findUsernameByEmail = async function(email) {
                 userData.googleEmail?.toLowerCase(),
                 userData.userEmail?.toLowerCase()
             ].filter(Boolean); // Remove undefined/null values
-            
+
             console.log('Possible emails found:', possibleEmails);
-            
+
             return possibleEmails.includes(searchEmail);
         });
-        
+
         if (matchingUser) {
             const userData = matchingUser.data();
             console.log('Found matching user:', userData);
             return userData.username;
         }
-        
+
         console.log('No matching user found');
         return null;
     } catch (error) {
@@ -2366,7 +2486,7 @@ function checkUsernameOverflow() {
     usernames.forEach(username => {
         // Remove truncated class first
         username.classList.remove('truncated');
-        
+
         // Check if text is overflowing
         if (username.scrollWidth > username.clientWidth) {
             username.classList.add('truncated');
