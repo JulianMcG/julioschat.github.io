@@ -1750,13 +1750,9 @@ function updateCurrentUserProfile(user) {
             const profilePicture = userData?.profilePicture || user.photoURL || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
 
             // Update username with verified badge if user is verified
-            const verifiedBadge = isVerified ? '<span class="material-symbols-outlined verified-badge" style="font-variation-settings: \'FILL\' 1;">verified</span>' : '';
+            const verifiedBadge = isVerified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : '';
             document.getElementById('current-username').innerHTML = `${username}${verifiedBadge}`;
-            const avatarImg = document.getElementById('current-user-avatar');
-            if (avatarImg) avatarImg.src = profilePicture;
-
-            // Online status is handled by CSS (green dot in .profile-picture-container), 
-            // but we ensure the container structure is correct in index.html.
+            document.getElementById('current-user-avatar').src = profilePicture;
 
             // Update user items in the list
             const userItems = document.querySelectorAll('.user-item');
