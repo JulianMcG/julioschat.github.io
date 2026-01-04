@@ -641,8 +641,46 @@ body {
     background-color: var(--primary-color);
     border-radius: 8px;
     padding: 10px;
-    transition: none;
+    transition: none !important;
     /* Instant activation */
+}
+
+/* Chat Skeleton Styles */
+.chat-skeleton-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding: 20px;
+    width: 100%;
+}
+
+.chat-skeleton-message {
+    height: 40px;
+    border-radius: 15px;
+    background: linear-gradient(90deg, var(--stroke-color) 25%, #2A2D36 50%, var(--stroke-color) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s ease-in-out infinite;
+    opacity: 0.6;
+}
+
+.chat-skeleton-message.sent {
+    align-self: flex-end;
+    width: 40%;
+    border-radius: 15px 15px 5px 15px;
+}
+
+.chat-skeleton-message.received {
+    align-self: flex-start;
+    width: 40%;
+    border-radius: 15px 15px 15px 5px;
+}
+
+.chat-skeleton-message.short {
+    width: 25%;
+}
+
+.chat-skeleton-message.long {
+    width: 60%;
 }
 
 .profile-picture-container {
@@ -754,8 +792,7 @@ body {
     display: flex;
     align-items: center;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    border-top: none !important;
-    border: none !important;
+    border-top: none;
     /* Ensure no separator */
 }
 
