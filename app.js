@@ -588,9 +588,14 @@ async function loadUsers() {
                 // Check if we already have this user in cache
                 if (sidebarUsers.has(userId)) {
                     const cachedUser = sidebarUsers.get(userId);
+                    const lastMessageInfo = dmUsers.get(userId);
+                    const lastReadTime = lastReadTimes[userId] ? lastReadTimes[userId].toDate() : 0;
+
                     return {
                         ...cachedUser,
-                        lastMessageTime: dmUsers.get(userId).lastMessageTime
+                        lastMessageTime: lastMessageInfo.lastMessageTime,
+                        lastMessageContent: lastMessageInfo.lastMessageContent,
+                        isUnread: lastMessageInfo.lastMessageTime.toDate() > lastReadTime
                     };
                 }
 
@@ -1323,25 +1328,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Send button click listener
-        const sendButton = document.querySelector('.send-message-button');
-        if (sendButton) {
-            const handleSend = () => {
-                const content = messageInput.value.trim();
-                if (content) {
-                    messageInput.value = '';
-                    sendMessage(content);
-                    updateTypingStatus(false);
-                }
-            };
-
-            sendButton.addEventListener('click', handleSend);
-            sendButton.addEventListener('touchstart', (e) => {
-                e.preventDefault(); // Prevent double firing on some devices
-                handleSend();
-            });
-        }
-
         // Add typing status listeners
         messageInput.addEventListener('input', () => {
             if (!isTyping) {
@@ -1559,8 +1545,9 @@ async function sendMessage(content) {
         // Normal message handling for all users
         await addDoc(collection(db, 'messages'), messageData);
 
-        // Clear input (already cleared in keypress, but good backup)
-        // document.getElementById('message-input').value = '';
+        // Clear input
+        const inputEl = document.getElementById('message-input');
+        if (inputEl) inputEl.value = '';
 
         // Update typing status
         await updateTypingStatus(false);
