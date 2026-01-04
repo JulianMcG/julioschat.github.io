@@ -1437,9 +1437,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        messageInput.addEventListener('keypress', (e) => {
+        messageInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
+
+                if (!currentChatUser) {
+                    alert('Please select a chat to send a message.');
+                    return;
+                }
+
                 const content = messageInput.value.trim();
                 if (content) {
                     messageInput.value = ''; // Clear input immediately
