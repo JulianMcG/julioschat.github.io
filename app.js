@@ -214,9 +214,16 @@ document.addEventListener('DOMContentLoaded', () => {
         document.addEventListener('mousemove', (e) => {
             if (!isResizing) return;
             const width = startWidth + (e.clientX - startX);
-            if (width > 200 && width < 600) { // Min 200px, Max 600px
+
+            // Auto-collapse logic
+            if (width < 200) {
+                sidebar.classList.add('collapsed');
+                sidebar.style.width = '';
+                sidebar.style.minWidth = '';
+            } else if (width < 600) {
+                sidebar.classList.remove('collapsed');
                 sidebar.style.width = `${width}px`;
-                sidebar.style.minWidth = `${width}px`; // Override min-width
+                sidebar.style.minWidth = `${width}px`;
             }
         });
 
@@ -225,13 +232,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 isResizing = false;
                 resizer.classList.remove('resizing');
                 document.body.style.cursor = 'default';
-                localStorage.setItem('sidebarWidth', sidebar.style.width);
+
+                // Save state
+                const isCollapsed = sidebar.classList.contains('collapsed');
+                localStorage.setItem('sidebarCollapsed', isCollapsed);
+                if (!isCollapsed) {
+                    localStorage.setItem('sidebarWidth', sidebar.style.width);
+                }
             }
         });
 
-        // Load saved width
+        // Load saved state
+        const savedState = localStorage.getItem('sidebarCollapsed');
         const savedWidth = localStorage.getItem('sidebarWidth');
-        if (savedWidth) {
+
+        if (savedState === 'true') {
+            sidebar.classList.add('collapsed');
+        } else if (savedWidth) {
             sidebar.style.width = savedWidth;
             sidebar.style.minWidth = savedWidth;
         }
