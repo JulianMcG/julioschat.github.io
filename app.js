@@ -566,12 +566,27 @@ async function loadUsers() {
                 console.error('Error fetching user data for unread status:', error);
             }
 
+            // Get current user's data for pinned/hidden status
+            const userDocSnapshot = await getDoc(doc(db, 'users', currentUser.uid));
+            const currentUserData = userDocSnapshot.exists() ? userDocSnapshot.data() : {};
+            const pinnedConversations = currentUserData.pinnedConversations || [];
+            const hiddenConversations = currentUserData.hiddenConversations || []; // Use local var, though accessible via closure if needed
+
             // Get unique user IDs from messages with their latest message timestamp
             const dmUsers = new Map();
             snapshot.forEach(doc => {
                 const message = doc.data();
+
+                // Check participants
+                if (!message.participants.includes(currentUser.uid)) return;
+
                 message.participants.forEach(id => {
                     if (id !== currentUser.uid) {
+                        // Skip if hidden
+                        if (hiddenConversations.includes(id)) {
+                            return;
+                        }
+
                         // Only update timestamp if it's more recent than what we have
                         if (!dmUsers.has(id) || message.timestamp > dmUsers.get(id).lastMessageTime) {
                             dmUsers.set(id, {
@@ -588,9 +603,15 @@ async function loadUsers() {
                 // Check if we already have this user in cache
                 if (sidebarUsers.has(userId)) {
                     const cachedUser = sidebarUsers.get(userId);
+                    // Update dynamic fields
+                    const lastMessageInfo = dmUsers.get(userId);
+                    const lastReadTime = lastReadTimes[userId] ? lastReadTimes[userId].toDate() : 0;
                     return {
                         ...cachedUser,
-                        lastMessageTime: dmUsers.get(userId).lastMessageTime
+                        lastMessageTime: lastMessageInfo.lastMessageTime,
+                        lastMessageContent: lastMessageInfo.lastMessageContent,
+                        isUnread: lastMessageInfo.lastMessageTime.toDate() > lastReadTime,
+                        isPinned: pinnedConversations.includes(userId) // Add pinned status
                     };
                 }
 
@@ -609,7 +630,8 @@ async function loadUsers() {
                         alias: userData.alias,
                         lastMessageTime: lastMessageTime,
                         lastMessageContent: lastMessageInfo.lastMessageContent,
-                        isUnread: lastMessageTime.toDate() > lastReadTime
+                        isUnread: lastMessageTime.toDate() > lastReadTime,
+                        isPinned: pinnedConversations.includes(userId) // Add pinned status
                     };
 
                     // Cache the user data
@@ -621,8 +643,11 @@ async function loadUsers() {
 
             const users = (await Promise.all(userPromises)).filter(user => user !== null);
 
-            // Sort users by last message timestamp
+            // Sort users: Pinned first, then by last message timestamp
             users.sort((a, b) => {
+                if (a.isPinned && !b.isPinned) return -1;
+                if (!a.isPinned && b.isPinned) return 1;
+
                 if (!a.lastMessageTime || !b.lastMessageTime) return 0;
                 return b.lastMessageTime.toMillis() - a.lastMessageTime.toMillis();
             });
@@ -710,7 +735,7 @@ function updateUserElement(userElement, user) {
 
 function createUserElement(user) {
     const userElement = document.createElement('div');
-    userElement.className = `user-item ${user.isUnread ? 'unread' : ''}`;
+    userElement.className = `user-item ${user.isUnread ? 'unread' : ''} ${user.isPinned ? 'pinned' : ''}`;
     userElement.dataset.uid = user.id;
     const displayName = user.alias || user.username;
 
