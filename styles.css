@@ -817,6 +817,12 @@ body {
 
 .pin-icon {
     display: none;
+    font-size: 16px;
+    color: var(--label-color);
+}
+
+.user-item.pinned .pin-icon {
+    display: block;
 }
 
 .pinned .username::after {
