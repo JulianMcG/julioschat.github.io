@@ -1323,6 +1323,25 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        // Send button click listener
+        const sendButton = document.querySelector('.send-message-button');
+        if (sendButton) {
+            const handleSend = () => {
+                const content = messageInput.value.trim();
+                if (content) {
+                    messageInput.value = '';
+                    sendMessage(content);
+                    updateTypingStatus(false);
+                }
+            };
+
+            sendButton.addEventListener('click', handleSend);
+            sendButton.addEventListener('touchstart', (e) => {
+                e.preventDefault(); // Prevent double firing on some devices
+                handleSend();
+            });
+        }
+
         // Add typing status listeners
         messageInput.addEventListener('input', () => {
             if (!isTyping) {
