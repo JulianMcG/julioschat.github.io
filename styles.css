@@ -554,7 +554,7 @@ body {
     display: flex;
     align-items: center;
     background-color: var(--game-bg);
-    border-radius: 8px;
+    border-radius: 50px;
     padding: 10px;
     margin-bottom: 20px;
     position: relative;
@@ -630,6 +630,8 @@ body {
     background-color: var(--primary-color);
     border-radius: 8px;
     padding: 10px;
+    transition: none;
+    /* Instant activation */
 }
 
 .profile-picture-container {
@@ -638,6 +640,20 @@ body {
     width: 40px;
     height: 40px;
     flex-shrink: 0;
+}
+
+/* Inner stroke for profile picture */
+.profile-picture-container::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    pointer-events: none;
+    box-sizing: border-box;
 }
 
 .profile-picture {
