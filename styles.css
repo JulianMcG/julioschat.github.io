@@ -480,7 +480,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
+    /* Reduced margin */
 }
 
 .sidebar-header h3 {
@@ -565,7 +566,8 @@ body {
     background-color: var(--game-bg);
     border-radius: 50px;
     padding: 10px;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
+    /* Reduced margin */
     position: relative;
 }
 
@@ -746,11 +748,14 @@ body {
     left: 20px;
     right: 20px;
     background-color: var(--game-bg);
-    border-radius: 50px;
+    border-radius: 15px;
+    /* Updated from 50px */
     padding: 10px;
     display: flex;
     align-items: center;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    border-top: none;
+    /* Ensure no separator */
 }
 
 /* Context Menu */
