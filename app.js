@@ -737,11 +737,100 @@ function createUserElement(user) {
     `;
 
     // Add click handler for the user item
+    // Add click handler for the user item
     userElement.onclick = (e) => {
         if (!e.target.classList.contains('action-icon')) {
             startChat(user.id, displayName);
         }
     };
+
+    // Context Menu Handler
+    userElement.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+
+        // Remove existing menus
+        document.querySelectorAll('.context-menu').forEach(m => m.remove());
+
+        const menu = document.createElement('div');
+        menu.className = 'context-menu';
+        menu.style.left = `${e.clientX}px`;
+        menu.style.top = `${e.clientY}px`;
+
+        const isPinned = userElement.classList.contains('pinned'); // Use sidebarUsers check properly in production, but class works for visual
+
+        menu.innerHTML = `
+            <div class="context-menu-item" id="ctx-pin">
+                <span class="material-symbols-outlined">keep</span>
+                <span>${isPinned ? 'Unpin' : 'Pin'} Chat</span>
+            </div>
+            <div class="context-menu-item" id="ctx-unread">
+                <span class="material-symbols-outlined">mark_chat_unread</span>
+                <span>Mark as Unread</span>
+            </div>
+            <div class="context-menu-item danger" id="ctx-delete">
+                <span class="material-symbols-outlined">delete</span>
+                <span>Delete Chat</span>
+            </div>
+        `;
+
+        document.body.appendChild(menu);
+
+        // adjust position if offscreen (basic check)
+        const rect = menu.getBoundingClientRect();
+        if (rect.bottom > window.innerHeight) {
+            menu.style.top = `${e.clientY - rect.height}px`;
+        }
+        if (rect.right > window.innerWidth) {
+            menu.style.left = `${e.clientX - rect.width}px`;
+        }
+
+        // Actions
+        menu.querySelector('#ctx-pin').onclick = async () => {
+            menu.remove();
+            // Toggle Pin
+            try {
+                await setDoc(doc(db, 'users', currentUser.uid), {
+                    pinnedConversations: isPinned ? arrayRemove(user.id) : arrayUnion(user.id)
+                }, { merge: true });
+            } catch (err) { console.error('Error pinning:', err); }
+        };
+
+        menu.querySelector('#ctx-unread').onclick = async () => {
+            menu.remove();
+            // Mark Unread (set lastReadTime to 0)
+            try {
+                await setDoc(doc(db, 'users', currentUser.uid), {
+                    lastReadTimes: {
+                        [user.id]: new Date(0) // Epoch
+                    }
+                }, { merge: true });
+            } catch (err) { console.error('Error marking unread:', err); }
+        };
+
+        menu.querySelector('#ctx-delete').onclick = async () => {
+            menu.remove();
+            // Delete (Hide)
+            try {
+                await setDoc(doc(db, 'users', currentUser.uid), {
+                    hiddenConversations: arrayUnion(user.id)
+                }, { merge: true });
+                if (currentChatUser?.id === user.id) {
+                    currentChatUser = null;
+                    document.getElementById('active-chat-username').textContent = 'Select a chat';
+                    document.getElementById('chat-section').style.display = 'none'; // Or reset UI
+                    document.getElementById('users-container').style.display = 'block';
+                }
+            } catch (err) { console.error('Error deleting:', err); }
+        };
+
+        // Close on click outside
+        const closeMenu = () => {
+            menu.remove();
+            document.removeEventListener('click', closeMenu);
+        };
+        // Use setTimeout to avoid immediate trigger
+        setTimeout(() => document.addEventListener('click', closeMenu), 0);
+    });
 
     // Add click handler for close icon
     const closeIcon = userElement.querySelector('.close-icon');
