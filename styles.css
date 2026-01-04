@@ -415,7 +415,8 @@ body {
 .sidebar.collapsed .username,
 .sidebar.collapsed .user-actions,
 .sidebar.collapsed .profile-info span,
-.sidebar.collapsed .profile-info img {
+.sidebar.collapsed .profile-info img,
+.sidebar.collapsed .last-message {
     display: none;
 }
 
@@ -441,6 +442,11 @@ body {
 
 .sidebar.collapsed .user-item:hover .user-actions {
     display: none;
+}
+
+.sidebar.collapsed .user-item:hover .action-icon {
+    display: none;
+    /* User requested removal */
 }
 
 .sidebar.collapsed .profile-section {
@@ -621,7 +627,7 @@ body {
 }
 
 .user-item.active {
-    background-color: var(--game-bg);
+    background-color: var(--primary-color);
     border-radius: 8px;
     padding: 10px;
 }
@@ -732,9 +738,6 @@ body {
     display: none;
 }
 
-.sidebar .profile-info {
-    display: none;
-}
 
 /* Container query-like behavior using media query or a class for small widths */
 /* Since JS handles 'collapsed' class for < 200px, we can add a 'compact' class or check width */
@@ -770,7 +773,7 @@ body {
 }
 
 .user-item:hover .user-actions {
-    display: flex;
+    display: none;
 }
 
 .action-icon {
@@ -2086,6 +2089,7 @@ input:checked+.slider:before {
     justify-content: center;
     align-items: center;
 }
+
 
 .custom-emoji-input {
     width: 60px;
