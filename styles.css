@@ -8,17 +8,17 @@
 }
 
 :root {
-    --background-dark: var(--background-dark);
+    --background-dark: #0C0E16;
     --game-bg: #151826;
     --stroke-color: #1C2033;
     --cell-bg: #252A42;
     --uncovered-cell-bg: #1C2033;
     --text-light: #ECEFF4;
-    --text-accent: var(--text-accent);
-    --label-color: var(--label-color);
-    --primary-color: var(--primary-color);
-    --primary-hover: var(--primary-hover);
-    --danger-color: var(--danger-color);
+    --text-accent: #ECEBF7;
+    --label-color: #B6B8C8;
+    --primary-color: #1F49C7;
+    --primary-hover: #1a3db0;
+    --danger-color: #E85658;
 }
 
 body {
