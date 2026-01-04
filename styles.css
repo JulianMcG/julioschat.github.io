@@ -753,9 +753,11 @@ body {
     padding: 10px;
     display: flex;
     align-items: center;
+    display: flex;
+    align-items: center;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    border-top: none !important;
     border: none !important;
+    outline: none !important;
     /* Ensure no separator */
 }
 
