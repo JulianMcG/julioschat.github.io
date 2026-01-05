@@ -786,11 +786,10 @@ body {
 .read-receipt {
     font-size: 10px;
     color: var(--label-color);
-    text-align: right;
-    margin-top: 2px;
-    margin-right: 5px;
-    margin-bottom: 2px;
-    opacity: 1;
+    position: absolute;
+    bottom: -18px;
+    right: 0;
+    opacity: 0.8;
 }
 
 .sidebar .profile-section {
@@ -994,7 +993,8 @@ body {
 }
 
 .message {
-    margin-bottom: 8px;
+    margin-bottom: 24px;
+    /* Space for absolute read receipt */
     max-width: 80%;
     position: relative;
     line-height: 1.4;
@@ -1006,13 +1006,11 @@ body {
 .message.sent {
     align-items: flex-end;
     margin-left: auto;
-    margin-right: 20px;
 }
 
 .message.received {
     align-items: flex-start;
     margin-right: auto;
-    margin-left: 20px;
 }
 
 .message .content {
