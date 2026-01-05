@@ -795,11 +795,13 @@ body {
     color: var(--label-color);
     text-align: right;
     margin-top: 2px;
-    margin-right: 5px;
-    margin-bottom: 2px;
+    margin-right: 20px;
+    margin-bottom: 8px;
+    margin-left: auto;
     opacity: 0.8;
-    clear: both;
-    /* Ensure it stays under the message bubble */
+    display: block;
+    max-width: 80%;
+    /* Positioned under the message bubble, not inside */
 }
 
 .sidebar .profile-section {
