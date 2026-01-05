@@ -631,6 +631,8 @@ body {
     transition: background-color 0.2s ease, opacity 0.2s ease;
     align-items: center;
     /* Center items vertically */
+    overflow: visible;
+    /* Allow absolute elements (unread indicator) to show outside */
 }
 
 .user-item:hover {
@@ -782,8 +784,22 @@ body {
     border-radius: 50%;
     display: none;
     position: absolute;
-    left: -15px;
-    /* Move outside the selection box */
+    left: -12px;
+    /* Adjusted to be slightly visible on the edge but outside content */
+    z-index: 10;
+}
+
+/* Read Receipt Styles */
+.read-receipt {
+    font-size: 10px;
+    color: var(--label-color);
+    text-align: right;
+    margin-top: 2px;
+    margin-right: 5px;
+    margin-bottom: 2px;
+    opacity: 0.8;
+    clear: both;
+    /* Ensure it stays under the message bubble */
 }
 
 .sidebar .profile-section {
