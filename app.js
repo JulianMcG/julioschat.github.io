@@ -1559,9 +1559,13 @@ async function loadMessages() {
                         if (msg.senderId !== currentUser.uid &&
                             msg.participants.includes(currentUser.uid) &&
                             !blockedUsers.includes(msg.senderId)) {
-                            // Play sound for ANY new message from others
-                            playNotificationSound();
+                            // Play sound only if the tab is hidden
+                            if (document.hidden) {
+                                playNotificationSound();
+                            }
                         }
+                        // Scroll to bottom with slight delay to ensure rendering
+                        setTimeout(scrollToBottom, 50);
                     }
                 });
             }
