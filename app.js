@@ -537,10 +537,40 @@ async function loadUsers() {
             return;
         }
 
-        // If sidebar is already initialized, don't reload
-        if (isSidebarInitialized) {
+        // If sidebar is already initialized, don't reload data but we keep listener
+        if (isSidebarInitialized && sidebarUnsubscribe) {
             return;
         }
+
+        // Setup a listener for current user's data to handle live unread status updates
+        if (window.currentUserDataUnsubscribe) {
+            window.currentUserDataUnsubscribe();
+        }
+        window.currentUserDataUnsubscribe = onSnapshot(doc(db, 'users', currentUser.uid), (userDoc) => {
+            if (!userDoc.exists()) return;
+            const data = userDoc.data();
+            const lastReadTimes = data.lastReadTimes || {};
+
+            // Live update all sidebar items unread status
+            const userItems = document.querySelectorAll('.user-item');
+            userItems.forEach(item => {
+                const uid = item.dataset.uid;
+                if (!uid) return;
+
+                // Find message info for this user in sidebarUsers cache
+                const user = sidebarUsers.get(uid);
+                if (user && user.lastMessageTime) {
+                    const lastReadTime = lastReadTimes[uid] ? lastReadTimes[uid].toDate() : new Date(0);
+                    const isUnread = user.lastMessageTime.toDate() > lastReadTime;
+
+                    if (isUnread) {
+                        item.classList.add('unread');
+                    } else {
+                        item.classList.remove('unread');
+                    }
+                }
+            });
+        });
 
         // Set up real-time listener for sidebar updates
         if (sidebarUnsubscribe) {
@@ -933,25 +963,20 @@ async function startChat(userId, username) {
 
     // Set current user data immediately
     // Note: We'll look up the alias asynchronously, but start with what we have
-    // If we have an existing alias from the sidebar item, we could use that, but username/alias logic 
-    // is a bit mixed here. We will defer the perfect alias until the async part, 
+    // If we have an existing alias from the sidebar item, we could use that, but username/alias logic
+    // is a bit mixed here. We will defer the perfect alias until the async part,
     // but usually 'username' passed in here is the alias if clicked from sidebar.
-    currentChatUser = { id: userId, username: username }; // Optimistic update
+    currentChatUser = { id: userId, username: username };
 
     // update UI for sidebar immediately
     const userItems = document.querySelectorAll('.user-item');
     userItems.forEach(item => {
         if (item.dataset.uid === userId) {
+            // Update active state in sidebar
+            const previousActive = document.querySelector('.user-item.active');
+            if (previousActive) previousActive.classList.remove('active');
             item.classList.add('active');
             item.classList.remove('unread');
-
-            // Hide unread indicator immediately
-            const unreadIndicator = item.querySelector('.unread-indicator');
-            if (unreadIndicator) unreadIndicator.style.display = 'none';
-
-            // If we have an alias in the DOM, ensure we use that for the header
-            const nameEl = item.querySelector('.username');
-            // But 'username' arg is usually correct.
         } else {
             item.classList.remove('active');
         }
@@ -1327,10 +1352,15 @@ async function loadMessages() {
             window.currentMessageUnsubscribe();
         }
 
-        const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
+        const unsubscribe = onSnapshot(messagesQuery, async (snapshot) => {
             chatMessages.innerHTML = '';
             let lastMessageTime = null;
             let lastMessageSenderId = null;
+
+            // Get current user's blocked users list
+            const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
+            const currentUserData = currentUserDoc.data();
+            const blockedUsers = currentUserData?.blockedUsers || [];
 
             snapshot.forEach(doc => {
                 const message = doc.data();
@@ -1379,6 +1409,7 @@ async function loadMessages() {
                     const messageElement = document.createElement('div');
                     messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
                     messageElement.dataset.messageId = doc.id;
+                    messageElement.dataset.timestamp = message.timestamp.toMillis();
 
                     // Create message content container
                     const contentContainer = document.createElement('div');
@@ -1430,55 +1461,36 @@ async function loadMessages() {
                 }
             });
 
-            // Handle Read Receipts
-            const allMessages = Array.from(chatMessages.querySelectorAll('.message'));
-            if (allMessages.length > 0) {
-                const myMessages = allMessages.filter(msg => msg.classList.contains('sent'));
-                if (myMessages.length > 0) {
-                    const lastSentMessage = myMessages[myMessages.length - 1];
-                    const lastSentMessageId = lastSentMessage.dataset.messageId;
-
-                    // Get other user's last read time (we might want to listen to this for real-time updates)
-                    const otherUserRef = doc(db, 'users', currentChatUser.id);
-                    getDoc(otherUserRef).then(docSnap => {
-                        if (docSnap.exists()) {
-                            const data = docSnap.data();
-                            const lastReadTimes = data.lastReadTimes || {};
-                            const myId = currentUser.uid;
-                            const lastReadTime = lastReadTimes[myId] ? lastReadTimes[myId].toDate() : new Date(0);
-
-                            // Find the timestamp of our last message
-                            // Ideally we have it from the snapshot data loop, but we can look it up or store it
-                            // For simplicity, let's assume if the last read time is > this message's timestamp, it's read.
-                            // We need the timestamp of the lastSentMessage. 
-                            // Let's grab it from the DOM element dataset if we stored it, or we rely on the loop above.
-                            // Better yet, let's just create the element and default to "Sent", then update if read.
-
-                            // Actually, since we are in a snapshot listener for MESSAGES, we re-run this on every message update.
-                            // But we ALSO need to re-run this if the USER OBJECT updates (read status changes).
-                            // So we should probably set up a separate listener or just check now.
-                            // For MVP requested "under your latest message", we check now.
-
-                            // We need the timestamp of the message corresponding to lastSentMessageId.
-                            // Re-find the message object from snapshot
-                            const lastMessageDoc = snapshot.docs.find(d => d.id === lastSentMessageId);
-                            if (lastMessageDoc) {
-                                const msgData = lastMessageDoc.data();
-                                const msgTime = msgData.timestamp.toDate();
-
-                                const receipt = document.createElement('div');
-                                receipt.className = 'read-receipt';
-                                if (lastReadTime > msgTime) {
-                                    receipt.textContent = 'Read';
-                                } else {
-                                    receipt.textContent = 'Sent';
-                                }
-                                lastSentMessage.appendChild(receipt);
-                            }
-                        }
-                    }).catch(err => console.error("Error getting read receipt:", err));
-                }
+            // LIVE READ RECEIPTS
+            // Setup a listener for the other user's read status
+            if (window.otherUserReadListener) {
+                window.otherUserReadListener();
             }
+
+            window.otherUserReadListener = onSnapshot(doc(db, 'users', currentChatUser.id), (userDoc) => {
+                if (!userDoc.exists()) return;
+
+                const data = userDoc.data();
+                const lastReadTimes = data.lastReadTimes || {};
+                const myLastReadTime = lastReadTimes[currentUser.uid] ? lastReadTimes[currentUser.uid].toDate() : new Date(0);
+
+                // Find our last sent message in the DOM
+                const sentMessages = Array.from(chatMessages.querySelectorAll('.message.sent'));
+                if (sentMessages.length > 0) {
+                    const lastSent = sentMessages[sentMessages.length - 1];
+                    const msgTimestamp = parseInt(lastSent.dataset.timestamp);
+
+                    // Remove existing receipt
+                    const existing = lastSent.querySelector('.read-receipt');
+                    if (existing) existing.remove();
+
+                    // Add/Update receipt
+                    const receipt = document.createElement('div');
+                    receipt.className = 'read-receipt';
+                    receipt.textContent = (myLastReadTime.getTime() >= msgTimestamp) ? 'Read' : 'Sent';
+                    lastSent.appendChild(receipt);
+                }
+            });
 
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }, (error) => {
