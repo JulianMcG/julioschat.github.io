@@ -2290,7 +2290,8 @@ input:checked+.slider:before {
 /* Base header gradient if requested for the bar itself, user said "titlebar" */
 /* Base header gradient - Floating Style */
 .chat-header {
-    background: linear-gradient(180deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0) 100%);
+    /* Gradient matching game bg (#151826) fading to transparent */
+    background: linear-gradient(180deg, #151826 40%, rgba(21, 24, 38, 0.8) 70%, rgba(21, 24, 38, 0) 100%);
     position: absolute;
     /* Float over content */
     top: 0;
@@ -2298,11 +2299,21 @@ input:checked+.slider:before {
     right: 0;
     z-index: 10;
     padding: 10px 16px;
-    height: 60px;
+    height: 80px;
+    /* Extended height for deeper fade */
     display: flex;
-    align-items: center;
+    align-items: flex-start;
+    /* Align to top */
+    padding-top: 15px;
     border-bottom: none;
     /* Remove any border */
+    pointer-events: none;
+    /* Let clicks pass through transparent parts */
+}
+
+/* Ensure user info is clickable */
+.header-user-info {
+    pointer-events: auto;
 }
 
 /* Ensure Chat Area handles the overlay */
