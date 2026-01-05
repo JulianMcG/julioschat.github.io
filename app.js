@@ -28,8 +28,15 @@ import {
     updateDoc,
     runTransaction
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js"; // Notification Audio
+const notificationSound = new Audio('./NotifSounds/Birdy.mp3');
 
+function playNotificationSound() {
+    notificationSound.currentTime = 0;
+    notificationSound.play().catch(err => console.error('Error playing sound:', err));
+}
+
+// Global Variables for Chat
 let currentUser = null;
 let currentChatUser = null;
 let typingTimeout = null;
@@ -37,7 +44,6 @@ let isTyping = false;
 const storage = getStorage();
 
 // Notification Sound
-let notificationSound = null;
 let isTabFocused = document.visibilityState === 'visible';
 let notificationsEnabled = true;
 let lastSoundPlayTime = 0;
@@ -594,6 +600,22 @@ async function loadUsers() {
                 }
             } catch (error) {
                 console.error('Error fetching user data for unread status:', error);
+            }
+
+            // Notification Sound for new messages
+            if (isSidebarInitialized) {
+                snapshot.docChanges().forEach(change => {
+                    if (change.type === 'added') {
+                        const message = change.doc.data();
+                        // If it's a new message not from us, and not in the currently open chat
+                        if (message.senderId !== currentUser.uid) {
+                            // Only play if not currently chatting with this person
+                            if (!currentChatUser || message.senderId !== currentChatUser.id) {
+                                playNotificationSound();
+                            }
+                        }
+                    }
+                });
             }
 
             // Get current user's data for pinned/hidden status
@@ -1195,8 +1217,7 @@ function createReactionPicker(messageId) {
             // Usually inputs commit on blur if there's content in this context
             // But it might be annoying if accidental. Let's just close if empty, or submit?
             // Let's stick to Enter to submit for safety, or just close.
-            // Actually user might click away to close.
-            // If they click inside input, it propagation stops.
+            // Actually user might click inside input, it propagation stops.
             // If they click outside, picker removes via global listener.
             // So blur event might not be needed if global listener handles "outside" clicks.
             // But if I want blur to remove picker:
@@ -1721,12 +1742,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
 
                     // If no users are visible, show skeleton loaders
-                    const visibleUsers = Array.from(userItems).filter(item => item.style.display !== 'none');
-                    if (visibleUsers.length === 0) {
-                        const usersContainer = document.getElementById('users-container');
-                        if (usersContainer) {
-                            addSkeletonLoaders(usersContainer);
-                        }
+                    const usersContainer = document.getElementById('users-container');
+                    if (usersContainer) {
+                        addSkeletonLoaders(usersContainer);
                     }
                 } else {
                     await searchUsers(searchTerm);
@@ -2489,7 +2507,7 @@ async function loadNotificationSoundPreference() {
         notificationsEnabled = userData?.notificationsEnabled ?? true;
 
         // Update audio source
-        notificationSound = new Audio(`NotifSounds/${selectedSound}`);
+        notificationSound.src = `NotifSounds/${selectedSound}`;
         notificationSound.volume = 0.3; // Set volume to 30%
 
         // Update UI elements if they exist
