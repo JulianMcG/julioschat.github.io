@@ -1346,7 +1346,7 @@ function formatReactions(reactions) {
 }
 
 // Function to update read receipts for sent messages
-function updateReadReceipts(lastReadTime, messagesSnapshot) {
+async function updateReadReceipts(lastReadTime) {
     if (!currentChatUser || !currentUser) return;
     
     const chatMessages = document.getElementById('chat-messages');
@@ -1367,19 +1367,25 @@ function updateReadReceipts(lastReadTime, messagesSnapshot) {
     const existingReceipts = chatMessages.querySelectorAll('.read-receipt');
     existingReceipts.forEach(receipt => receipt.remove());
     
-    // Find the message timestamp from snapshot
-    const lastMessageDoc = messagesSnapshot.docs.find(d => d.id === lastSentMessageId);
-    if (lastMessageDoc) {
-        const msgData = lastMessageDoc.data();
-        const msgTime = msgData.timestamp.toDate();
+    try {
+        // Query the message document directly to get the timestamp
+        const messageDocRef = doc(db, 'messages', lastSentMessageId);
+        const messageDoc = await getDoc(messageDocRef);
         
-        const receipt = document.createElement('div');
-        receipt.className = 'read-receipt';
-        receipt.dataset.messageId = lastSentMessageId;
-        receipt.textContent = lastReadTime >= msgTime ? 'Read' : 'Sent';
-        
-        // Append after the message element, not inside it
-        lastSentMessage.after(receipt);
+        if (messageDoc.exists()) {
+            const msgData = messageDoc.data();
+            const msgTime = msgData.timestamp.toDate();
+            
+            const receipt = document.createElement('div');
+            receipt.className = 'read-receipt';
+            receipt.dataset.messageId = lastSentMessageId;
+            receipt.textContent = lastReadTime >= msgTime ? 'Read' : 'Sent';
+            
+            // Append after the message element, not inside it
+            lastSentMessage.after(receipt);
+        }
+    } catch (err) {
+        console.error('Error getting message timestamp for read receipt:', err);
     }
 }
 
@@ -1411,9 +1417,6 @@ async function loadMessages() {
         }
 
         const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
-            // Store snapshot for read receipt updates
-            window.currentMessagesSnapshot = snapshot;
-            
             chatMessages.innerHTML = '';
             let lastMessageTime = null;
             let lastMessageSenderId = null;
@@ -1519,18 +1522,16 @@ async function loadMessages() {
             chatMessages.scrollTop = chatMessages.scrollHeight;
             
             // Initial read receipt update after messages are loaded
-            if (window.currentMessagesSnapshot) {
-                const otherUserRef = doc(db, 'users', currentChatUser.id);
-                getDoc(otherUserRef).then(docSnap => {
-                    if (docSnap.exists()) {
-                        const data = docSnap.data();
-                        const lastReadTimes = data.lastReadTimes || {};
-                        const myId = currentUser.uid;
-                        const lastReadTime = lastReadTimes[myId] ? lastReadTimes[myId].toDate() : new Date(0);
-                        updateReadReceipts(lastReadTime, window.currentMessagesSnapshot);
-                    }
-                }).catch(err => console.error('Error getting initial read receipt:', err));
-            }
+            const otherUserRef = doc(db, 'users', currentChatUser.id);
+            getDoc(otherUserRef).then(docSnap => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    const lastReadTimes = data.lastReadTimes || {};
+                    const myId = currentUser.uid;
+                    const lastReadTime = lastReadTimes[myId] ? lastReadTimes[myId].toDate() : new Date(0);
+                    updateReadReceipts(lastReadTime);
+                }
+            }).catch(err => console.error('Error getting initial read receipt:', err));
         }, (error) => {
             console.error('Error in message snapshot:', error);
         });
@@ -1543,15 +1544,15 @@ async function loadMessages() {
         }
         const otherUserRef = doc(db, 'users', currentChatUser.id);
         window.currentReadReceiptUnsubscribe = onSnapshot(otherUserRef, (docSnap) => {
-            if (!docSnap.exists() || !window.currentMessagesSnapshot) return;
+            if (!docSnap.exists()) return;
             
             const data = docSnap.data();
             const lastReadTimes = data.lastReadTimes || {};
             const myId = currentUser.uid;
             const lastReadTime = lastReadTimes[myId] ? lastReadTimes[myId].toDate() : new Date(0);
             
-            // Update read receipts with the latest read time
-            updateReadReceipts(lastReadTime, window.currentMessagesSnapshot);
+            // Update read receipts with the latest read time - query message directly
+            updateReadReceipts(lastReadTime);
         }, (error) => {
             console.error('Error in read receipt listener:', error);
         });
