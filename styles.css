@@ -628,7 +628,7 @@ body {
     position: relative;
     min-width: 0;
     /* Smooth transitions to prevent flickering */
-    transition: background-color 0.2s ease, opacity 0.2s ease;
+    transition: none;
     align-items: center;
     /* Center items vertically */
     overflow: visible;
