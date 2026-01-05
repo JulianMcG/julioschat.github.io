@@ -46,6 +46,7 @@ const SOUND_COOLDOWN = 1000; // 1 second cooldown
 // Sidebar optimization variables
 let sidebarUsers = new Map(); // Cache for user data
 let sidebarUnsubscribe = null; // Real-time listener for sidebar updates
+let currentUserUnreadUnsubscribe = null; // Real-time listener for current user's lastReadTimes
 let isSidebarInitialized = false; // Track if sidebar has been initialized
 
 
@@ -663,6 +664,43 @@ async function loadUsers() {
         }, (error) => {
             console.error('Error in sidebar listener:', error);
         });
+        
+        // Set up real-time listener for current user's lastReadTimes to update unread indicators
+        if (currentUserUnreadUnsubscribe) {
+            currentUserUnreadUnsubscribe();
+        }
+        const currentUserRef = doc(db, 'users', currentUser.uid);
+        currentUserUnreadUnsubscribe = onSnapshot(currentUserRef, async (userDocSnap) => {
+            if (!userDocSnap.exists()) return;
+            
+            const lastReadTimes = userDocSnap.data().lastReadTimes || {};
+            
+            // Update unread status for all user items in the sidebar
+            const usersContainer = document.getElementById('users-container');
+            if (!usersContainer) return;
+            
+            const userItems = usersContainer.querySelectorAll('.user-item');
+            userItems.forEach(userElement => {
+                const userId = userElement.dataset.uid;
+                if (!userId) return;
+                
+                // Get the user's last message time from cache
+                const cachedUser = sidebarUsers.get(userId);
+                if (!cachedUser || !cachedUser.lastMessageTime) return;
+                
+                const lastReadTime = lastReadTimes[userId] ? lastReadTimes[userId].toDate() : new Date(0);
+                const isUnread = cachedUser.lastMessageTime.toDate() > lastReadTime;
+                
+                // Update unread class
+                if (isUnread) {
+                    userElement.classList.add('unread');
+                } else {
+                    userElement.classList.remove('unread');
+                }
+            });
+        }, (error) => {
+            console.error('Error in current user unread listener:', error);
+        });
 
     } catch (error) {
         console.error('Error loading users:', error);
@@ -730,6 +768,13 @@ function updateUserElement(userElement, user) {
         if (lastMessageSpan.textContent !== messagePreview) {
             lastMessageSpan.textContent = messagePreview;
         }
+    }
+    
+    // Update unread status
+    if (user.isUnread) {
+        userElement.classList.add('unread');
+    } else {
+        userElement.classList.remove('unread');
     }
 }
 
@@ -1300,6 +1345,60 @@ function formatReactions(reactions) {
     return reactionDiv;
 }
 
+// Function to update read receipts for sent messages
+async function updateReadReceipts(messagesSnapshot) {
+    if (!currentChatUser || !currentUser) return;
+    
+    const chatMessages = document.getElementById('chat-messages');
+    if (!chatMessages) return;
+    
+    const allMessages = Array.from(chatMessages.querySelectorAll('.message'));
+    const myMessages = allMessages.filter(msg => msg.classList.contains('sent'));
+    
+    if (myMessages.length === 0) return;
+    
+    // Get the last sent message
+    const lastSentMessage = myMessages[myMessages.length - 1];
+    const lastSentMessageId = lastSentMessage.dataset.messageId;
+    
+    if (!lastSentMessageId) return;
+    
+    // Remove any existing read receipt for this message
+    const existingReceipt = chatMessages.querySelector(`.read-receipt[data-message-id="${lastSentMessageId}"]`);
+    if (existingReceipt) {
+        existingReceipt.remove();
+    }
+    
+    try {
+        // Get other user's last read time
+        const otherUserRef = doc(db, 'users', currentChatUser.id);
+        const docSnap = await getDoc(otherUserRef);
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            const lastReadTimes = data.lastReadTimes || {};
+            const myId = currentUser.uid;
+            const lastReadTime = lastReadTimes[myId] ? lastReadTimes[myId].toDate() : new Date(0);
+            
+            // Find the message timestamp from snapshot
+            const lastMessageDoc = messagesSnapshot.docs.find(d => d.id === lastSentMessageId);
+            if (lastMessageDoc) {
+                const msgData = lastMessageDoc.data();
+                const msgTime = msgData.timestamp.toDate();
+                
+                const receipt = document.createElement('div');
+                receipt.className = 'read-receipt';
+                receipt.dataset.messageId = lastSentMessageId;
+                receipt.textContent = lastReadTime >= msgTime ? 'Read' : 'Sent';
+                
+                // Append after the message element, not inside it
+                lastSentMessage.after(receipt);
+            }
+        }
+    } catch (err) {
+        console.error("Error getting read receipt:", err);
+    }
+}
+
 // Modify the loadMessages function to include reactions
 async function loadMessages() {
     if (!currentUser || !currentChatUser) {
@@ -1328,6 +1427,9 @@ async function loadMessages() {
         }
 
         const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
+            // Store snapshot for read receipt updates
+            window.currentMessagesSnapshot = snapshot;
+            
             chatMessages.innerHTML = '';
             let lastMessageTime = null;
             let lastMessageSenderId = null;
@@ -1430,62 +1532,32 @@ async function loadMessages() {
                 }
             });
 
-            // Handle Read Receipts
-            const allMessages = Array.from(chatMessages.querySelectorAll('.message'));
-            if (allMessages.length > 0) {
-                const myMessages = allMessages.filter(msg => msg.classList.contains('sent'));
-                if (myMessages.length > 0) {
-                    const lastSentMessage = myMessages[myMessages.length - 1];
-                    const lastSentMessageId = lastSentMessage.dataset.messageId;
-
-                    // Get other user's last read time (we might want to listen to this for real-time updates)
-                    const otherUserRef = doc(db, 'users', currentChatUser.id);
-                    getDoc(otherUserRef).then(docSnap => {
-                        if (docSnap.exists()) {
-                            const data = docSnap.data();
-                            const lastReadTimes = data.lastReadTimes || {};
-                            const myId = currentUser.uid;
-                            const lastReadTime = lastReadTimes[myId] ? lastReadTimes[myId].toDate() : new Date(0);
-
-                            // Find the timestamp of our last message
-                            // Ideally we have it from the snapshot data loop, but we can look it up or store it
-                            // For simplicity, let's assume if the last read time is > this message's timestamp, it's read.
-                            // We need the timestamp of the lastSentMessage. 
-                            // Let's grab it from the DOM element dataset if we stored it, or we rely on the loop above.
-                            // Better yet, let's just create the element and default to "Sent", then update if read.
-
-                            // Actually, since we are in a snapshot listener for MESSAGES, we re-run this on every message update.
-                            // But we ALSO need to re-run this if the USER OBJECT updates (read status changes).
-                            // So we should probably set up a separate listener or just check now.
-                            // For MVP requested "under your latest message", we check now.
-
-                            // We need the timestamp of the message corresponding to lastSentMessageId.
-                            // Re-find the message object from snapshot
-                            const lastMessageDoc = snapshot.docs.find(d => d.id === lastSentMessageId);
-                            if (lastMessageDoc) {
-                                const msgData = lastMessageDoc.data();
-                                const msgTime = msgData.timestamp.toDate();
-
-                                const receipt = document.createElement('div');
-                                receipt.className = 'read-receipt';
-                                if (lastReadTime > msgTime) {
-                                    receipt.textContent = 'Read';
-                                } else {
-                                    receipt.textContent = 'Sent';
-                                }
-                                lastSentMessage.appendChild(receipt);
-                            }
-                        }
-                    }).catch(err => console.error("Error getting read receipt:", err));
-                }
-            }
-
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            // Handle Read Receipts - update all sent messages
+            updateReadReceipts(snapshot).then(() => {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            });
         }, (error) => {
             console.error('Error in message snapshot:', error);
         });
 
         window.currentMessageUnsubscribe = unsubscribe;
+        
+        // Store the current messages snapshot for read receipt updates
+        window.currentMessagesSnapshot = null;
+        
+        // Set up real-time listener for read receipts (other user's lastReadTimes)
+        if (window.currentReadReceiptUnsubscribe) {
+            window.currentReadReceiptUnsubscribe();
+        }
+        const otherUserRef = doc(db, 'users', currentChatUser.id);
+        window.currentReadReceiptUnsubscribe = onSnapshot(otherUserRef, async (docSnap) => {
+            if (docSnap.exists() && window.currentMessagesSnapshot) {
+                await updateReadReceipts(window.currentMessagesSnapshot);
+            }
+        }, (error) => {
+            console.error('Error in read receipt listener:', error);
+        });
+        
     } catch (error) {
         console.error('Error loading messages:', error);
     }
