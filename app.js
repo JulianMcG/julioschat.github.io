@@ -1559,8 +1559,6 @@ async function loadMessages() {
 
             // 3. Read Receipt Logic (Critical Path)
             // Always mark the LATEST incoming message as read if we are in this view
-            // 3. Read Receipt Logic (Critical Path)
-            // Always mark the LATEST incoming message as read if we are in this view
             if (latestIncomingMessage) {
                 // Use the message timestamp if available, otherwise assume "now" (server time)
                 // This fixes race conditions where local writes have null timestamps
