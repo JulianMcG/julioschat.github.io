@@ -1,5 +1,5 @@
 // Trigger new deployment with Vercel Pro
-import { auth, db } from './firebase-config.js';
+import { auth, db, storage } from './firebase-config.js';
 import {
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
@@ -26,15 +26,16 @@ import {
     arrayRemove,
     writeBatch,
     updateDoc,
-    runTransaction
+    runTransaction,
+    deleteField
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
 let currentUser = null;
 let currentChatUser = null;
 let typingTimeout = null;
 let isTyping = false;
-const storage = getStorage();
+// const storage = getStorage(); // storage is imported from firebase-config.js
 
 // Notification Sound
 let notificationSound = null;
