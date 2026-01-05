@@ -2283,15 +2283,33 @@ input:checked+.slider:before {
 }
 
 .header-user-info:hover {
-    background: linear-gradient(to right, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
-    /* Gradient fade on hover */
+    background: transparent;
+    /* Removed hover highlight */
 }
 
-/* Base header gradient if requested for the bar itself, user said "titlebar" */
+/* SEARCH BAR GRADIENT FADE */
+.search-container::after {
+    content: '';
+    position: absolute;
+    bottom: -20px;
+    left: 0;
+    right: 0;
+    height: 20px;
+    background: linear-gradient(to bottom, #151826 0%, rgba(21, 24, 38, 0) 100%);
+    pointer-events: none;
+    z-index: 5;
+}
+
 /* Base header gradient - Floating Style */
 .chat-header {
-    /* Gradient matching game bg (#151826) fading to transparent */
-    background: linear-gradient(180deg, #151826 40%, rgba(21, 24, 38, 0.8) 70%, rgba(21, 24, 38, 0) 100%);
+    /* Gradient matching game bg (#151826) fading to transparent - 70% opacity start */
+    background: linear-gradient(180deg, rgba(21, 24, 38, 0.7) 30%, rgba(21, 24, 38, 0) 100%);
+
+    /* Gradual Blur Effect using mask-image */
+    backdrop-filter: blur(8px);
+    -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
+    mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
+
     position: absolute;
     /* Float over content */
     top: 0;
@@ -2309,6 +2327,11 @@ input:checked+.slider:before {
     /* Remove any border */
     pointer-events: none;
     /* Let clicks pass through transparent parts */
+}
+
+/* Ensure user info is clickable */
+.header-user-info {
+    pointer-events: auto;
 }
 
 /* Ensure user info is clickable */
