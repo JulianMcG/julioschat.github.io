@@ -1417,132 +1417,152 @@ async function loadMessages() {
         }
 
         let isFirstSnapshot = true;
-        let lastAckReadTime = 0; // Track the last read time we confirmed to avoid write loops
+        let localLastReadTime = 0; // Prevent duplicate writes
 
         const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
             chatMessages.innerHTML = '';
             let lastMessageTime = null;
-            let lastMessageSenderId = null;
-            let latestMessageFromOther = null;
+            let latestIncomingMessage = null;
 
-            // 1. Rendering Loop
+            // 1. Render Messages using simple loop
+            const messages = [];
             snapshot.forEach(doc => {
-                const message = doc.data();
-                // console.log('Message data:', message); // Debug log
+                const data = doc.data();
+                data.id = doc.id;
+                messages.push(data);
+            });
 
+            messages.forEach(message => {
                 // Filter logic
-                if (message.participants.includes(currentChatUser.id) &&
-                    message.participants.includes(currentUser.uid) &&
-                    !blockedUsers.includes(message.senderId)) {
-
-                    const messageTime = message.timestamp ? message.timestamp.toDate() : new Date();
-
-                    // Track latest message from other user for Read Receipts
-                    if (message.senderId !== currentUser.uid) {
-                        latestMessageFromOther = message;
-                    }
-
-                    // Add timestamp or gap if needed
-                    if (lastMessageTime) {
-                        const timeDiff = messageTime - lastMessageTime;
-                        const twentyMinutes = 20 * 60 * 1000;
-                        if (timeDiff > twentyMinutes) {
-                            const dateSeparator = document.createElement('div');
-                            dateSeparator.className = 'date-separator';
-                            const today = new Date();
-                            const messageDate = messageTime;
-                            let dateText;
-                            if (messageDate.toDateString() === today.toDateString()) {
-                                dateText = `Today ${messageDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
-                            } else if (messageDate.toDateString() === new Date(today - 86400000).toDateString()) {
-                                dateText = `Yesterday ${messageDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
-                            } else {
-                                dateText = messageDate.toLocaleDateString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-                            }
-                            dateSeparator.textContent = dateText;
-                            chatMessages.appendChild(dateSeparator);
-                        }
-                    }
-
-                    const messageElement = document.createElement('div');
-                    messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
-                    messageElement.dataset.messageId = doc.id;
-
-                    const contentContainer = document.createElement('div');
-                    contentContainer.className = 'content';
-                    contentContainer.innerHTML = formatMessageContent(message.content);
-
-                    const reactionsContainer = document.createElement('div');
-                    reactionsContainer.className = 'message-reactions';
-                    if (message.reactions && Object.keys(message.reactions).length > 0) {
-                        reactionsContainer.classList.add('has-reactions');
-                        Object.keys(message.reactions).forEach(emoji => {
-                            const reaction = document.createElement('span');
-                            reaction.className = 'reaction';
-                            reaction.textContent = emoji;
-                            reaction.onclick = (e) => { e.stopPropagation(); addReaction(doc.id, emoji); };
-                            reactionsContainer.appendChild(reaction);
-                        });
-                    }
-
-                    if (message.senderId !== currentUser.uid) {
-                        const reactionButton = document.createElement('div');
-                        reactionButton.className = 'reaction-button';
-                        reactionButton.innerHTML = '<span class="material-symbols-outlined">add_reaction</span>';
-                        reactionButton.onclick = (e) => { e.stopPropagation(); showReactionPicker(e, doc.id); };
-                        messageElement.appendChild(reactionButton);
-                    }
-
-                    messageElement.appendChild(contentContainer);
-                    messageElement.appendChild(reactionsContainer);
-                    chatMessages.appendChild(messageElement);
-
-                    lastMessageTime = messageTime;
-                    lastMessageSenderId = message.senderId;
+                if (!message.participants.includes(currentChatUser.id) ||
+                    !message.participants.includes(currentUser.uid) ||
+                    blockedUsers.includes(message.senderId)) {
+                    return;
                 }
+
+                const messageTime = message.timestamp ? message.timestamp.toDate() : new Date();
+
+                // Track latest incoming message for Read Receipt
+                if (message.senderId !== currentUser.uid) {
+                    // Since specific order is asc, the last one we see is the latest
+                    latestIncomingMessage = message; // Keep reference to the latest object
+                }
+
+                // Date Separator
+                if (lastMessageTime) {
+                    const timeDiff = messageTime - lastMessageTime;
+                    const twentyMinutes = 20 * 60 * 1000;
+                    if (timeDiff > twentyMinutes) {
+                        const dateSeparator = document.createElement('div');
+                        dateSeparator.className = 'date-separator';
+                        const today = new Date();
+                        const messageDate = messageTime;
+                        let dateText;
+                        if (messageDate.toDateString() === today.toDateString()) {
+                            dateText = `Today ${messageDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+                        } else if (messageDate.toDateString() === new Date(today - 86400000).toDateString()) {
+                            dateText = `Yesterday ${messageDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+                        } else {
+                            dateText = messageDate.toLocaleDateString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+                        }
+                        dateSeparator.textContent = dateText;
+                        chatMessages.appendChild(dateSeparator);
+                    }
+                }
+
+                // Message Element Construction
+                const messageElement = document.createElement('div');
+                messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
+                messageElement.dataset.messageId = message.id;
+
+                const contentContainer = document.createElement('div');
+                contentContainer.className = 'content';
+                contentContainer.innerHTML = formatMessageContent(message.content);
+
+                const reactionsContainer = document.createElement('div');
+                reactionsContainer.className = 'message-reactions';
+                if (message.reactions && Object.keys(message.reactions).length > 0) {
+                    reactionsContainer.classList.add('has-reactions');
+                    Object.keys(message.reactions).forEach(emoji => {
+                        const reaction = document.createElement('span');
+                        reaction.className = 'reaction';
+                        reaction.textContent = emoji;
+                        reaction.onclick = (e) => { e.stopPropagation(); addReaction(message.id, emoji); };
+                        reactionsContainer.appendChild(reaction);
+                    });
+                }
+
+                if (message.senderId !== currentUser.uid) {
+                    const reactionButton = document.createElement('div');
+                    reactionButton.className = 'reaction-button';
+                    reactionButton.innerHTML = '<span class="material-symbols-outlined">add_reaction</span>';
+                    reactionButton.onclick = (e) => { e.stopPropagation(); showReactionPicker(e, message.id); };
+                    messageElement.appendChild(reactionButton);
+                }
+
+                messageElement.appendChild(contentContainer);
+                messageElement.appendChild(reactionsContainer);
+                chatMessages.appendChild(messageElement);
+
+                lastMessageTime = messageTime;
             });
 
             chatMessages.scrollTop = chatMessages.scrollHeight;
 
-            // 2. Sound Logic (Only for new messages, not initial load)
+            // 2. Sound & Notification Logic
             if (!isFirstSnapshot) {
                 snapshot.docChanges().forEach(change => {
                     if (change.type === 'added') {
-                        const message = change.doc.data();
-                        if (message.senderId !== currentUser.uid &&
-                            message.participants.includes(currentChatUser.id) &&
-                            message.participants.includes(currentUser.uid) &&
-                            !blockedUsers.includes(message.senderId)) {
+                        const msg = change.doc.data();
+                        if (msg.senderId !== currentUser.uid &&
+                            msg.participants.includes(currentUser.uid) &&
+                            !blockedUsers.includes(msg.senderId)) {
+                            // Play sound for ANY new message from others
                             playNotificationSound();
                         }
                     }
                 });
             }
 
-            // 3. Read Receipt Logic (Always mark latest as read if we are viewing)
-            if (latestMessageFromOther && latestMessageFromOther.timestamp) {
-                const latestTime = latestMessageFromOther.timestamp.toMillis();
-                // Only write if we haven't acknowledged this timestamp yet
-                if (latestTime > lastAckReadTime) {
-                    lastAckReadTime = latestTime; // Update local tracker immediately
+            // 3. Read Receipt Logic (Critical Path)
+            // Always mark the LATEST incoming message as read if we are in this view
+            if (latestIncomingMessage && latestIncomingMessage.timestamp) {
+                const msgTime = latestIncomingMessage.timestamp.toMillis();
 
-                    const myId = currentUser.uid;
-                    const targetId = latestMessageFromOther.senderId; // Should be currentChatUser.id usually
+                // Only write if this is a NEWER message than we last acknowledged locally
+                if (msgTime > localLastReadTime) {
+                    localLastReadTime = msgTime;
 
-                    setDoc(doc(db, 'users', myId), {
+                    // console.log("Marking read:", latestIncomingMessage.id, msgTime);
+
+                    // Direct update to currentUser doc
+                    // Using setDoc with merge to ensure nested field is updated/created correctly
+                    const userRef = doc(db, 'users', currentUser.uid);
+                    setDoc(userRef, {
                         lastReadTimes: {
-                            [targetId]: latestMessageFromOther.timestamp
+                            [latestIncomingMessage.senderId]: latestIncomingMessage.timestamp
                         }
                     }, { merge: true }).catch(err => {
-                        console.error("Error updating read receipt:", err);
-                        lastAckReadTime = 0; // Reset on failure to retry next snapshot
+                        console.error("Failed to mark as read:", err);
+                        localLastReadTime = 0; // Reset to retry
                     });
                 }
             }
 
             isFirstSnapshot = false;
 
-            // Update read receipts indicators (for sent messages)
+            // Trigger UI update for *my* sent messages (checking *their* read status)
+            // This reads the OTHER user's doc to see if THEY read MY messages
+            checkOtherUserReadStatus();
+
+        }, (error) => {
+            console.error('Error in message snapshot:', error);
+        });
+
+        window.currentMessageUnsubscribe = unsubscribe;
+
+        // Helper to check if other user has read my messages
+        function checkOtherUserReadStatus() {
             const otherUserRef = doc(db, 'users', currentChatUser.id);
             getDoc(otherUserRef).then(docSnap => {
                 if (docSnap.exists()) {
@@ -1553,18 +1573,14 @@ async function loadMessages() {
                     updateReadReceipts(lastReadTime);
                 }
             }).catch(err => console.error('Error getting read receipt:', err));
-        }, (error) => {
-            console.error('Error in message snapshot:', error);
-        });
-
-        window.currentMessageUnsubscribe = unsubscribe;
+        }
 
         // Set up real-time listener for read receipts (other user's lastReadTimes)
         if (window.currentReadReceiptUnsubscribe) {
             window.currentReadReceiptUnsubscribe();
         }
-        const otherUserRef = doc(db, 'users', currentChatUser.id);
-        window.currentReadReceiptUnsubscribe = onSnapshot(otherUserRef, (docSnap) => {
+        const otherRef = doc(db, 'users', currentChatUser.id);
+        window.currentReadReceiptUnsubscribe = onSnapshot(otherRef, (docSnap) => {
             if (!docSnap.exists()) return;
 
             const data = docSnap.data();
@@ -1572,8 +1588,7 @@ async function loadMessages() {
             const myId = currentUser.uid;
             const lastReadTime = lastReadTimes[myId] ? lastReadTimes[myId].toDate() : new Date(0);
 
-            // Update read receipts with the latest read time - query message directly
-            // This will trigger whenever the other user's lastReadTimes change
+            // Update read receipts with the latest read time
             updateReadReceipts(lastReadTime).catch(err => {
                 console.error('Error updating read receipts:', err);
             });
