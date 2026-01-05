@@ -664,7 +664,7 @@ async function loadUsers() {
         }, (error) => {
             console.error('Error in sidebar listener:', error);
         });
-        
+
         // Set up real-time listener for current user's lastReadTimes to update unread indicators
         if (currentUserUnreadUnsubscribe) {
             currentUserUnreadUnsubscribe();
@@ -672,25 +672,25 @@ async function loadUsers() {
         const currentUserRef = doc(db, 'users', currentUser.uid);
         currentUserUnreadUnsubscribe = onSnapshot(currentUserRef, async (userDocSnap) => {
             if (!userDocSnap.exists()) return;
-            
+
             const lastReadTimes = userDocSnap.data().lastReadTimes || {};
-            
+
             // Update unread status for all user items in the sidebar
             const usersContainer = document.getElementById('users-container');
             if (!usersContainer) return;
-            
+
             const userItems = usersContainer.querySelectorAll('.user-item');
             userItems.forEach(userElement => {
                 const userId = userElement.dataset.uid;
                 if (!userId) return;
-                
+
                 // Get the user's last message time from cache
                 const cachedUser = sidebarUsers.get(userId);
                 if (!cachedUser || !cachedUser.lastMessageTime) return;
-                
+
                 const lastReadTime = lastReadTimes[userId] ? lastReadTimes[userId].toDate() : new Date(0);
                 const isUnread = cachedUser.lastMessageTime.toDate() > lastReadTime;
-                
+
                 // Update unread class
                 if (isUnread) {
                     userElement.classList.add('unread');
@@ -769,7 +769,7 @@ function updateUserElement(userElement, user) {
             lastMessageSpan.textContent = messagePreview;
         }
     }
-    
+
     // Update unread status
     if (user.isUnread) {
         userElement.classList.add('unread');
@@ -1348,39 +1348,39 @@ function formatReactions(reactions) {
 // Function to update read receipts for sent messages
 async function updateReadReceipts(lastReadTime) {
     if (!currentChatUser || !currentUser) return;
-    
+
     const chatMessages = document.getElementById('chat-messages');
     if (!chatMessages) return;
-    
+
     const allMessages = Array.from(chatMessages.querySelectorAll('.message'));
     const myMessages = allMessages.filter(msg => msg.classList.contains('sent'));
-    
+
     if (myMessages.length === 0) return;
-    
+
     // Get the last sent message
     const lastSentMessage = myMessages[myMessages.length - 1];
     const lastSentMessageId = lastSentMessage.dataset.messageId;
-    
+
     if (!lastSentMessageId) return;
-    
+
     // Remove ALL existing read receipts first
     const existingReceipts = chatMessages.querySelectorAll('.read-receipt');
     existingReceipts.forEach(receipt => receipt.remove());
-    
+
     try {
         // Query the message document directly to get the timestamp
         const messageDocRef = doc(db, 'messages', lastSentMessageId);
         const messageDoc = await getDoc(messageDocRef);
-        
+
         if (messageDoc.exists()) {
             const msgData = messageDoc.data();
             const msgTime = msgData.timestamp.toDate();
-            
+
             const receipt = document.createElement('div');
             receipt.className = 'read-receipt';
             receipt.dataset.messageId = lastSentMessageId;
             receipt.textContent = lastReadTime >= msgTime ? 'Read' : 'Sent';
-            
+
             // Append after the message element, not inside it
             lastSentMessage.after(receipt);
         }
@@ -1426,13 +1426,31 @@ async function loadMessages() {
                 console.log('Message data:', message); // Debug log
 
                 // Only show messages if:
-                // 1. The message is between current user and current chat user
                 // 2. The sender is not blocked
                 if (message.participants.includes(currentChatUser.id) &&
                     message.participants.includes(currentUser.uid) &&
                     !blockedUsers.includes(message.senderId)) {
 
                     const messageTime = message.timestamp.toDate();
+
+                    // Play notification sound if it's a new message and not from current user
+                    // We check if it's the last message in the list to avoid playing sounds for old messages on load
+                    // Simple check: if messageTime is very recent (within last 3 seconds)
+                    if (message.senderId !== currentUser.uid && (Date.now() - messageTime.getTime()) < 3000) {
+                        playNotificationSound();
+
+                        // IMPORTANT: Instant Read Receipt Update
+                        // If we are here, we are viewing the chat and received a new message.
+                        // We should immediately mark it as read.
+                        const myId = currentUser.uid;
+                        // Use a debounce or check to prevent excessive writes if multiple messages come in at once
+                        // But Firestore handles this well usually.
+                        setDoc(doc(db, 'users', myId), {
+                            lastReadTimes: {
+                                [message.senderId]: message.timestamp
+                            }
+                        }, { merge: true }).catch(err => console.error("Error updating read receipt instant:", err));
+                    }
 
                     // Add timestamp or gap if needed
                     if (lastMessageTime) {
@@ -1520,7 +1538,7 @@ async function loadMessages() {
             });
 
             chatMessages.scrollTop = chatMessages.scrollHeight;
-            
+
             // Update read receipts after messages are loaded/updated
             const otherUserRef = doc(db, 'users', currentChatUser.id);
             getDoc(otherUserRef).then(docSnap => {
@@ -1537,7 +1555,7 @@ async function loadMessages() {
         });
 
         window.currentMessageUnsubscribe = unsubscribe;
-        
+
         // Set up real-time listener for read receipts (other user's lastReadTimes)
         if (window.currentReadReceiptUnsubscribe) {
             window.currentReadReceiptUnsubscribe();
@@ -1545,12 +1563,12 @@ async function loadMessages() {
         const otherUserRef = doc(db, 'users', currentChatUser.id);
         window.currentReadReceiptUnsubscribe = onSnapshot(otherUserRef, (docSnap) => {
             if (!docSnap.exists()) return;
-            
+
             const data = docSnap.data();
             const lastReadTimes = data.lastReadTimes || {};
             const myId = currentUser.uid;
             const lastReadTime = lastReadTimes[myId] ? lastReadTimes[myId].toDate() : new Date(0);
-            
+
             // Update read receipts with the latest read time - query message directly
             // This will trigger whenever the other user's lastReadTimes change
             updateReadReceipts(lastReadTime).catch(err => {
@@ -1559,7 +1577,7 @@ async function loadMessages() {
         }, (error) => {
             console.error('Error in read receipt listener:', error);
         });
-        
+
     } catch (error) {
         console.error('Error loading messages:', error);
     }
@@ -2620,7 +2638,8 @@ async function saveNotificationSoundPreference() {
 // Play notification sound
 function playNotificationSound() {
     const now = Date.now();
-    if (!isTabFocused && notificationsEnabled && (now - lastSoundPlayTime) >= SOUND_COOLDOWN) {
+    // Play sound regardless of focus (user request)
+    if (notificationsEnabled && (now - lastSoundPlayTime) >= SOUND_COOLDOWN) {
         lastSoundPlayTime = now;
         // Create a new audio instance to allow multiple sounds to play
         const sound = new Audio(notificationSound.src);
@@ -2850,7 +2869,6 @@ function checkUsernameOverflow() {
 window.addEventListener('resize', checkUsernameOverflow);
 
 // The checkUsernameOverflow is now called within the loadUsers function itself
-
 
 
 
