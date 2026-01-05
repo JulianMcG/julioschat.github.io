@@ -1382,8 +1382,7 @@ async function updateReadReceipts(lastReadTime) {
 
     if (!lastSentMessageId) return;
 
-    // Remove ALL existing read receipts from the entire chat to be safe (prevent duplicates)
-    // Or at least remove any that might be attached to this message already
+    // Remove ALL existing read receipts first
     const existingReceipts = chatMessages.querySelectorAll('.read-receipt');
     existingReceipts.forEach(receipt => receipt.remove());
 
@@ -1396,17 +1395,20 @@ async function updateReadReceipts(lastReadTime) {
             const msgData = messageDoc.data();
             const msgTime = msgData.timestamp.toDate();
 
+            // Ensure we remove any existing receipts on this specific message again just to be safe
+            // even though we cleared ALL receipts above, sometimes DOM updates lag or race
+            const existingOnMsg = lastSentMessage.nextElementSibling;
+            if (existingOnMsg && existingOnMsg.classList.contains('read-receipt')) {
+                existingOnMsg.remove();
+            }
+
             const receipt = document.createElement('div');
             receipt.className = 'read-receipt';
             receipt.dataset.messageId = lastSentMessageId;
             receipt.textContent = lastReadTime >= msgTime ? 'Read' : 'Sent';
 
-            // Append after the message element
-            // Ensure we don't already have one adjacent? (Logic above clears all but race conditions happen)
-            // Double check
-            if (!lastSentMessage.nextElementSibling || !lastSentMessage.nextElementSibling.classList.contains('read-receipt')) {
-                lastSentMessage.after(receipt);
-            }
+            // Append after the message element, not inside it
+            lastSentMessage.after(receipt);
         }
     } catch (err) {
         console.error('Error getting message timestamp for read receipt:', err);
