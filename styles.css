@@ -2288,15 +2288,70 @@ input:checked+.slider:before {
 }
 
 /* Base header gradient if requested for the bar itself, user said "titlebar" */
+/* Base header gradient - Floating Style */
 .chat-header {
-    background: linear-gradient(180deg, rgba(30, 30, 30, 0.95) 0%, rgba(30, 30, 30, 0.8) 100%);
-    backdrop-filter: blur(10px);
-    /* Ensure it's not overriding user info if that's what was meant, 
-       but "titlebar" usually means the container */
-    padding: 8px 16px;
-    /* Keep outer padding reasonable or shrink if needed */
-    height: 50px;
-    /* Force smaller height if needed */
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0) 100%);
+    position: absolute;
+    /* Float over content */
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    padding: 10px 16px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    border-bottom: none;
+    /* Remove any border */
+}
+
+/* Ensure Chat Area handles the overlay */
+.chat-area {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 70px 20px 20px 20px;
+    /* Add top padding so messages don't start under header */
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    /* Background Image Support */
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    position: relative;
+}
+
+/* Dim overlay for background readability */
+.chat-messages.has-background::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    /* Cover entire scrollable area */
+    background: rgba(0, 0, 0, 0.6);
+    /* Dark dim */
+    z-index: 0;
+    /* Behind content but above bg */
+    pointer-events: none;
+    background-attachment: fixed;
+    /* Keep it fixed */
+}
+
+/* Ensure messages are above the overlay */
+.chat-messages .message,
+.chat-messages .date-separator {
+    z-index: 1;
+    position: relative;
 }
 
 .header-pfp {
