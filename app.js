@@ -2492,26 +2492,49 @@ function getChatId(uid1, uid2) {
 }
 
 // Upload Chat Background
+// Upload Chat Background
 async function uploadChatBackground(file) {
     if (!currentSelectedUser || !currentUser) return;
 
+    // ImgBB API Key provided by user
+    const apiKey = 'b20dafa4db75ca192070ec47334a4a77';
+
+    if (!apiKey) {
+        alert("API Key is required to upload images.");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('key', apiKey);
+
     try {
-        const chatId = getChatId(currentUser.uid, currentSelectedUser.id);
-        const storageRef = ref(storage, `chat-backgrounds/${chatId}/${Date.now()}_${file.name}`);
+        const response = await fetch('https://api.imgbb.com/1/upload', {
+            method: 'POST',
+            body: formData
+        });
 
-        // Upload file
-        const snapshot = await uploadBytes(storageRef, file);
-        const downloadURL = await getDownloadURL(snapshot.ref);
+        const data = await response.json();
 
-        // Save to specific chat document in 'chats' collection
-        await setDoc(doc(db, 'chats', chatId), {
-            backgroundImage: downloadURL,
-            updatedAt: serverTimestamp(),
-            participants: [currentUser.uid, currentSelectedUser.id]
-        }, { merge: true });
+        if (data.success) {
+            const downloadURL = data.data.url;
+            const chatId = getChatId(currentUser.uid, currentSelectedUser.id);
 
-        alert('Background updated!');
-        closeUserOptionsModal();
+            // Save to specific chat document in 'chats' collection
+            await setDoc(doc(db, 'chats', chatId), {
+                backgroundImage: downloadURL,
+                updatedAt: serverTimestamp(),
+                participants: [currentUser.uid, currentSelectedUser.id]
+            }, { merge: true });
+
+            alert('Background updated!');
+            closeUserOptionsModal();
+        } else {
+            console.error('ImgBB Error:', data);
+            alert('Failed to upload to ImgBB: ' + (data.error ? data.error.message : 'Unknown error'));
+            // If key is invalid, clear it
+            if (data.status_code === 400) localStorage.removeItem('imgbb_api_key');
+        }
     } catch (error) {
         console.error("Error uploading background:", error);
         alert("Failed to upload background.");
