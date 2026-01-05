@@ -2517,7 +2517,9 @@ async function uploadChatBackground(file) {
         const data = await response.json();
 
         if (data.success) {
-            const downloadURL = data.data.url;
+            // Use display_url or url if available. Sometimes thumb is better for speed but we want quality.
+            // data.data.display_url is usually the one to use.
+            const downloadURL = data.data.display_url || data.data.url;
             const chatId = getChatId(currentUser.uid, currentSelectedUser.id);
 
             // Save to specific chat document in 'chats' collection
@@ -2529,6 +2531,12 @@ async function uploadChatBackground(file) {
 
             alert('Background updated!');
             closeUserOptionsModal();
+            // Force verify background application
+            const chatMessages = document.getElementById('chat-messages');
+            if (chatMessages) {
+                chatMessages.style.backgroundImage = `url('${downloadURL}')`;
+                chatMessages.classList.add('has-background');
+            }
         } else {
             console.error('ImgBB Error:', data);
             alert('Failed to upload to ImgBB: ' + (data.error ? data.error.message : 'Unknown error'));
