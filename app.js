@@ -1395,13 +1395,6 @@ async function updateReadReceipts(lastReadTime) {
             const msgData = messageDoc.data();
             const msgTime = msgData.timestamp.toDate();
 
-            // Ensure we remove any existing receipts on this specific message again just to be safe
-            // even though we cleared ALL receipts above, sometimes DOM updates lag or race
-            const existingOnMsg = lastSentMessage.nextElementSibling;
-            if (existingOnMsg && existingOnMsg.classList.contains('read-receipt')) {
-                existingOnMsg.remove();
-            }
-
             const receipt = document.createElement('div');
             receipt.className = 'read-receipt';
             receipt.dataset.messageId = lastSentMessageId;
@@ -1559,13 +1552,9 @@ async function loadMessages() {
                         if (msg.senderId !== currentUser.uid &&
                             msg.participants.includes(currentUser.uid) &&
                             !blockedUsers.includes(msg.senderId)) {
-                            // Play sound only if the tab is hidden
-                            if (document.hidden) {
-                                playNotificationSound();
-                            }
+                            // Play sound for ANY new message from others
+                            playNotificationSound();
                         }
-                        // Scroll to bottom with slight delay to ensure rendering
-                        setTimeout(scrollToBottom, 50);
                     }
                 });
             }
@@ -2503,60 +2492,32 @@ function getChatId(uid1, uid2) {
 }
 
 // Upload Chat Background
-// Upload Chat Background
 async function uploadChatBackground(file) {
     if (!currentSelectedUser || !currentUser) return;
 
-    // ImgBB API Key provided by user
-    const apiKey = 'b20dafa4db75ca192070ec47334a4a77';
-
-    if (!apiKey) {
-        alert("API Key is required to upload images.");
-        return;
-    }
-
-    const formData = new FormData();
-    formData.append('image', file);
-    formData.append('key', apiKey);
-
     try {
-        const response = await fetch('https://api.imgbb.com/1/upload', {
-            method: 'POST',
-            body: formData
-        });
+        const chatId = getChatId(currentUser.uid, currentSelectedUser.id);
+        // Alert to debug
+        // alert(`Uploading to chat: ${chatId}`); 
 
-        const data = await response.json();
+        const storageRef = ref(storage, `chat-backgrounds/${chatId}/${Date.now()}_${file.name}`);
 
-        if (data.success) {
-            // Use display_url or url if available. Sometimes thumb is better for speed but we want quality.
-            // data.data.display_url is usually the one to use.
-            const downloadURL = data.data.display_url || data.data.url;
-            const chatId = getChatId(currentUser.uid, currentSelectedUser.id);
+        // Upload file
+        const snapshot = await uploadBytes(storageRef, file);
+        const downloadURL = await getDownloadURL(snapshot.ref);
 
-            // Save to specific chat document in 'chats' collection
-            await setDoc(doc(db, 'chats', chatId), {
-                backgroundImage: downloadURL,
-                updatedAt: serverTimestamp(),
-                participants: [currentUser.uid, currentSelectedUser.id]
-            }, { merge: true });
+        // Save to specific chat document in 'chats' collection
+        await setDoc(doc(db, 'chats', chatId), {
+            backgroundImage: downloadURL,
+            updatedAt: serverTimestamp(),
+            participants: [currentUser.uid, currentSelectedUser.id]
+        }, { merge: true });
 
-            alert('Background updated!');
-            closeUserOptionsModal();
-            // Force verify background application
-            const chatMessages = document.getElementById('chat-messages');
-            if (chatMessages) {
-                chatMessages.style.backgroundImage = `url('${downloadURL}')`;
-                chatMessages.classList.add('has-background');
-            }
-        } else {
-            console.error('ImgBB Error:', data);
-            alert('Failed to upload to ImgBB: ' + (data.error ? data.error.message : 'Unknown error'));
-            // If key is invalid, clear it
-            if (data.status_code === 400) localStorage.removeItem('imgbb_api_key');
-        }
+        alert('Background updated successfully!');
+        closeUserOptionsModal();
     } catch (error) {
         console.error("Error uploading background:", error);
-        alert("Failed to upload background.");
+        alert(`Failed to upload background: ${error.message}`);
     }
 }
 
