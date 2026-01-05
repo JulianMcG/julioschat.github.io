@@ -1430,6 +1430,56 @@ async function loadMessages() {
                 }
             });
 
+            // Handle Read Receipts
+            const allMessages = Array.from(chatMessages.querySelectorAll('.message'));
+            if (allMessages.length > 0) {
+                const myMessages = allMessages.filter(msg => msg.classList.contains('sent'));
+                if (myMessages.length > 0) {
+                    const lastSentMessage = myMessages[myMessages.length - 1];
+                    const lastSentMessageId = lastSentMessage.dataset.messageId;
+
+                    // Get other user's last read time (we might want to listen to this for real-time updates)
+                    const otherUserRef = doc(db, 'users', currentChatUser.id);
+                    getDoc(otherUserRef).then(docSnap => {
+                        if (docSnap.exists()) {
+                            const data = docSnap.data();
+                            const lastReadTimes = data.lastReadTimes || {};
+                            const myId = currentUser.uid;
+                            const lastReadTime = lastReadTimes[myId] ? lastReadTimes[myId].toDate() : new Date(0);
+
+                            // Find the timestamp of our last message
+                            // Ideally we have it from the snapshot data loop, but we can look it up or store it
+                            // For simplicity, let's assume if the last read time is > this message's timestamp, it's read.
+                            // We need the timestamp of the lastSentMessage. 
+                            // Let's grab it from the DOM element dataset if we stored it, or we rely on the loop above.
+                            // Better yet, let's just create the element and default to "Sent", then update if read.
+
+                            // Actually, since we are in a snapshot listener for MESSAGES, we re-run this on every message update.
+                            // But we ALSO need to re-run this if the USER OBJECT updates (read status changes).
+                            // So we should probably set up a separate listener or just check now.
+                            // For MVP requested "under your latest message", we check now.
+
+                            // We need the timestamp of the message corresponding to lastSentMessageId.
+                            // Re-find the message object from snapshot
+                            const lastMessageDoc = snapshot.docs.find(d => d.id === lastSentMessageId);
+                            if (lastMessageDoc) {
+                                const msgData = lastMessageDoc.data();
+                                const msgTime = msgData.timestamp.toDate();
+
+                                const receipt = document.createElement('div');
+                                receipt.className = 'read-receipt';
+                                if (lastReadTime > msgTime) {
+                                    receipt.textContent = 'Read';
+                                } else {
+                                    receipt.textContent = 'Sent';
+                                }
+                                lastSentMessage.appendChild(receipt);
+                            }
+                        }
+                    }).catch(err => console.error("Error getting read receipt:", err));
+                }
+            }
+
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }, (error) => {
             console.error('Error in message snapshot:', error);
