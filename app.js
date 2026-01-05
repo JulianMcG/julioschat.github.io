@@ -1,5 +1,5 @@
 // Trigger new deployment with Vercel Pro
-import { auth, db, storage } from './firebase-config.js';
+import { auth, db } from './firebase-config.js';
 import {
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
@@ -26,16 +26,15 @@ import {
     arrayRemove,
     writeBatch,
     updateDoc,
-    runTransaction,
-    deleteField
+    runTransaction
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
 let currentUser = null;
 let currentChatUser = null;
 let typingTimeout = null;
 let isTyping = false;
-// const storage = getStorage(); // storage is imported from firebase-config.js
+const storage = getStorage();
 
 // Notification Sound
 let notificationSound = null;
@@ -1390,214 +1389,6 @@ async function updateReadReceipts(lastReadTime) {
     }
 }
 
-// Helper to get consistent conversation ID
-function getConversationId(uid1, uid2) {
-    return [uid1, uid2].sort().join('_');
-}
-
-async function selectUser(userId) {
-    // If clicking same user, do nothing unless on mobile (to close sidebar)
-    if (currentChatUser && currentChatUser.id === userId) {
-        if (window.innerWidth <= 768) {
-            document.querySelector('.sidebar').classList.remove('active');
-        }
-        return;
-    }
-
-    const user = sidebarUsers.get(userId);
-    if (!user) return;
-
-    currentChatUser = user;
-
-    // Update active class in sidebar
-    document.querySelectorAll('.user-item').forEach(item => {
-        item.classList.remove('active');
-        if (item.dataset.uid === userId) {
-            item.classList.add('active');
-            item.classList.remove('unread'); // Remove unread indicator locally
-        }
-    });
-
-    // Update Header
-    const headerAvatar = document.getElementById('header-avatar');
-    const headerUsername = document.getElementById('active-chat-username');
-    const headerUserArea = document.getElementById('chat-header-user-area');
-
-    // Set Header Info
-    headerAvatar.src = user.profilePicture || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
-    headerAvatar.style.display = 'block';
-    headerUsername.textContent = user.alias || user.username;
-
-    // Enable clicking header to open options
-    headerUserArea.onclick = () => openUserOptionsModal(user);
-
-    // Close sidebar on mobile
-    if (window.innerWidth <= 768) {
-        document.querySelector('.sidebar').classList.remove('active');
-        document.querySelector('.chat-area').classList.add('active');
-    }
-
-    // Load Messages
-    await loadMessages();
-}
-
-// Open User Options Modal
-async function openUserOptionsModal(user) {
-    const modal = document.getElementById('user-options-modal');
-    document.getElementById('options-modal-username').textContent = user.username; // Show real username in title
-    document.getElementById('user-alias').value = user.alias || '';
-
-    // Block Button State
-    const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
-    const blockedUsers = currentUserDoc.data()?.blockedUsers || [];
-    const isBlocked = blockedUsers.includes(user.id);
-
-    const blockBtn = document.getElementById('block-user');
-    const unblockBtn = document.getElementById('unblock-user');
-
-    if (isBlocked) {
-        blockBtn.style.display = 'none';
-        unblockBtn.style.display = 'block';
-    } else {
-        blockBtn.style.display = 'block';
-        unblockBtn.style.display = 'none';
-    }
-
-    // Background Preview State
-    const convId = getConversationId(currentUser.uid, user.id);
-    const convDoc = await getDoc(doc(db, 'conversations', convId));
-    const bgPreview = document.getElementById('chat-bg-preview');
-
-    if (convDoc.exists() && convDoc.data().backgroundUrl) {
-        bgPreview.style.backgroundImage = `url(${convDoc.data().backgroundUrl})`;
-        bgPreview.classList.add('has-image');
-        bgPreview.innerHTML = `
-            <span class="material-symbols-outlined">edit</span>
-            <p>Change Background</p>
-        `;
-    } else {
-        bgPreview.style.backgroundImage = '';
-        bgPreview.classList.remove('has-image');
-        bgPreview.innerHTML = `
-            <span class="material-symbols-outlined">image</span>
-            <p>Click to upload</p>
-        `;
-    }
-
-    // Setup Event Listeners for this specific user interaction
-    document.getElementById('save-alias').onclick = async () => {
-        const newAlias = document.getElementById('user-alias').value.trim();
-        // Save alias to currentUser's aliases map
-        // For simplicity now, we stored alias on user object in loadUsers.
-        // But for persistence, we should store it in currentUser's doc: aliases: { [uid]: "Name" }
-        // Let's implement that storage pattern.
-        try {
-            await setDoc(doc(db, 'users', currentUser.uid), {
-                aliases: {
-                    [user.id]: newAlias
-                }
-            }, { merge: true });
-
-            // Update local state and UI
-            if (sidebarUsers.has(user.id)) {
-                sidebarUsers.get(user.id).alias = newAlias;
-            }
-            if (currentChatUser && currentChatUser.id === user.id) {
-                document.getElementById('active-chat-username').textContent = newAlias || user.username;
-            }
-            // Refresh sidebar list to show new alias
-            const users = Array.from(sidebarUsers.values());
-            updateSidebarUsers(users); // This needs access to the sorted list, effectively re-rendering
-
-            modal.style.display = 'none';
-        } catch (err) {
-            console.error("Error saving alias:", err);
-            alert("Failed to save alias");
-        }
-    };
-
-    document.getElementById('block-user').onclick = async () => {
-        if (confirm(`Block ${user.username}?`)) {
-            try {
-                await updateDoc(doc(db, 'users', currentUser.uid), {
-                    blockedUsers: arrayUnion(user.id)
-                });
-                modal.style.display = 'none';
-                selectUser(user.id); // Reload to update UI state
-            } catch (e) { console.error(e); }
-        }
-    };
-
-    document.getElementById('unblock-user').onclick = async () => {
-        try {
-            await updateDoc(doc(db, 'users', currentUser.uid), {
-                blockedUsers: arrayRemove(user.id)
-            });
-            modal.style.display = 'none';
-            selectUser(user.id);
-        } catch (e) { console.error(e); }
-    };
-
-    // Background Upload Logic
-    const bgInput = document.getElementById('chat-bg-input');
-    const resetBgBtn = document.getElementById('reset-chat-bg');
-
-    bgPreview.onclick = () => bgInput.click();
-
-    bgInput.onchange = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        // Show loading state
-        bgPreview.innerHTML = '<span class="material-symbols-outlined">hourglass_top</span><p>Uploading...</p>';
-
-        try {
-            const storageRef = ref(storage, `backgrounds/${convId}_${Date.now()}`);
-            await uploadBytes(storageRef, file);
-            const url = await getDownloadURL(storageRef);
-
-            // Save to shared conversations collection
-            await setDoc(doc(db, 'conversations', convId), {
-                participants: [currentUser.uid, user.id],
-                backgroundUrl: url,
-                lastUpdated: serverTimestamp()
-            }, { merge: true });
-
-            // Update preview
-            bgPreview.style.backgroundImage = `url(${url})`;
-            bgPreview.classList.add('has-image');
-            bgPreview.innerHTML = '<span class="material-symbols-outlined">check</span><p>Saved!</p>';
-            setTimeout(() => {
-                bgPreview.innerHTML = '<span class="material-symbols-outlined">edit</span><p>Change Background</p>';
-            }, 1000);
-
-        } catch (err) {
-            console.error("Error uploading background:", err);
-            bgPreview.innerHTML = '<span class="material-symbols-outlined">error</span><p>Failed</p>';
-        }
-    };
-
-    resetBgBtn.onclick = async () => {
-        if (confirm("Remove shared background for both users?")) {
-            try {
-                await updateDoc(doc(db, 'conversations', convId), {
-                    backgroundUrl: deleteField() // Need to import deleteField or just set to null/empty
-                });
-                // Wait, deleteField needs import. Let's just set to null.
-            } catch (err) {
-                // updateDoc might fail if doc doesn't exist, try setDoc
-                await setDoc(doc(db, 'conversations', convId), { backgroundUrl: null }, { merge: true });
-            }
-            bgPreview.style.backgroundImage = '';
-            bgPreview.classList.remove('has-image');
-            bgPreview.innerHTML = '<span class="material-symbols-outlined">image</span><p>Click to upload</p>';
-        }
-    };
-
-    modal.style.display = 'block';
-}
-
-
 // Modify the loadMessages function to include reactions
 async function loadMessages() {
     if (!currentUser || !currentChatUser) {
@@ -1606,29 +1397,8 @@ async function loadMessages() {
     }
 
     const chatMessages = document.getElementById('chat-messages');
-
-    // Load Chat Background
-    const convId = getConversationId(currentUser.uid, currentChatUser.id);
-    const chatArea = document.querySelector('.chat-area');
-
-    // Listen for Shared Background Changes
-    if (window.backgroundUnsubscribe) {
-        window.backgroundUnsubscribe();
-    }
-
-    window.backgroundUnsubscribe = onSnapshot(doc(db, 'conversations', convId), (docSnap) => {
-        if (docSnap.exists() && docSnap.data().backgroundUrl) {
-            // chatArea.style.backgroundImage = `url(${docSnap.data().backgroundUrl})`;
-            // chatArea.style.backgroundSize = 'cover';
-            // chatArea.style.backgroundPosition = 'center';
-            // Actually user requested "chat background", usually implies the message area.
-            chatMessages.style.backgroundImage = `url(${docSnap.data().backgroundUrl})`;
-            chatMessages.style.backgroundSize = 'cover';
-            chatMessages.style.backgroundPosition = 'center';
-        } else {
-            chatMessages.style.backgroundImage = 'none';
-        }
-    });
+    // Don't clear here -- let the skeleton persist until snapshot loads
+    // chatMessages.innerHTML = '';
 
     try {
         // Get current user's blocked users list
