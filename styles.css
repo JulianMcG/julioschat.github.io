@@ -623,6 +623,11 @@ body {
     min-width: 0;
     /* Smooth transitions to prevent flickering */
     cursor: pointer;
+    border-radius: 10px;
+    width: 100%;
+    position: relative;
+    min-width: 0;
+    /* Smooth transitions to prevent flickering */
     transition: background-color 0.2s ease, opacity 0.2s ease;
     align-items: center;
     /* Center items vertically */
@@ -777,19 +782,24 @@ body {
     height: 8px;
     background-color: var(--primary-color);
     border-radius: 50%;
-    margin-right: 10px;
     display: none;
-    flex-shrink: 0;
+    position: absolute;
+    left: -12px;
+    /* Adjusted to be slightly visible on the edge but outside content */
+    z-index: 10;
 }
 
 /* Read Receipt Styles */
 .read-receipt {
     font-size: 10px;
     color: var(--label-color);
-    position: absolute;
-    bottom: -18px;
-    right: 0;
+    text-align: right;
+    margin-top: 2px;
+    margin-right: 5px;
+    margin-bottom: 2px;
     opacity: 0.8;
+    clear: both;
+    /* Ensure it stays under the message bubble */
 }
 
 .sidebar .profile-section {
@@ -993,43 +1003,13 @@ body {
 }
 
 .message {
-    margin-bottom: 24px;
-    /* Space for absolute read receipt */
+    margin-bottom: 8px;
+    padding: 12px 20px;
     max-width: 80%;
     position: relative;
     line-height: 1.4;
     word-wrap: break-word;
-    display: flex;
-    flex-direction: column;
-}
-
-.message.sent {
-    align-items: flex-end;
-    margin-left: auto;
-}
-
-.message.received {
-    align-items: flex-start;
-    margin-right: auto;
-}
-
-.message .content {
-    padding: 12px 20px;
-    border-radius: 15px;
-    position: relative;
     display: inline-block;
-}
-
-.message.sent .content {
-    background-color: var(--primary-color);
-    color: var(--text-accent);
-    border-radius: 15px 15px 5px 15px;
-}
-
-.message.received .content {
-    background-color: var(--stroke-color);
-    color: var(--text-accent);
-    border-radius: 15px 15px 15px 5px;
 }
 
 .message-bubble {
