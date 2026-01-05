@@ -1012,10 +1012,27 @@ async function startChat(userId, username) {
     renderChatSkeleton(messagesContainer);
 
     // Update Header immediately (loading identifier if needed? No, just show name)
-    // We might not know verified status yet if not passed, but that's a minor visual pop-in later.
-    document.getElementById('active-chat-username').textContent = username;
+    // We might not know verified status yet if not passed, but that's a minor visual    // Update chat header
+    const headerUsername = document.getElementById('active-chat-username');
+    const headerPfp = document.getElementById('header-pfp');
+    const headerUserInfo = document.getElementById('chat-header-user-info');
 
-    // Show input immediately
+    // For immediate display, use the passed username and a default pfp.
+    // The actual alias and pfp will be updated after fetching otherUserData.
+    headerUsername.textContent = username;
+    headerPfp.src = 'https://i.ibb.co/Gf9VD2MN/pfp.png'; // Default pfp
+
+    // Add click listener to header for options
+    if (headerUserInfo) {
+        // Clone to remove old listeners
+        const newHeaderInfo = headerUserInfo.cloneNode(true);
+        headerUserInfo.parentNode.replaceChild(newHeaderInfo, headerUserInfo);
+
+        newHeaderInfo.addEventListener('click', () => {
+            // Use currentChatUser for the modal, which will be updated with alias/pfp later
+            openUserOptionsModal(currentChatUser.id, currentChatUser.username, headerPfp.src);
+        });
+    }
     const messageInput = document.querySelector('.message-input');
     messageInput.classList.add('visible');
     document.querySelector('.chat-header svg').style.display = 'block';
@@ -1415,6 +1432,22 @@ async function loadMessages() {
         if (window.currentMessageUnsubscribe) {
             window.currentMessageUnsubscribe();
         }
+
+        // Background listener
+        if (window.backgroundUnsubscribe) {
+            window.backgroundUnsubscribe();
+        }
+        const chatId = getChatId(currentUser.uid, currentChatUser.id);
+        window.backgroundUnsubscribe = onSnapshot(doc(db, 'chats', chatId), (docSnap) => {
+            const chatMessages = document.getElementById('chat-messages');
+            if (docSnap.exists() && docSnap.data().backgroundImage) {
+                chatMessages.style.backgroundImage = `url('${docSnap.data().backgroundImage}')`;
+                chatMessages.classList.add('has-background');
+            } else {
+                chatMessages.style.backgroundImage = '';
+                chatMessages.classList.remove('has-background');
+            }
+        });
 
         let isFirstSnapshot = true;
         let localLastReadTime = 0; // Prevent duplicate writes
@@ -2338,37 +2371,52 @@ function updateChatHeader(user) {
 // User Options Modal
 let currentSelectedUser = null;
 
-// Open user options modal
-function openUserOptionsModal(userId, username) {
-    currentSelectedUser = { id: userId, username };
+// User Options Modal Functions
+function openUserOptionsModal(userId, username, pfpUrl = null) {
+    currentSelectedUser = { id: userId, username, pfpUrl };
     const modal = document.getElementById('user-options-modal');
-    const aliasInput = document.getElementById('user-alias');
-    const blockButton = document.getElementById('block-user');
-    const unblockButton = document.getElementById('unblock-user');
+    // Populate simple UI
+    const modalUsername = document.getElementById('options-modal-username');
+    const modalPfp = document.getElementById('options-modal-pfp');
 
-    // Check if user is blocked
-    getDoc(doc(db, 'users', currentUser.uid)).then(userDoc => {
-        const userData = userDoc.data();
-        const blockedUsers = userData?.blockedUsers || [];
-        const userAliases = userData?.userAliases || {};
+    if (modalUsername) modalUsername.textContent = username;
+    if (modalPfp) modalPfp.src = pfpUrl || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
 
-        // Set alias input value if exists
-        aliasInput.value = userAliases[userId] || '';
+    // Reset inputs
+    document.getElementById('user-alias').value = '';
 
-        // Show appropriate block/unblock button
-        if (blockedUsers.includes(userId)) {
-            blockButton.style.display = 'none';
-            unblockButton.style.display = 'block';
-        } else {
-            blockButton.style.display = 'block';
-            unblockButton.style.display = 'none';
+    // Setup file upload listener (clean old ones first if needed, though replaceWith is easier)
+    const fileInput = document.getElementById('bg-upload');
+    const newFileInput = fileInput.cloneNode(true);
+    fileInput.parentNode.replaceChild(newFileInput, fileInput);
+
+    newFileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+            uploadChatBackground(e.target.files[0]);
+        }
+    });
+
+    // Check blocked status
+    const blockBtn = document.getElementById('block-user');
+    const unblockBtn = document.getElementById('unblock-user');
+
+    getDoc(doc(db, 'users', currentUser.uid)).then(docSnap => {
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            const blockedUsers = data.blockedUsers || [];
+            if (blockedUsers.includes(userId)) {
+                blockBtn.style.display = 'none';
+                unblockBtn.style.display = 'inline-block';
+            } else {
+                blockBtn.style.display = 'inline-block';
+                unblockBtn.style.display = 'none';
+            }
         }
     });
 
     modal.style.display = 'block';
 }
 
-// Close user options modal
 function closeUserOptionsModal() {
     const modal = document.getElementById('user-options-modal');
     modal.style.display = 'none';
@@ -2426,9 +2474,47 @@ async function saveUserAlias() {
             }
         }
 
+        // Update header if active
+        if (currentChatUser && currentChatUser.id === currentSelectedUser.id) {
+            const headerUsername = document.getElementById('active-chat-username');
+            if (headerUsername) headerUsername.textContent = alias || currentSelectedUser.username;
+        }
+
         closeUserOptionsModal();
     } catch (error) {
         console.error('Error saving user alias:', error);
+    }
+}
+
+// Helper to get consistent chat ID for two users
+function getChatId(uid1, uid2) {
+    return [uid1, uid2].sort().join('_');
+}
+
+// Upload Chat Background
+async function uploadChatBackground(file) {
+    if (!currentSelectedUser || !currentUser) return;
+
+    try {
+        const chatId = getChatId(currentUser.uid, currentSelectedUser.id);
+        const storageRef = ref(storage, `chat-backgrounds/${chatId}/${Date.now()}_${file.name}`);
+
+        // Upload file
+        const snapshot = await uploadBytes(storageRef, file);
+        const downloadURL = await getDownloadURL(snapshot.ref);
+
+        // Save to specific chat document in 'chats' collection
+        await setDoc(doc(db, 'chats', chatId), {
+            backgroundImage: downloadURL,
+            updatedAt: serverTimestamp(),
+            participants: [currentUser.uid, currentSelectedUser.id]
+        }, { merge: true });
+
+        alert('Background updated!');
+        closeUserOptionsModal();
+    } catch (error) {
+        console.error("Error uploading background:", error);
+        alert("Failed to upload background.");
     }
 }
 
@@ -2447,6 +2533,10 @@ async function blockUser() {
             document.getElementById('active-chat-username').textContent = 'Select a chat';
             document.getElementById('message-input').placeholder = 'Type a message...';
             document.querySelector('.message-input').classList.remove('visible');
+            document.querySelector('.chat-header svg').style.display = 'none'; // Hide options
+            // Also clear header pfp
+            document.getElementById('header-pfp').src = '';
+            document.getElementById('chat-messages').innerHTML = '';
         }
 
         closeUserOptionsModal();
