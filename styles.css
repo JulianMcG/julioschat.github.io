@@ -789,6 +789,10 @@ body {
     z-index: 10;
 }
 
+.user-item.unread .unread-indicator {
+    display: block;
+}
+
 /* Read Receipt Styles */
 .read-receipt {
     font-size: 10px;
