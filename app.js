@@ -1017,10 +1017,15 @@ async function startChat(userId, username) {
     const headerPfp = document.getElementById('header-pfp');
     const headerUserInfo = document.getElementById('chat-header-user-info');
 
-    // For immediate display, use the passed username and a default pfp.
-    // The actual alias and pfp will be updated after fetching otherUserData.
+    // Try to get pfp from cache first
+    let pfpUrl = 'https://i.ibb.co/Gf9VD2MN/pfp.png';
+    if (sidebarUsers.has(userId)) {
+        const cached = sidebarUsers.get(userId);
+        if (cached.profilePicture) pfpUrl = cached.profilePicture;
+    }
+
     headerUsername.textContent = username;
-    headerPfp.src = 'https://i.ibb.co/Gf9VD2MN/pfp.png'; // Default pfp
+    headerPfp.src = pfpUrl;
 
     // Add click listener to header for options
     if (headerUserInfo) {
@@ -1029,16 +1034,12 @@ async function startChat(userId, username) {
         headerUserInfo.parentNode.replaceChild(newHeaderInfo, headerUserInfo);
 
         newHeaderInfo.addEventListener('click', () => {
-            // Use currentChatUser for the modal, which will be updated with alias/pfp later
-            openUserOptionsModal(currentChatUser.id, currentChatUser.username, headerPfp.src);
+            // Use currentChatUser for the modal
+            openUserOptionsModal(currentChatUser.id, currentChatUser.username, document.getElementById('header-pfp').src);
         });
     }
     const messageInput = document.querySelector('.message-input');
     messageInput.classList.add('visible');
-
-    // Disable input temporarily? Or let them type? 
-    // Let's let them type, but maybe queues messages? 
-    // For now, keep it simple, it's fast enough.
 
     // 2. ASYNC BACKGROUND WORK
 
@@ -1050,7 +1051,6 @@ async function startChat(userId, username) {
 
     // If this conversation was hidden, remove it from hiddenConversations
     if (hiddenConversations.includes(userId)) {
-        // No await needed to block UI, just do it
         setDoc(doc(db, 'users', currentUser.uid), {
             hiddenConversations: arrayRemove(userId)
         }, { merge: true }).catch(err => console.error('Error unhiding:', err));
@@ -1061,6 +1061,7 @@ async function startChat(userId, username) {
     const otherUserData = otherUserDoc.data();
     const actualUsername = otherUserData?.username || username;
     const alias = userAliases[userId] || actualUsername;
+    const finalPfp = otherUserData?.profilePicture || pfpUrl;
 
     // Update currentChatUser with the definitive alias
     currentChatUser = { id: userId, username: alias };
@@ -1076,6 +1077,8 @@ async function startChat(userId, username) {
     const isVerified = otherUserData?.verified || false;
     const verifiedBadge = isVerified ? '<span class="material-symbols-outlined verified-badge" style="font-variation-settings: \'FILL\' 1;">verified</span>' : '';
     document.getElementById('active-chat-username').innerHTML = `${alias}${verifiedBadge}`;
+    // Update PFP if we fetched a newer one
+    document.getElementById('header-pfp').src = finalPfp;
 
     // Set up typing listener
     if (window.currentTypingUnsubscribe) {
