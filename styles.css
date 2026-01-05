@@ -2273,20 +2273,36 @@ input:checked+.slider:before {
 .header-user-info {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 8px 12px;
+    gap: 8px;
+    /* Reduced gap */
+    padding: 2px 6px;
+    /* Reduced padding */
     border-radius: 12px;
     cursor: pointer;
     transition: background-color 0.2s ease;
 }
 
 .header-user-info:hover {
-    background-color: rgba(255, 255, 255, 0.05);
+    background: linear-gradient(to right, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+    /* Gradient fade on hover */
+}
+
+/* Base header gradient if requested for the bar itself, user said "titlebar" */
+.chat-header {
+    background: linear-gradient(180deg, rgba(30, 30, 30, 0.95) 0%, rgba(30, 30, 30, 0.8) 100%);
+    backdrop-filter: blur(10px);
+    /* Ensure it's not overriding user info if that's what was meant, 
+       but "titlebar" usually means the container */
+    padding: 8px 16px;
+    /* Keep outer padding reasonable or shrink if needed */
+    height: 50px;
+    /* Force smaller height if needed */
 }
 
 .header-pfp {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    /* Smaller PFP */
+    height: 32px;
     border-radius: 50%;
     object-fit: cover;
     border: 1.5px solid var(--stroke-color);
