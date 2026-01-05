@@ -2275,45 +2275,25 @@ input:checked+.slider:before {
     align-items: center;
     gap: 8px;
     /* Reduced gap */
-    padding: 6px 12px;
-    /* Slight increase for pill shape */
-    border-radius: 999px;
-    /* Pill shape */
+    padding: 2px 6px;
+    /* Reduced padding */
+    border-radius: 12px;
     cursor: pointer;
     transition: background-color 0.2s ease;
-    z-index: 20;
-    /* Ensure above header background */
-    position: relative;
-    margin-top: 5px;
-    /* Alignment adjustment */
 }
 
 .header-user-info:hover {
-    background: rgba(255, 255, 255, 0.08);
-    /* Solid white transparent pill */
+    background-color: rgba(255, 255, 255, 0.08);
+    /* Solid color highlight */
+    background-image: none;
+    /* Ensure no gradient */
 }
 
-/* SEARCH BAR GRADIENT FADE */
-.search-container {
-    position: relative;
-    z-index: 5;
-}
-
-.search-container::after {
-    content: '';
-    position: absolute;
-    bottom: -30px;
-    left: 0;
-    right: 0;
-    height: 30px;
-    /* Gradient from solid background to transparent */
-    background: linear-gradient(to bottom, var(--background-dark) 0%, rgba(12, 14, 22, 0) 100%);
-    pointer-events: none;
-    z-index: 10;
-}
-
+/* Base header gradient if requested for the bar itself, user said "titlebar" */
 /* Base header gradient - Floating Style */
 .chat-header {
+    /* Gradient matching game bg (#151826) fading to transparent */
+    background: linear-gradient(180deg, #151826 40%, rgba(21, 24, 38, 0.8) 70%, rgba(21, 24, 38, 0) 100%);
     position: absolute;
     /* Float over content */
     top: 0;
@@ -2321,8 +2301,8 @@ input:checked+.slider:before {
     right: 0;
     z-index: 10;
     padding: 10px 16px;
-    height: 100px;
-    /* Taller area for smoother fade */
+    height: 80px;
+    /* Extended height for deeper fade */
     display: flex;
     align-items: flex-start;
     /* Align to top */
@@ -2331,37 +2311,6 @@ input:checked+.slider:before {
     /* Remove any border */
     pointer-events: none;
     /* Let clicks pass through transparent parts */
-    background: transparent;
-    /* Handled by pseudo-element */
-}
-
-/* The BLUR and GRADIENT layer */
-.chat-header::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-
-    /* 1. The Blur */
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-
-    /* 2. The Color Gradient (70% opacity start to transparent) */
-    background: linear-gradient(180deg, rgba(21, 24, 38, 0.7) 0%, rgba(21, 24, 38, 0.4) 50%, rgba(21, 24, 38, 0) 100%);
-
-    /* 3. The Mask - fading the blur itself out at the bottom */
-    -webkit-mask-image: linear-gradient(to bottom, black 0%, black 40%, transparent 100%);
-    mask-image: linear-gradient(to bottom, black 0%, black 40%, transparent 100%);
-
-    z-index: -1;
-    /* Behind content */
-}
-
-/* Ensure user info is clickable */
-.header-user-info {
-    pointer-events: auto;
 }
 
 /* Ensure user info is clickable */
