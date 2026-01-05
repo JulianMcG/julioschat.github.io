@@ -1526,21 +1526,22 @@ async function loadMessages() {
 
             // 3. Read Receipt Logic (Critical Path)
             // Always mark the LATEST incoming message as read if we are in this view
-            if (latestIncomingMessage && latestIncomingMessage.timestamp) {
-                const msgTime = latestIncomingMessage.timestamp.toMillis();
+            // 3. Read Receipt Logic (Critical Path)
+            // Always mark the LATEST incoming message as read if we are in this view
+            if (latestIncomingMessage) {
+                // Use the message timestamp if available, otherwise assume "now" (server time)
+                // This fixes race conditions where local writes have null timestamps
+                const msgTime = latestIncomingMessage.timestamp ? latestIncomingMessage.timestamp.toMillis() : Date.now();
 
                 // Only write if this is a NEWER message than we last acknowledged locally
                 if (msgTime > localLastReadTime) {
                     localLastReadTime = msgTime;
 
-                    // console.log("Marking read:", latestIncomingMessage.id, msgTime);
-
                     // Direct update to currentUser doc
-                    // Using setDoc with merge to ensure nested field is updated/created correctly
                     const userRef = doc(db, 'users', currentUser.uid);
                     setDoc(userRef, {
                         lastReadTimes: {
-                            [latestIncomingMessage.senderId]: latestIncomingMessage.timestamp
+                            [latestIncomingMessage.senderId]: serverTimestamp() // Use server time to "ack" reading
                         }
                     }, { merge: true }).catch(err => {
                         console.error("Failed to mark as read:", err);
@@ -1548,7 +1549,6 @@ async function loadMessages() {
                     });
                 }
             }
-
             isFirstSnapshot = false;
 
             // Trigger UI update for *my* sent messages (checking *their* read status)
