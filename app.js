@@ -1521,7 +1521,7 @@ async function loadMessages() {
 
             chatMessages.scrollTop = chatMessages.scrollHeight;
             
-            // Initial read receipt update after messages are loaded
+            // Update read receipts after messages are loaded/updated
             const otherUserRef = doc(db, 'users', currentChatUser.id);
             getDoc(otherUserRef).then(docSnap => {
                 if (docSnap.exists()) {
@@ -1531,7 +1531,7 @@ async function loadMessages() {
                     const lastReadTime = lastReadTimes[myId] ? lastReadTimes[myId].toDate() : new Date(0);
                     updateReadReceipts(lastReadTime);
                 }
-            }).catch(err => console.error('Error getting initial read receipt:', err));
+            }).catch(err => console.error('Error getting read receipt:', err));
         }, (error) => {
             console.error('Error in message snapshot:', error);
         });
@@ -1552,7 +1552,10 @@ async function loadMessages() {
             const lastReadTime = lastReadTimes[myId] ? lastReadTimes[myId].toDate() : new Date(0);
             
             // Update read receipts with the latest read time - query message directly
-            updateReadReceipts(lastReadTime);
+            // This will trigger whenever the other user's lastReadTimes change
+            updateReadReceipts(lastReadTime).catch(err => {
+                console.error('Error updating read receipts:', err);
+            });
         }, (error) => {
             console.error('Error in read receipt listener:', error);
         });
