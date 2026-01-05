@@ -1035,7 +1035,6 @@ async function startChat(userId, username) {
     }
     const messageInput = document.querySelector('.message-input');
     messageInput.classList.add('visible');
-    document.querySelector('.chat-header svg').style.display = 'block';
 
     // Disable input temporarily? Or let them type? 
     // Let's let them type, but maybe queues messages? 
@@ -2531,7 +2530,6 @@ async function blockUser() {
             document.getElementById('active-chat-username').textContent = 'Select a chat';
             document.getElementById('message-input').placeholder = 'Type a message...';
             document.querySelector('.message-input').classList.remove('visible');
-            document.querySelector('.chat-header svg').style.display = 'none'; // Hide options
             // Also clear header pfp
             document.getElementById('header-pfp').src = '';
             document.getElementById('chat-messages').innerHTML = '';
@@ -2573,13 +2571,6 @@ document.addEventListener('DOMContentLoaded', () => {
     saveAliasBtn.addEventListener('click', saveUserAlias);
     blockUserBtn.addEventListener('click', blockUser);
     unblockUserBtn.addEventListener('click', unblockUser);
-
-    // Add click handler for the user options icon
-    document.querySelector('.chat-header svg').addEventListener('click', () => {
-        if (currentChatUser) {
-            openUserOptionsModal(currentChatUser.id, currentChatUser.username);
-        }
-    });
 
     // Close modal when clicking outside
     window.addEventListener('click', (e) => {
