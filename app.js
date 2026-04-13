@@ -1557,6 +1557,9 @@ async function loadMessages() {
             }
             isFirstSnapshot = false;
 
+            // Always show Sent/Read receipt after render
+            updateReadReceipts(window.lastKnownReadTime || new Date(0)).catch(() => {});
+
         }, (error) => {
             console.error('Error in message snapshot:', error);
         });
@@ -1568,6 +1571,7 @@ async function loadMessages() {
             window.currentReadReceiptUnsubscribe();
         }
         const otherRef = doc(db, 'users', currentChatUser.id);
+        window.lastKnownReadTime = new Date(0);
         window.currentReadReceiptUnsubscribe = onSnapshot(otherRef, (docSnap) => {
             if (!docSnap.exists()) return;
 
@@ -1576,7 +1580,7 @@ async function loadMessages() {
             const myId = currentUser.uid;
             const lastReadTime = lastReadTimes[myId] ? lastReadTimes[myId].toDate() : new Date(0);
 
-            // Update read receipts with the latest read time
+            window.lastKnownReadTime = lastReadTime;
             updateReadReceipts(lastReadTime).catch(err => {
                 console.error('Error updating read receipts:', err);
             });
