@@ -1727,11 +1727,10 @@ document.addEventListener('DOMContentLoaded', () => {
         composeIcon.addEventListener('click', openComposeModal);
     }
 
-    // Close modal event listener
-    const closeModal = document.querySelector('.close-modal');
-    if (closeModal) {
-        closeModal.addEventListener('click', closeComposeModal);
-    }
+    // Close modal event listener — delegated (Lucide replaces <i> with <svg>)
+    document.addEventListener('click', e => {
+        if (e.target.closest('#compose-modal .close-modal')) closeComposeModal();
+    });
 
     // Compose search event listener
     const composeSearch = document.getElementById('compose-search');
@@ -1968,8 +1967,8 @@ function closeSettingsModal() {
 }
 
 // Settings Modal Event Listeners
-document.querySelector('.settings-icon').addEventListener('click', openSettingsModal);
-document.querySelector('#settings-modal .close-modal').addEventListener('click', closeSettingsModal);
+document.addEventListener('click', e => { if (e.target.closest('.settings-icon')) openSettingsModal(); });
+document.addEventListener('click', e => { if (e.target.closest('#settings-modal .close-modal')) closeSettingsModal(); });
 
 // Close modal when clicking outside
 window.addEventListener('click', (event) => {
@@ -2571,7 +2570,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const blockUserBtn = document.getElementById('block-user');
     const unblockUserBtn = document.getElementById('unblock-user');
 
-    closeUserOptionsBtn.addEventListener('click', closeUserOptionsModal);
+    // closeUserOptionsBtn may be replaced by Lucide; use delegation
+    document.addEventListener('click', e => { if (e.target.closest('#user-options-modal .close-modal')) closeUserOptionsModal(); });
     saveAliasBtn.addEventListener('click', saveUserAlias);
     blockUserBtn.addEventListener('click', blockUser);
     unblockUserBtn.addEventListener('click', unblockUser);
