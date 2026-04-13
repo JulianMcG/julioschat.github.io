@@ -1336,33 +1336,6 @@ function showReactionPicker(event, messageId) {
     document.addEventListener('click', closePicker);
 }
 
-// Format reactions for display
-function formatReactions(reactions) {
-    if (!reactions || Object.keys(reactions).length === 0) return '';
-
-    const reactionDiv = document.createElement('div');
-    reactionDiv.className = 'message-reactions';
-
-    // Add has-reactions class if there are any reactions
-    if (Object.keys(reactions).length > 0) {
-        reactionDiv.classList.add('has-reactions');
-    }
-
-    // Just show the emoji without count
-    Object.keys(reactions).forEach(emoji => {
-        const reactionSpan = document.createElement('span');
-        reactionSpan.className = 'reaction';
-        reactionSpan.textContent = emoji;
-        // Add click handler to remove reaction
-        reactionSpan.onclick = (e) => {
-            e.stopPropagation();
-            addReaction(doc.id, emoji);
-        };
-        reactionDiv.appendChild(reactionSpan);
-    });
-
-    return reactionDiv;
-}
 
 // Function to update read receipts for sent messages
 async function updateReadReceipts(lastReadTime) {
@@ -1584,29 +1557,11 @@ async function loadMessages() {
             }
             isFirstSnapshot = false;
 
-            // Trigger UI update for *my* sent messages (checking *their* read status)
-            // This reads the OTHER user's doc to see if THEY read MY messages
-            checkOtherUserReadStatus();
-
         }, (error) => {
             console.error('Error in message snapshot:', error);
         });
 
         window.currentMessageUnsubscribe = unsubscribe;
-
-        // Helper to check if other user has read my messages
-        function checkOtherUserReadStatus() {
-            const otherUserRef = doc(db, 'users', currentChatUser.id);
-            getDoc(otherUserRef).then(docSnap => {
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    const lastReadTimes = data.lastReadTimes || {};
-                    const myId = currentUser.uid;
-                    const lastReadTime = lastReadTimes[myId] ? lastReadTimes[myId].toDate() : new Date(0);
-                    updateReadReceipts(lastReadTime);
-                }
-            }).catch(err => console.error('Error getting read receipt:', err));
-        }
 
         // Set up real-time listener for read receipts (other user's lastReadTimes)
         if (window.currentReadReceiptUnsubscribe) {
@@ -1830,63 +1785,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Search input event listener
-    const searchInput = document.getElementById('search-user');
-    if (searchInput) {
-        let searchTimeout;
-        searchInput.addEventListener('input', (e) => {
-            const searchTerm = e.target.value.trim();
-
-            // Clear any existing timeout
-            if (searchTimeout) {
-                clearTimeout(searchTimeout);
-            }
-
-            // Set a new timeout to debounce the search
-            searchTimeout = setTimeout(async () => {
-                if (!searchTerm) {
-                    // If search is empty, show all users (don't reload)
-                    const userItems = document.querySelectorAll('.user-item');
-                    userItems.forEach(userItem => {
-                        userItem.style.display = 'flex';
-                    });
-
-                    // If no users are visible, show skeleton loaders
-                    const visibleUsers = Array.from(userItems).filter(item => item.style.display !== 'none');
-                    if (visibleUsers.length === 0) {
-                        const usersContainer = document.getElementById('users-container');
-                        if (usersContainer) {
-                            addSkeletonLoaders(usersContainer);
-                        }
-                    }
-                } else {
-                    await searchUsers(searchTerm);
-                }
-            }, 300); // 300ms debounce
-        });
-    }
-
-    if (clearSearch) {
-        clearSearch.addEventListener('click', async () => {
-            if (searchInput) {
-                searchInput.value = '';
-                // Show all users when clear button is clicked (don't reload)
-                const userItems = document.querySelectorAll('.user-item');
-                userItems.forEach(userItem => {
-                    userItem.style.display = 'flex';
-                });
-
-                // If no users are visible, show skeleton loaders
-                const visibleUsers = Array.from(userItems).filter(item => item.style.display !== 'none');
-                if (visibleUsers.length === 0) {
-                    const usersContainer = document.getElementById('users-container');
-                    if (usersContainer) {
-                        addSkeletonLoaders(usersContainer);
-                    }
-                }
-            }
-        });
-    }
 });
 
 // Close compose modal when clicking outside
