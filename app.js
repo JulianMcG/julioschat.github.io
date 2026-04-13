@@ -1659,6 +1659,22 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        const sendButton = document.getElementById('send-button');
+        if (sendButton) {
+            sendButton.addEventListener('click', () => {
+                if (!currentChatUser) {
+                    alert('Please select a chat to send a message.');
+                    return;
+                }
+                const content = messageInput.value.trim();
+                if (content) {
+                    messageInput.value = '';
+                    sendMessage(content);
+                    updateTypingStatus(false);
+                }
+            });
+        }
+
         // Add typing status listeners
         messageInput.addEventListener('input', () => {
             if (!isTyping) {
