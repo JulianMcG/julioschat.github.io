@@ -753,7 +753,7 @@ function updateUserElement(userElement, user) {
     }
 
     // Update username if different
-    const newUsername = `${displayName}${user.verified ? '<i class="ri-verified-badge-fill verified-badge"></i>' : ''}`;
+    const newUsername = `${displayName}${user.verified ? '<i data-lucide="badge-check" class="verified-badge"></i>' : ''}`;
     if (username.innerHTML !== newUsername) {
         username.innerHTML = newUsername;
     }
@@ -797,16 +797,16 @@ function createUserElement(user) {
             <div class="online-status"></div>
         </div>
         <div class="user-info">
-            <span class="username">${displayName}${user.verified ? '<i class="ri-verified-badge-fill verified-badge"></i>' : ''}</span>
+            <span class="username">${displayName}${user.verified ? '<i data-lucide="badge-check" class="verified-badge"></i>' : ''}</span>
             <span class="last-message">${messagePreview}</span>
         </div>
         <div class="user-actions">
-            <i class="ri-pushpin-line action-icon pin-icon"></i>
-            <i class="ri-close-line action-icon close-icon"></i>
+            <i data-lucide="pin" class="action-icon pin-icon"></i>
+            <i data-lucide="x" class="action-icon close-icon"></i>
         </div>
     `;
 
-    // Add click handler for the user item
+    refreshIcons();
     // Add click handler for the user item
     userElement.onclick = (e) => {
         if (!e.target.classList.contains('action-icon')) {
@@ -830,20 +830,21 @@ function createUserElement(user) {
 
         menu.innerHTML = `
             <div class="context-menu-item" id="ctx-pin">
-                <i class="ri-pushpin-line"></i>
+                <i data-lucide="pin"></i>
                 <span>${isPinned ? 'Unpin' : 'Pin'} Chat</span>
             </div>
             <div class="context-menu-item" id="ctx-unread">
-                <i class="ri-chat-new-line"></i>
+                <i data-lucide="message-circle-plus"></i>
                 <span>Mark as Unread</span>
             </div>
             <div class="context-menu-item danger" id="ctx-delete">
-                <i class="ri-delete-bin-line"></i>
+                <i data-lucide="trash-2"></i>
                 <span>Delete Chat</span>
             </div>
         `;
 
         document.body.appendChild(menu);
+        refreshIcons();
 
         // adjust position if offscreen (basic check)
         const rect = menu.getBoundingClientRect();
@@ -1075,7 +1076,7 @@ async function startChat(userId, username) {
 
     // Update chat header with verified badge if user is verified
     const isVerified = otherUserData?.verified || false;
-    const verifiedBadge = isVerified ? '<i class="ri-verified-badge-fill verified-badge"></i>' : '';
+    const verifiedBadge = isVerified ? '<i data-lucide="badge-check" class="verified-badge"></i>' : '';
     document.getElementById('active-chat-username').innerHTML = `${alias}${verifiedBadge}`;
     // Update PFP if we fetched a newer one
     document.getElementById('header-pfp').src = finalPfp;
@@ -1201,7 +1202,8 @@ function createReactionPicker(messageId) {
     // Add custom reaction button
     const customButton = document.createElement('div');
     customButton.className = 'reaction-option custom-reaction';
-    customButton.innerHTML = '<i class="ri-emotion-line" style="font-size:20px;"></i>';
+    customButton.innerHTML = '<i data-lucide="smile" style="width:20px;height:20px;"></i>';
+    refreshIcons();
     customButton.title = "Custom Emoji";
 
     customButton.addEventListener('click', (e) => {
@@ -1511,7 +1513,8 @@ async function loadMessages() {
                 if (message.senderId !== currentUser.uid) {
                     const reactionButton = document.createElement('div');
                     reactionButton.className = 'reaction-button';
-                    reactionButton.innerHTML = '<i class="ri-emotion-line"></i>';
+                    reactionButton.innerHTML = '<i data-lucide="smile"></i>';
+                    refreshIcons();
                     reactionButton.onclick = (e) => { e.stopPropagation(); showReactionPicker(e, message.id); };
                     messageElement.appendChild(reactionButton);
                 }
@@ -1784,7 +1787,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             userElement.className = 'compose-user-item';
                             userElement.innerHTML = `
                                 <img src="${user.profilePicture}" alt="${user.username}" class="user-avatar">
-                                <span>${user.username}${user.verified ? '<i class="ri-verified-badge-fill verified-badge"></i>' : ''}</span>
+                                <span>${user.username}${user.verified ? '<i data-lucide="badge-check" class="verified-badge"></i>' : ''}</span>
                             `;
                             userElement.onclick = () => {
                                 startChat(user.id, user.username);
@@ -1929,7 +1932,7 @@ function updateCurrentUserProfile(user) {
             const profilePicture = userData?.profilePicture || user.photoURL || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
 
             // Update username with verified badge if user is verified
-            const verifiedBadge = isVerified ? '<i class="ri-verified-badge-fill verified-badge"></i>' : '';
+            const verifiedBadge = isVerified ? '<i data-lucide="badge-check" class="verified-badge"></i>' : '';
             document.getElementById('current-username').innerHTML = `${username}${verifiedBadge}`;
             document.getElementById('current-user-avatar').src = profilePicture;
 
@@ -2207,6 +2210,61 @@ async function searchAllUsers(searchTerm) {
     }
 }
 
+// ── Lucide icon refresh (debounced) ──
+let _iconTimer = null;
+function refreshIcons() {
+    if (_iconTimer) clearTimeout(_iconTimer);
+    _iconTimer = setTimeout(() => {
+        if (window.lucide) lucide.createIcons();
+    }, 40);
+}
+
+// ── Sidebar toggle + peek ──
+document.addEventListener('DOMContentLoaded', () => {
+    const toggleBtn = document.getElementById('sidebar-toggle');
+    const sidebar = document.querySelector('.sidebar');
+    const peekZone = document.getElementById('sidebar-peek-zone');
+    if (!toggleBtn || !sidebar || !peekZone) return;
+
+    let peeking = false;
+
+    toggleBtn.addEventListener('click', () => {
+        const hiding = !sidebar.classList.contains('sidebar-hidden');
+        sidebar.classList.toggle('sidebar-hidden', hiding);
+        peekZone.classList.toggle('active', hiding);
+        // Swap icon
+        const icon = toggleBtn.querySelector('[data-lucide]');
+        if (icon) {
+            icon.setAttribute('data-lucide', hiding ? 'panel-left-open' : 'panel-left-close');
+            refreshIcons();
+        }
+    });
+
+    peekZone.addEventListener('mouseenter', () => {
+        if (sidebar.classList.contains('sidebar-hidden')) {
+            peeking = true;
+            sidebar.classList.add('peeking');
+        }
+    });
+
+    const stopPeek = () => {
+        if (peeking) {
+            peeking = false;
+            sidebar.classList.remove('peeking');
+        }
+    };
+
+    peekZone.addEventListener('mouseleave', stopPeek);
+    sidebar.addEventListener('mouseleave', () => {
+        if (sidebar.classList.contains('sidebar-hidden')) stopPeek();
+    });
+});
+
+// ── Initial Lucide icon render ──
+document.addEventListener('DOMContentLoaded', () => {
+    if (window.lucide) lucide.createIcons();
+});
+
 // Add event listeners for search
 document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('search-user');
@@ -2304,7 +2362,7 @@ function updateChatHeader(user) {
 
     chatHeader.innerHTML = `
         <img src="${user.photoURL || 'default-avatar.png'}" alt="${user.username}" class="profile-picture">
-        <span class="username">${user.username}${user.verified ? '<i class="ri-verified-badge-fill verified-badge"></i>' : ''}</span>
+        <span class="username">${user.username}${user.verified ? '<i data-lucide="badge-check" class="verified-badge"></i>' : ''}</span>
     `;
 }
 
