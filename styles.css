@@ -8,14 +8,14 @@
 }
 
 :root {
-    --background-dark: #0C0E16;
-    --game-bg: #151826;
-    --stroke-color: #1C2033;
-    --cell-bg: #252A42;
-    --uncovered-cell-bg: #1C2033;
-    --text-light: #ECEFF4;
+    --background-dark: #0A0B13;
+    --game-bg: #121524;
+    --stroke-color: #1A1F34;
+    --cell-bg: #1E243C;
+    --uncovered-cell-bg: #1A1F34;
+    --text-light: #ECEBF7;
     --text-accent: #ECEBF7;
-    --label-color: #B6B8C8;
+    --label-color: #B0B5DB;
     --primary-color: #1F49C7;
     --primary-hover: #1a3db0;
     --danger-color: #E85658;
@@ -70,7 +70,7 @@ body {
     margin: 0 auto;
     padding: 40px;
     background-color: var(--game-bg);
-    border-radius: 15px;
+    border-radius: 16px;
     position: relative;
     top: 50%;
     transform: translateY(-50%);
@@ -103,7 +103,7 @@ body {
     width: 100%;
     padding: 16px 15px;
     border: 1.5px solid var(--stroke-color);
-    border-radius: 15px;
+    border-radius: 12px;
     font-size: 16px;
     background-color: var(--game-bg);
     color: var(--text-accent);
@@ -136,7 +136,7 @@ body {
     background-color: var(--primary-color);
     color: var(--text-accent);
     border: 3px solid rgba(255, 255, 255, 0.1);
-    border-radius: 15px;
+    border-radius: 12px;
     cursor: pointer;
     font-size: 16px;
     font-weight: 500;
@@ -274,7 +274,8 @@ body {
     width: 310px;
     min-width: 310px;
     background-color: var(--game-bg);
-    border-radius: 20px;
+    border-radius: 16px;
+    border: 1px solid var(--stroke-color);
     padding: 20px;
     display: flex;
     flex-direction: column;
@@ -523,7 +524,7 @@ body {
     display: flex;
     align-items: center;
     gap: 6px;
-    background-color: var(--game-bg);
+    background-color: var(--stroke-color);
     border: none;
     border-radius: 50px;
     padding: 8px 12px;
@@ -538,7 +539,7 @@ body {
 }
 
 .new-message-button:hover {
-    background-color: var(--stroke-color);
+    background-color: #222847;
 }
 
 .new-message-button .material-symbols-outlined {
@@ -568,11 +569,10 @@ body {
 .search-container {
     display: flex;
     align-items: center;
-    background-color: var(--game-bg);
+    background-color: var(--stroke-color);
     border-radius: 50px;
     padding: 10px;
     margin-bottom: 15px;
-    /* Reduced margin */
     position: relative;
 }
 
@@ -819,7 +819,7 @@ body {
     left: 20px;
     right: 20px;
     background-color: var(--uncovered-cell-bg);
-    border-radius: 15px;
+    border-radius: 12px;
     padding: 10px;
     display: flex;
     align-items: center;
@@ -957,8 +957,7 @@ body {
     min-width: 0;
     display: flex;
     flex-direction: column;
-    background-color: var(--game-bg);
-    border-radius: 20px;
+    background-color: transparent;
     overflow: hidden;
 }
 
@@ -984,6 +983,7 @@ body {
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-shrink: 0;
 }
 
 .msg-add-btn,
@@ -1097,23 +1097,20 @@ body {
 }
 
 .message-bubble.consecutive {
-    border-radius: 15px;
+    border-radius: 12px;
     margin-top: 2px;
 }
 
-/* For consecutive messages, only the last one gets the 5px lower corner */
 .message-bubble.consecutive:last-child {
-    border-radius: 15px 15px 5px 15px;
+    border-radius: 12px 12px 4px 12px;
 }
 
-/* For sent messages that are consecutive, only the last one gets the 5px lower corner */
 .message-bubble.sent.consecutive:last-child {
-    border-radius: 15px 15px 5px 15px;
+    border-radius: 12px 12px 4px 12px;
 }
 
-/* For received messages that are consecutive, only the last one gets the 5px lower corner */
 .message-bubble.received.consecutive:last-child {
-    border-radius: 15px 15px 15px 5px;
+    border-radius: 12px 12px 12px 4px;
 }
 
 .message-gap {
@@ -1153,7 +1150,7 @@ body {
     margin-left: auto;
     margin-right: 20px;
     text-align: right;
-    border-radius: 15px 15px 5px 15px;
+    border-radius: 12px 12px 4px 12px;
     position: relative;
 }
 
@@ -1194,7 +1191,7 @@ body {
     margin-right: auto;
     margin-left: 20px;
     text-align: left;
-    border-radius: 15px 15px 15px 5px;
+    border-radius: 12px 12px 12px 4px;
 }
 
 .typing-indicator {
@@ -1203,7 +1200,7 @@ body {
     margin-right: auto;
     margin-left: 20px;
     text-align: left;
-    border-radius: 15px 15px 15px 5px;
+    border-radius: 12px 12px 12px 4px;
     padding: 12px 20px;
     display: flex;
     align-items: center;
@@ -1316,7 +1313,8 @@ body {
     padding: 20px;
     width: 90%;
     max-width: 800px;
-    border-radius: 15px;
+    border-radius: 16px;
+    border: 1px solid var(--stroke-color);
     position: relative;
 }
 
@@ -1424,7 +1422,7 @@ body {
 
 .chat-header {
     padding: 16px 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: none;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -1675,7 +1673,7 @@ body {
 
 #settings-modal .modal-content {
     background-color: var(--game-bg);
-    border-radius: 15px;
+    border-radius: 16px;
     width: 500px;
     max-width: 90%;
     max-height: 90vh;
@@ -1693,7 +1691,7 @@ body {
     width: 100%;
     padding: 16px 15px;
     border: 1.5px solid var(--stroke-color);
-    border-radius: 15px;
+    border-radius: 12px;
     font-size: 16px;
     background-color: var(--game-bg);
     color: var(--text-accent);
@@ -1747,7 +1745,7 @@ body {
     padding: 16px 15px;
     padding-right: 40px;
     border: 1.5px solid var(--stroke-color);
-    border-radius: 15px;
+    border-radius: 12px;
     font-size: 16px;
     background-color: var(--game-bg);
     color: var(--text-accent);
@@ -1774,7 +1772,7 @@ body {
     background-color: #494C56;
     color: var(--text-accent);
     border: 3px solid rgba(255, 255, 255, 0.05);
-    border-radius: 15px;
+    border-radius: 12px;
     cursor: pointer;
     font-size: 16px;
     font-weight: 500;
@@ -1797,7 +1795,7 @@ body {
     background-color: var(--danger-color);
     color: var(--text-accent);
     border: 3px solid rgba(255, 255, 255, 0.1);
-    border-radius: 15px;
+    border-radius: 12px;
     cursor: pointer;
     font-size: 16px;
     font-weight: 500;
