@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,500;0,700;1,500;1,700&display=swap"
         rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.lordicon.com/lordicon.js"></script>
     <!-- Firebase SDK -->
@@ -89,22 +89,22 @@
             <div class="chat-container">
                 <div class="sidebar">
                     <div class="sidebar-header">
-                        <div class="header-left">
-                            <h3>Chat</h3>
-                        </div>
+                        <button class="icon-btn" id="sidebar-toggle" title="Toggle sidebar">
+                            <i data-lucide="panel-left-close"></i>
+                        </button>
                         <div class="header-actions">
                             <button class="icon-btn" id="search-toggle" title="Search">
-                                <i class="ri-search-line"></i>
+                                <i data-lucide="search"></i>
                             </button>
                             <button class="new-message-button">
-                                <i class="ri-user-add-line"></i>
+                                <i data-lucide="user-plus"></i>
                                 <span class="button-text">New Chat</span>
                             </button>
                         </div>
                     </div>
                     <div class="search-container">
                         <input type="text" id="search-user" placeholder="Search...">
-                        <i class="ri-close-line clear-search"></i>
+                        <i data-lucide="x" class="clear-search"></i>
                     </div>
                     <div id="users-container" class="users-list"></div>
                     <div class="profile-section">
@@ -112,7 +112,7 @@
                             <img id="current-user-avatar" src="https://i.ibb.co/Gf9VD2MN/pfp.png" alt="Profile Picture">
                             <span id="current-username">Username</span>
                         </div>
-                        <i class="ri-settings-3-line settings-icon"></i>
+                        <i data-lucide="settings" class="settings-icon"></i>
                     </div>
                     <div class="resizer"></div>
                 </div>
@@ -127,7 +127,7 @@
                     <div class="message-input">
                         <input type="text" id="message-input" placeholder="Type a message...">
                         <button class="msg-send-btn" id="send-button" title="Send">
-                            <i class="ri-arrow-up-line"></i>
+                            <i data-lucide="arrow-up"></i>
                         </button>
                     </div>
                 </div>
@@ -135,11 +135,14 @@
         </div>
     </div>
 
+    <!-- Peek zone overlay when sidebar is hidden -->
+    <div id="sidebar-peek-zone"></div>
+
     <!-- Compose Modal -->
     <div id="compose-modal" class="modal">
         <div class="modal-content">
-            <div class="search-container">
-                <i class="ri-search-line search-icon"></i>
+            <div class="search-container visible">
+                <i data-lucide="search" class="search-icon"></i>
                 <input type="text" id="compose-search" placeholder="Search users...">
             </div>
             <div id="compose-results" class="compose-results"></div>
@@ -151,7 +154,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2>Settings</h2>
-                <i class="ri-close-line close-modal"></i>
+                <i data-lucide="x" class="close-modal"></i>
             </div>
             <div class="modal-body">
                 <div class="profile-picture-upload">
@@ -180,7 +183,7 @@
                                 <option value="Grow.mp3">Grow</option>
                                 <option value="Point.mp3">Point</option>
                             </select>
-                            <i class="ri-arrow-down-s-line dropdown-icon"></i>
+                            <i data-lucide="chevron-down" class="dropdown-icon"></i>
                         </div>
                     </div>
                 </div>
@@ -191,31 +194,29 @@
         </div>
     </div>
 
-    <!-- User Options Modal (Redesigned) -->
+    <!-- User Options Modal -->
     <div id="user-options-modal" class="modal">
         <div class="modal-content friendly-modal">
             <div class="modal-header">
                 <h2>Chat Options</h2>
-                <i class="ri-close-line close-modal"></i>
+                <i data-lucide="x" class="close-modal"></i>
             </div>
             <div class="modal-body">
                 <div class="user-profile-summary">
                     <img src="" alt="Profile" id="options-modal-pfp" class="modal-pfp">
                     <h3 id="options-modal-username">Username</h3>
                 </div>
-
                 <div class="friendly-options-grid">
                     <div class="option-card" id="option-alias">
-                        <div class="option-icon"><i class="ri-edit-line"></i></div>
+                        <div class="option-icon"><i data-lucide="pencil"></i></div>
                         <div class="option-details">
                             <h4>Set Alias</h4>
                             <input type="text" id="user-alias" placeholder="Nickname">
                             <button class="small-btn" id="save-alias">Save</button>
                         </div>
                     </div>
-
                     <div class="option-card" id="option-background">
-                        <div class="option-icon"><i class="ri-wallpaper-line"></i></div>
+                        <div class="option-icon"><i data-lucide="image"></i></div>
                         <div class="option-details">
                             <h4>Chat Background</h4>
                             <p>Shared with both users</p>
@@ -223,9 +224,8 @@
                             <input type="file" id="bg-upload" accept="image/*" style="display: none;">
                         </div>
                     </div>
-
                     <div class="option-card danger-zone" id="option-block">
-                        <div class="option-icon"><i class="ri-forbid-2-line"></i></div>
+                        <div class="option-icon"><i data-lucide="ban"></i></div>
                         <div class="option-details">
                             <h4>Block User</h4>
                             <button class="danger-btn" id="block-user">Block</button>
