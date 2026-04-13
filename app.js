@@ -753,7 +753,7 @@ function updateUserElement(userElement, user) {
     }
 
     // Update username if different
-    const newUsername = `${displayName}${user.verified ? '<span class="material-symbols-outlined verified-badge" style="font-variation-settings: \'FILL\' 1;">verified</span>' : ''}`;
+    const newUsername = `${displayName}${user.verified ? '<i class="ri-verified-badge-fill verified-badge"></i>' : ''}`;
     if (username.innerHTML !== newUsername) {
         username.innerHTML = newUsername;
     }
@@ -797,12 +797,12 @@ function createUserElement(user) {
             <div class="online-status"></div>
         </div>
         <div class="user-info">
-            <span class="username">${displayName}${user.verified ? '<span class="material-symbols-outlined verified-badge" style="font-variation-settings: \'FILL\' 1;">verified</span>' : ''}</span>
+            <span class="username">${displayName}${user.verified ? '<i class="ri-verified-badge-fill verified-badge"></i>' : ''}</span>
             <span class="last-message">${messagePreview}</span>
         </div>
         <div class="user-actions">
-            <span class="material-symbols-outlined action-icon pin-icon">keep</span>
-            <span class="material-symbols-outlined action-icon close-icon">close</span>
+            <i class="ri-pushpin-line action-icon pin-icon"></i>
+            <i class="ri-close-line action-icon close-icon"></i>
         </div>
     `;
 
@@ -830,15 +830,15 @@ function createUserElement(user) {
 
         menu.innerHTML = `
             <div class="context-menu-item" id="ctx-pin">
-                <span class="material-symbols-outlined">keep</span>
+                <i class="ri-pushpin-line"></i>
                 <span>${isPinned ? 'Unpin' : 'Pin'} Chat</span>
             </div>
             <div class="context-menu-item" id="ctx-unread">
-                <span class="material-symbols-outlined">mark_chat_unread</span>
+                <i class="ri-chat-new-line"></i>
                 <span>Mark as Unread</span>
             </div>
             <div class="context-menu-item danger" id="ctx-delete">
-                <span class="material-symbols-outlined">delete</span>
+                <i class="ri-delete-bin-line"></i>
                 <span>Delete Chat</span>
             </div>
         `;
@@ -1075,7 +1075,7 @@ async function startChat(userId, username) {
 
     // Update chat header with verified badge if user is verified
     const isVerified = otherUserData?.verified || false;
-    const verifiedBadge = isVerified ? '<span class="material-symbols-outlined verified-badge" style="font-variation-settings: \'FILL\' 1;">verified</span>' : '';
+    const verifiedBadge = isVerified ? '<i class="ri-verified-badge-fill verified-badge"></i>' : '';
     document.getElementById('active-chat-username').innerHTML = `${alias}${verifiedBadge}`;
     // Update PFP if we fetched a newer one
     document.getElementById('header-pfp').src = finalPfp;
@@ -1201,7 +1201,7 @@ function createReactionPicker(messageId) {
     // Add custom reaction button
     const customButton = document.createElement('div');
     customButton.className = 'reaction-option custom-reaction';
-    customButton.innerHTML = '<span class="material-symbols-outlined" style="font-size: 20px;">add_reaction</span>';
+    customButton.innerHTML = '<i class="ri-emotion-line" style="font-size:20px;"></i>';
     customButton.title = "Custom Emoji";
 
     customButton.addEventListener('click', (e) => {
@@ -1336,6 +1336,14 @@ function showReactionPicker(event, messageId) {
     document.addEventListener('click', closePicker);
 }
 
+
+let _readReceiptTimer = null;
+function scheduleReadReceipts(lastReadTime) {
+    if (_readReceiptTimer) clearTimeout(_readReceiptTimer);
+    _readReceiptTimer = setTimeout(() => {
+        updateReadReceipts(lastReadTime).catch(() => {});
+    }, 60);
+}
 
 // Function to update read receipts for sent messages
 async function updateReadReceipts(lastReadTime) {
@@ -1503,7 +1511,7 @@ async function loadMessages() {
                 if (message.senderId !== currentUser.uid) {
                     const reactionButton = document.createElement('div');
                     reactionButton.className = 'reaction-button';
-                    reactionButton.innerHTML = '<span class="material-symbols-outlined">add_reaction</span>';
+                    reactionButton.innerHTML = '<i class="ri-emotion-line"></i>';
                     reactionButton.onclick = (e) => { e.stopPropagation(); showReactionPicker(e, message.id); };
                     messageElement.appendChild(reactionButton);
                 }
@@ -1558,7 +1566,7 @@ async function loadMessages() {
             isFirstSnapshot = false;
 
             // Always show Sent/Read receipt after render
-            updateReadReceipts(window.lastKnownReadTime || new Date(0)).catch(() => {});
+            scheduleReadReceipts(window.lastKnownReadTime || new Date(0));
 
         }, (error) => {
             console.error('Error in message snapshot:', error);
@@ -1581,9 +1589,7 @@ async function loadMessages() {
             const lastReadTime = lastReadTimes[myId] ? lastReadTimes[myId].toDate() : new Date(0);
 
             window.lastKnownReadTime = lastReadTime;
-            updateReadReceipts(lastReadTime).catch(err => {
-                console.error('Error updating read receipts:', err);
-            });
+            scheduleReadReceipts(lastReadTime);
         }, (error) => {
             console.error('Error in read receipt listener:', error);
         });
@@ -1778,7 +1784,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             userElement.className = 'compose-user-item';
                             userElement.innerHTML = `
                                 <img src="${user.profilePicture}" alt="${user.username}" class="user-avatar">
-                                <span>${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
+                                <span>${user.username}${user.verified ? '<i class="ri-verified-badge-fill verified-badge"></i>' : ''}</span>
                             `;
                             userElement.onclick = () => {
                                 startChat(user.id, user.username);
@@ -1923,7 +1929,7 @@ function updateCurrentUserProfile(user) {
             const profilePicture = userData?.profilePicture || user.photoURL || 'https://i.ibb.co/Gf9VD2MN/pfp.png';
 
             // Update username with verified badge if user is verified
-            const verifiedBadge = isVerified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : '';
+            const verifiedBadge = isVerified ? '<i class="ri-verified-badge-fill verified-badge"></i>' : '';
             document.getElementById('current-username').innerHTML = `${username}${verifiedBadge}`;
             document.getElementById('current-user-avatar').src = profilePicture;
 
@@ -2206,6 +2212,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('search-user');
     const clearSearch = document.querySelector('.clear-search');
     const usersContainer = document.getElementById('users-container');
+    const searchToggle = document.getElementById('search-toggle');
+    const searchContainer = document.querySelector('.sidebar .search-container');
+
+    if (searchToggle && searchContainer) {
+        searchToggle.addEventListener('click', () => {
+            const isVisible = searchContainer.classList.toggle('visible');
+            if (isVisible) {
+                searchInput && searchInput.focus();
+            } else {
+                if (searchInput) searchInput.value = '';
+                const userItems = document.querySelectorAll('.user-item');
+                userItems.forEach(item => item.style.display = 'flex');
+                if (clearSearch) clearSearch.style.display = 'none';
+            }
+        });
+    }
 
     if (searchInput) {
         let searchTimeout;
@@ -2282,7 +2304,7 @@ function updateChatHeader(user) {
 
     chatHeader.innerHTML = `
         <img src="${user.photoURL || 'default-avatar.png'}" alt="${user.username}" class="profile-picture">
-        <span class="username">${user.username}${user.verified ? '<span class="material-symbols-outlined verified-badge">verified</span>' : ''}</span>
+        <span class="username">${user.username}${user.verified ? '<i class="ri-verified-badge-fill verified-badge"></i>' : ''}</span>
     `;
 }
 
