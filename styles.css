@@ -1627,7 +1627,7 @@ body {
     position: fixed;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -60%);
+    transform: translate(-50%, -50%);
     padding: 30px;
     overflow-y: auto;
     scrollbar-width: none;
@@ -2298,7 +2298,7 @@ input:checked+.slider:before {
 .friendly-modal {
     max-width: 500px;
     width: 90%;
-    background: var(--secondary-bg);
+    background: var(--game-bg);
     border-radius: 20px;
     overflow: hidden;
 }
@@ -2308,7 +2308,7 @@ input:checked+.slider:before {
     flex-direction: column;
     align-items: center;
     padding: 20px 0;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--stroke-color);
     margin-bottom: 20px;
 }
 
@@ -2364,7 +2364,7 @@ input:checked+.slider:before {
 
 .option-details h4 {
     margin: 0 0 5px 0;
-    color: var(--text-color);
+    color: var(--text-accent);
 }
 
 .option-details p {
