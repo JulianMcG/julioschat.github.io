@@ -264,7 +264,7 @@ body {
     height: 100vh;
     width: 100%;
     min-width: 0;
-    padding: 0 12px 12px;
+    padding: 12px;
     gap: 12px;
     box-sizing: border-box;
     background-color: var(--background-dark);
@@ -274,9 +274,8 @@ body {
     width: 310px;
     min-width: 310px;
     background-color: var(--game-bg);
-    border-radius: 0 0 16px 16px;
+    border-radius: 16px;
     border: 1px solid var(--stroke-color);
-    border-top: none;
     padding: 20px;
     display: flex;
     flex-direction: column;
@@ -474,8 +473,8 @@ body {
     background-color: var(--stroke-color);
     border: none;
     border-radius: 10px;
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -560,7 +559,7 @@ body {
     text-transform: capitalize;
     width: fit-content;
     margin: 0;
-    height: 36px;
+    height: 40px;
 }
 
 .new-message-button:hover {
@@ -836,16 +835,19 @@ body {
 
 .sidebar .profile-section {
     position: absolute;
-    bottom: 20px;
-    left: 20px;
-    right: 20px;
-    background-color: var(--uncovered-cell-bg);
-    border-radius: 12px;
-    padding: 10px;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to bottom, transparent 0%, var(--game-bg) 45%);
+    border-radius: 0 0 16px 16px;
+    padding: 50px 20px 20px;
     display: flex;
     align-items: center;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    border-top: none;
+    pointer-events: none;
+}
+
+.sidebar .profile-section > * {
+    pointer-events: auto;
 }
 
 /* Context Menu */
@@ -980,6 +982,8 @@ body {
     flex-direction: column;
     background-color: transparent;
     overflow: hidden;
+    position: relative;
+    gap: 0;
 }
 
 .chat-messages {
@@ -990,6 +994,19 @@ body {
     flex-direction: column;
     scrollbar-width: none;
     -ms-overflow-style: none;
+    position: relative;
+}
+
+.chat-messages::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: linear-gradient(to bottom, var(--background-dark) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 5;
 }
 
 .chat-messages::-webkit-scrollbar {
@@ -997,14 +1014,14 @@ body {
 }
 
 .message-input {
-    padding: 10px 14px;
+    padding: 14px 16px;
     background-color: var(--game-bg);
     border: 1px solid var(--stroke-color);
-    border-radius: 12px;
-    margin: 0 20px 20px;
+    border-radius: 16px;
+    margin: 0;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     flex-shrink: 0;
 }
 
@@ -1013,8 +1030,8 @@ body {
     border: none;
     cursor: pointer;
     color: var(--text-accent);
-    width: 34px;
-    height: 34px;
+    width: 40px;
+    height: 40px;
     border-radius: 10px;
     display: flex;
     align-items: center;
@@ -1261,8 +1278,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background-color: transparent;
-    z-index: 1;
+    z-index: 2;
 }
 
 .profile-section::before {
@@ -2482,4 +2498,120 @@ input:checked+.slider:before {
 .danger-btn:hover {
     background: #ff4444;
     color: white;
+}
+
+/* ── Sidebar hide / peek ── */
+.sidebar {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.3s ease,
+                width 0.3s ease,
+                min-width 0.3s ease;
+}
+
+.sidebar.sidebar-hidden {
+    transform: translateX(calc(-100% - 24px));
+    opacity: 0;
+    pointer-events: none;
+    position: fixed;
+    left: 12px;
+    top: 12px;
+    bottom: 12px;
+    z-index: 200;
+}
+
+.sidebar.sidebar-hidden.peeking {
+    transform: translateX(-55%);
+    opacity: 0.97;
+    pointer-events: auto;
+    box-shadow: 8px 0 32px rgba(0,0,0,0.6);
+}
+
+#sidebar-peek-zone {
+    display: none;
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 18px;
+    z-index: 199;
+    cursor: pointer;
+}
+
+#sidebar-peek-zone.active {
+    display: block;
+}
+
+/* Chat area padding so message input has breathing room at bottom */
+.chat-area {
+    padding-bottom: 0;
+}
+
+.chat-messages {
+    padding-bottom: 12px;
+}
+
+/* Lucide SVG icons — inherit size from parent */
+[data-lucide] svg,
+i[data-lucide] svg {
+    width: 1em;
+    height: 1em;
+    stroke-width: 2;
+}
+
+.icon-btn [data-lucide] svg,
+.icon-btn i svg {
+    width: 18px;
+    height: 18px;
+}
+
+.new-message-button [data-lucide] svg,
+.new-message-button i svg {
+    width: 16px;
+    height: 16px;
+}
+
+.msg-send-btn [data-lucide] svg,
+.msg-send-btn i svg {
+    width: 18px;
+    height: 18px;
+}
+
+.settings-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.close-modal svg {
+    width: 22px;
+    height: 22px;
+}
+
+.action-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.context-menu-item svg {
+    width: 18px;
+    height: 18px;
+}
+
+.dropdown-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.clear-search svg {
+    width: 16px;
+    height: 16px;
+}
+
+.verified-badge svg {
+    width: 14px;
+    height: 14px;
+}
+
+.search-icon svg {
+    width: 18px;
+    height: 18px;
 }
