@@ -264,7 +264,7 @@ body {
     height: 100vh;
     width: 100%;
     min-width: 0;
-    padding: 16px;
+    padding: 0 12px 12px;
     gap: 12px;
     box-sizing: border-box;
     background-color: var(--background-dark);
@@ -274,8 +274,9 @@ body {
     width: 310px;
     min-width: 310px;
     background-color: var(--game-bg);
-    border-radius: 16px;
+    border-radius: 0 0 16px 16px;
     border: 1px solid var(--stroke-color);
+    border-top: none;
     padding: 20px;
     display: flex;
     flex-direction: column;
@@ -466,7 +467,31 @@ body {
 .header-actions {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
+}
+
+.icon-btn {
+    background-color: var(--stroke-color);
+    border: none;
+    border-radius: 10px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--label-color);
+    transition: background-color 0.2s, color 0.2s;
+    flex-shrink: 0;
+}
+
+.icon-btn:hover {
+    background-color: #222847;
+    color: var(--text-accent);
+}
+
+.icon-btn i {
+    font-size: 18px;
 }
 
 .toggle-sidebar {
@@ -474,7 +499,6 @@ body {
     color: var(--label-color);
     transition: color 0.3s ease;
     font-size: 22px;
-    font-variation-settings: 'FILL' 0;
 }
 
 .toggle-sidebar:hover {
@@ -526,7 +550,7 @@ body {
     gap: 6px;
     background-color: var(--stroke-color);
     border: none;
-    border-radius: 50px;
+    border-radius: 10px;
     padding: 8px 12px;
     cursor: pointer;
     color: var(--label-color);
@@ -536,17 +560,16 @@ body {
     text-transform: capitalize;
     width: fit-content;
     margin: 0;
+    height: 36px;
 }
 
 .new-message-button:hover {
     background-color: #222847;
+    color: var(--text-accent);
 }
 
-.new-message-button .material-symbols-outlined {
-    font-size: 18px;
-    font-variation-settings: 'FILL' 1;
-    padding: 1px;
-    color: var(--label-color);
+.new-message-button i {
+    font-size: 16px;
 }
 
 .new-message-button .button-text {
@@ -561,26 +584,25 @@ body {
     display: none;
 }
 
-.sidebar.collapsed .new-message-button .material-symbols-outlined {
-    margin: 0;
-    padding: 0;
-}
 
 .search-container {
-    display: flex;
+    display: none;
     align-items: center;
     background-color: var(--stroke-color);
-    border-radius: 50px;
-    padding: 10px;
+    border-radius: 10px;
+    padding: 10px 14px;
     margin-bottom: 15px;
     position: relative;
+}
+
+.search-container.visible {
+    display: flex;
 }
 
 .search-icon {
     color: var(--label-color);
     margin-right: 8px;
     font-size: 18px;
-    font-variation-settings: 'FILL' 1;
 }
 
 #search-user {
@@ -601,11 +623,10 @@ body {
 
 .clear-search {
     position: absolute;
-    right: 10px;
+    right: 12px;
     color: var(--label-color);
     cursor: pointer;
     font-size: 18px;
-    font-variation-settings: 'FILL' 1;
     display: none;
 }
 
@@ -859,8 +880,8 @@ body {
     color: var(--danger-color);
 }
 
-.context-menu-item .material-symbols-outlined {
-    font-size: 20px;
+.context-menu-item i {
+    font-size: 18px;
 }
 
 @keyframes menuFadeIn {
@@ -945,7 +966,7 @@ body {
     color: var(--label-color);
     cursor: pointer;
     font-size: 18px;
-    font-variation-settings: 'FILL' 1;
+
 }
 
 .action-icon:hover {
@@ -976,9 +997,10 @@ body {
 }
 
 .message-input {
-    padding: 10px 12px;
-    background-color: var(--stroke-color);
-    border-radius: 50px;
+    padding: 10px 14px;
+    background-color: var(--game-bg);
+    border: 1px solid var(--stroke-color);
+    border-radius: 12px;
     margin: 0 20px 20px;
     display: flex;
     align-items: center;
@@ -986,41 +1008,14 @@ body {
     flex-shrink: 0;
 }
 
-.msg-add-btn,
-.msg-mic-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: var(--label-color);
-    padding: 6px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: color 0.2s, background-color 0.2s;
-    flex-shrink: 0;
-}
-
-.msg-add-btn .material-symbols-outlined,
-.msg-mic-btn .material-symbols-outlined {
-    font-size: 22px;
-    font-variation-settings: 'FILL' 0, 'wght' 300;
-}
-
-.msg-add-btn:hover,
-.msg-mic-btn:hover {
-    color: var(--text-accent);
-    background-color: rgba(255, 255, 255, 0.07);
-}
-
 .msg-send-btn {
     background-color: var(--primary-color);
     border: none;
     cursor: pointer;
     color: var(--text-accent);
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1028,9 +1023,8 @@ body {
     transition: background-color 0.2s, transform 0.1s;
 }
 
-.msg-send-btn .material-symbols-outlined {
-    font-size: 20px;
-    font-variation-settings: 'FILL' 1, 'wght' 500;
+.msg-send-btn i {
+    font-size: 18px;
 }
 
 .msg-send-btn:hover {
@@ -1292,7 +1286,11 @@ body {
     color: var(--label-color);
     cursor: pointer;
     font-size: 22px;
-    font-variation-settings: 'FILL' 1;
+    transition: color 0.2s;
+}
+
+.settings-icon:hover {
+    color: var(--text-accent);
 }
 
 /* Modal Styles */
@@ -1556,7 +1554,7 @@ body {
     color: var(--label-color);
     margin-left: 12px;
     font-size: 20px;
-    font-variation-settings: 'FILL' 1;
+
     transition: color 0.3s ease;
 }
 
@@ -2090,7 +2088,7 @@ input:checked+.slider:before {
     color: var(--label-color);
     pointer-events: none;
     font-size: 18px;
-    font-variation-settings: 'wght' 300;
+
 }
 
 .divider {
