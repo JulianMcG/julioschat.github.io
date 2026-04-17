@@ -613,7 +613,7 @@ body {
 }
 
 .new-message-button .button-text {
-    color: var(--label-color);
+    color: var(--text-accent);
 }
 
 .sidebar.collapsed .new-message-button {
@@ -1077,18 +1077,14 @@ body {
     color: var(--text-accent);
     width: 44px;
     height: 44px;
-    --r: 4px;
+    --r: 10px;
     border-shape: var(--squircle-shape);
-    border-radius: 4px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    transition: background-color 0.2s, transform 0.1s;
-}
-
-.msg-send-btn i {
-    font-size: 18px;
+    transition: background-color 0.2s, color 0.2s, transform 0.1s;
 }
 
 .msg-send-btn:hover {
@@ -1101,8 +1097,14 @@ body {
 
 .msg-send-btn.empty {
     background-color: var(--stroke-color);
+    color: var(--label-color);
     cursor: default;
     pointer-events: none;
+}
+
+.msg-send-btn.empty:hover {
+    background-color: var(--stroke-color);
+    color: var(--label-color);
 }
 
 .message-input input {
