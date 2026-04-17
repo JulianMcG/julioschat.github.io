@@ -1663,6 +1663,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const content = messageInput.value.trim();
                 if (content) {
                     messageInput.value = ''; // Clear input immediately
+                    const sb = document.getElementById('send-button');
+                    if (sb) sb.classList.add('empty');
                     sendMessage(content); // Pass content to sendMessage
                     updateTypingStatus(false);
                 }
@@ -1671,6 +1673,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const sendButton = document.getElementById('send-button');
         if (sendButton) {
+            sendButton.classList.add('empty');
             sendButton.addEventListener('click', () => {
                 if (!currentChatUser) {
                     alert('Please select a chat to send a message.');
@@ -1679,6 +1682,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const content = messageInput.value.trim();
                 if (content) {
                     messageInput.value = '';
+                    sendButton.classList.add('empty');
                     sendMessage(content);
                     updateTypingStatus(false);
                 }
@@ -1687,6 +1691,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Add typing status listeners
         messageInput.addEventListener('input', () => {
+            if (sendButton) {
+                sendButton.classList.toggle('empty', !messageInput.value.trim());
+            }
             if (!isTyping) {
                 isTyping = true;
                 updateTypingStatus(true);
