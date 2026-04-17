@@ -1063,7 +1063,7 @@ body {
     --r: 16px;
     border-shape: var(--squircle-shape);
     border-radius: 16px;
-    margin: 0 20px 20px;
+    margin: 0 20px 12px;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -1508,7 +1508,7 @@ body {
     top: 100%;
     left: 0;
     right: 0;
-    height: 48px;
+    height: 24px;
     background: linear-gradient(to bottom, var(--background-dark), transparent);
     pointer-events: none;
     z-index: 5;
