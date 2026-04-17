@@ -609,11 +609,11 @@ body {
 }
 
 .new-message-button i {
-    font-size: 16px;
+    font-size: 20px;
 }
 
 .new-message-button .button-text {
-    color: var(--primary-color);
+    color: var(--label-color);
 }
 
 .sidebar.collapsed .new-message-button {
@@ -1077,9 +1077,9 @@ body {
     color: var(--text-accent);
     width: 44px;
     height: 44px;
-    --r: 10px;
+    --r: 4px;
     border-shape: var(--squircle-shape);
-    border-radius: 10px;
+    border-radius: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1097,6 +1097,12 @@ body {
 
 .msg-send-btn:active {
     transform: scale(0.93);
+}
+
+.msg-send-btn.empty {
+    background-color: var(--stroke-color);
+    cursor: default;
+    pointer-events: none;
 }
 
 .message-input input {
@@ -1349,16 +1355,6 @@ body {
     object-fit: cover;
 }
 
-.settings-icon {
-    color: var(--label-color);
-    cursor: pointer;
-    font-size: 22px;
-    transition: color 0.2s;
-}
-
-.settings-icon:hover {
-    color: var(--text-accent);
-}
 
 /* Modal Styles */
 .modal {
@@ -2669,7 +2665,6 @@ input:checked+.slider:before {
 /* sidebar / button icons — outline style */
 .icon-btn .material-symbols-rounded,
 .new-message-button .material-symbols-rounded,
-.settings-icon,
 .action-icon,
 .toggle-sidebar,
 .clear-search,
