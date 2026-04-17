@@ -708,7 +708,7 @@ body {
 }
 
 .user-item:hover {
-    background-color: rgba(19, 22, 31, 0.5);
+    background-color: var(--stroke-color);
 }
 
 .user-item.active {
@@ -2707,5 +2707,10 @@ input:checked+.slider:before {
     font-size: 15px !important;
     color: var(--primary-color) !important;
     margin-left: 3px;
+    transition: color 0.15s;
+}
+
+.user-item.active .verified-badge {
+    color: var(--text-accent) !important;
 }
 
