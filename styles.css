@@ -8,6 +8,28 @@
 }
 
 :root {
+    --squircle-shape: shape(
+        from calc(1.6 * var(--r)) 0,
+        hline to calc(100% - 1.6 * var(--r)),
+        curve to calc(100% - 0.546 * var(--r)) calc(0.109 * var(--r)) with calc(100% - 1.04 * var(--r)) 0 /
+        calc(100% - 0.76 * var(--r)) 0,
+        arc to calc(100% - 0.109 * var(--r)) calc(0.546 * var(--r)) of var(--r) cw,
+        curve to 100% calc(1.6 * var(--r)) with 100% calc(0.76 * var(--r)) / 100% calc(1.04 * var(--r)),
+        vline to calc(100% - 1.6 * var(--r)),
+        curve to calc(100% - 0.109 * var(--r)) calc(100% - 0.546 * var(--r)) with 100% calc(100% - 1.04 * var(--r)) / 100%
+        calc(100% - 0.76 * var(--r)),
+        arc to calc(100% - 0.546 * var(--r)) calc(100% - 0.109 * var(--r)) of var(--r) cw,
+        curve to calc(100% - 1.6 * var(--r)) 100% with calc(100% - 1.04 * var(--r)) 100% / calc(100% - 0.76 * var(--r)) 100%,
+        hline to calc(1.6 * var(--r)),
+        curve to calc(0.546 * var(--r)) calc(100% - 0.109 * var(--r)) with calc(1.04 * var(--r)) 100% /
+        calc(0.76 * var(--r)) 100%,
+        arc to calc(0.109 * var(--r)) calc(100% - 0.546 * var(--r)) of var(--r) cw,
+        curve to 0 calc(100% - 1.6 * var(--r)) with 0 calc(100% - 0.76 * var(--r)) / 0 calc(100% - 1.04 * var(--r)),
+        vline to calc(1.6 * var(--r)),
+        curve to calc(0.109 * var(--r)) calc(0.546 * var(--r)) with 0 calc(1.04 * var(--r)) / 0 calc(0.76 * var(--r)),
+        arc to calc(0.546 * var(--r)) calc(0.109 * var(--r)) of var(--r) cw,
+        curve to calc(1.6 * var(--r)) 0 with calc(0.76 * var(--r)) 0 / calc(1.04 * var(--r)) 0
+    );
     --background-dark: #0A0B13;
     --game-bg: #121524;
     --stroke-color: #1A1F34;
@@ -70,6 +92,8 @@ body {
     margin: 0 auto;
     padding: 40px;
     background-color: var(--game-bg);
+    --r: 16px;
+    border-shape: var(--squircle-shape);
     border-radius: 16px;
     position: relative;
     top: 50%;
@@ -103,6 +127,8 @@ body {
     width: 100%;
     padding: 16px 15px;
     border: 1.5px solid var(--stroke-color);
+    --r: 12px;
+    border-shape: var(--squircle-shape);
     border-radius: 12px;
     font-size: 16px;
     background-color: var(--game-bg);
@@ -136,6 +162,8 @@ body {
     background-color: var(--primary-color);
     color: var(--text-accent);
     border: 3px solid rgba(255, 255, 255, 0.1);
+    --r: 12px;
+    border-shape: var(--squircle-shape);
     border-radius: 12px;
     cursor: pointer;
     font-size: 16px;
@@ -163,6 +191,8 @@ body {
     background-color: var(--primary-color);
     color: var(--text-accent);
     border: 3px solid rgba(255, 255, 255, 0.1);
+    --r: 15px;
+    border-shape: var(--squircle-shape);
     border-radius: 15px;
     cursor: pointer;
     font-size: 16px;
@@ -275,6 +305,8 @@ body {
     width: 310px;
     min-width: 310px;
     background-color: var(--game-bg);
+    --r: 16px;
+    border-shape: var(--squircle-shape);
     border-radius: 16px;
     border: 1.5px solid var(--stroke-color);
     padding: 10px;
@@ -322,6 +354,8 @@ body {
     display: flex;
     align-items: center;
     padding: 10px;
+    --r: 10px;
+    border-shape: var(--squircle-shape);
     border-radius: 10px;
     margin-bottom: 8px;
     animation: skeleton-pulse 1.5s ease-in-out infinite;
@@ -348,6 +382,8 @@ body {
     background: linear-gradient(90deg, var(--stroke-color) 25%, #2A2D36 50%, var(--stroke-color) 75%);
     background-size: 200% 100%;
     animation: skeleton-shimmer 1.5s ease-in-out infinite;
+    --r: 4px;
+    border-shape: var(--squircle-shape);
     border-radius: 4px;
     margin-bottom: 6px;
 }
@@ -358,6 +394,8 @@ body {
     background: linear-gradient(90deg, var(--stroke-color) 25%, #2A2D36 50%, var(--stroke-color) 75%);
     background-size: 200% 100%;
     animation: skeleton-shimmer 1.5s ease-in-out infinite;
+    --r: 3px;
+    border-shape: var(--squircle-shape);
     border-radius: 3px;
 }
 
@@ -473,6 +511,8 @@ body {
 .icon-btn {
     background-color: var(--stroke-color);
     border: none;
+    --r: 10px;
+    border-shape: var(--squircle-shape);
     border-radius: 10px;
     width: 44px;
     height: 44px;
@@ -548,6 +588,8 @@ body {
     gap: 6px;
     background-color: var(--stroke-color);
     border: none;
+    --r: 10px;
+    border-shape: var(--squircle-shape);
     border-radius: 10px;
     padding: 0 14px;
     cursor: pointer;
@@ -587,6 +629,8 @@ body {
     display: none;
     align-items: center;
     background-color: var(--stroke-color);
+    --r: 10px;
+    border-shape: var(--squircle-shape);
     border-radius: 10px;
     padding: 8px 12px;
     margin-bottom: 10px;
@@ -641,12 +685,16 @@ body {
     align-items: center;
     padding: 10px;
     cursor: pointer;
+    --r: 10px;
+    border-shape: var(--squircle-shape);
     border-radius: 10px;
     width: 100%;
     position: relative;
     min-width: 0;
     /* Smooth transitions to prevent flickering */
     cursor: pointer;
+    --r: 10px;
+    border-shape: var(--squircle-shape);
     border-radius: 10px;
     width: 100%;
     position: relative;
@@ -665,6 +713,8 @@ body {
 
 .user-item.active {
     background-color: var(--primary-color);
+    --r: 8px;
+    border-shape: var(--squircle-shape);
     border-radius: 8px;
     padding: 10px;
     transition: none !important;
@@ -682,6 +732,8 @@ body {
 
 .chat-skeleton-message {
     height: 40px;
+    --r: 15px;
+    border-shape: var(--squircle-shape);
     border-radius: 15px;
     background: linear-gradient(90deg, var(--stroke-color) 25%, #2A2D36 50%, var(--stroke-color) 75%);
     background-size: 200% 100%;
@@ -853,6 +905,8 @@ body {
 .context-menu {
     position: absolute;
     background-color: var(--cell-bg);
+    --r: 12px;
+    border-shape: var(--squircle-shape);
     border-radius: 12px;
     padding: 8px 0;
     min-width: 180px;
@@ -1006,6 +1060,8 @@ body {
     padding: 12px 12px;
     background-color: var(--game-bg);
     border: 1.5px solid var(--stroke-color);
+    --r: 16px;
+    border-shape: var(--squircle-shape);
     border-radius: 16px;
     margin: 0;
     display: flex;
@@ -1021,6 +1077,8 @@ body {
     color: var(--text-accent);
     width: 44px;
     height: 44px;
+    --r: 10px;
+    border-shape: var(--squircle-shape);
     border-radius: 10px;
     display: flex;
     align-items: center;
@@ -1082,6 +1140,8 @@ body {
     max-width: 80%;
     padding: 10px 15px;
     margin: 5px 0;
+    --r: 5px;
+    border-shape: var(--squircle-shape);
     border-radius: 5px;
     position: relative;
 }
@@ -1097,6 +1157,8 @@ body {
 }
 
 .message-bubble.consecutive {
+    --r: 12px;
+    border-shape: var(--squircle-shape);
     border-radius: 12px;
     margin-top: 2px;
 }
@@ -1316,6 +1378,8 @@ body {
     padding: 20px;
     width: 90%;
     max-width: 800px;
+    --r: 16px;
+    border-shape: var(--squircle-shape);
     border-radius: 16px;
     border: 1.5px solid var(--stroke-color);
     position: relative;
@@ -1370,6 +1434,8 @@ body {
     color: var(--text-accent);
     border: none;
     padding: 10px 20px;
+    --r: 8px;
+    border-shape: var(--squircle-shape);
     border-radius: 8px;
     cursor: pointer;
     transition: background-color 0.3s;
@@ -1392,6 +1458,8 @@ body {
 .username-change input {
     background-color: var(--game-bg);
     border: 1px solid var(--stroke-color);
+    --r: 8px;
+    border-shape: var(--squircle-shape);
     border-radius: 8px;
     padding: 10px;
     color: var(--text-accent);
@@ -1402,6 +1470,8 @@ body {
     color: var(--text-accent);
     border: none;
     padding: 10px 20px;
+    --r: 8px;
+    border-shape: var(--squircle-shape);
     border-radius: 8px;
     cursor: pointer;
     transition: background-color 0.3s;
@@ -1536,6 +1606,8 @@ body {
 
 #compose-modal .search-container {
     background-color: var(--game-bg);
+    --r: 15px;
+    border-shape: var(--squircle-shape);
     border-radius: 15px;
     padding: 15px;
     margin: 0;
@@ -1585,6 +1657,8 @@ body {
     scrollbar-width: none;
     -ms-overflow-style: none;
     background-color: var(--game-bg);
+    --r: 15px;
+    border-shape: var(--squircle-shape);
     border-radius: 15px;
     padding: 10px;
     opacity: 0;
@@ -1606,6 +1680,8 @@ body {
     align-items: center;
     padding: 10px;
     cursor: pointer;
+    --r: 8px;
+    border-shape: var(--squircle-shape);
     border-radius: 8px;
     transition: background-color 0.3s;
 }
@@ -1648,6 +1724,8 @@ body {
     color: var(--text-accent);
     border: none;
     padding: 12px 24px;
+    --r: 8px;
+    border-shape: var(--squircle-shape);
     border-radius: 8px;
     cursor: pointer;
     font-size: 16px;
@@ -1677,6 +1755,8 @@ body {
 
 #settings-modal .modal-content {
     background-color: var(--game-bg);
+    --r: 16px;
+    border-shape: var(--squircle-shape);
     border-radius: 16px;
     width: 500px;
     max-width: 90%;
@@ -1695,6 +1775,8 @@ body {
     width: 100%;
     padding: 16px 15px;
     border: 1.5px solid var(--stroke-color);
+    --r: 12px;
+    border-shape: var(--squircle-shape);
     border-radius: 12px;
     font-size: 16px;
     background-color: var(--game-bg);
@@ -1749,6 +1831,8 @@ body {
     padding: 16px 15px;
     padding-right: 40px;
     border: 1.5px solid var(--stroke-color);
+    --r: 12px;
+    border-shape: var(--squircle-shape);
     border-radius: 12px;
     font-size: 16px;
     background-color: var(--game-bg);
@@ -1776,6 +1860,8 @@ body {
     background-color: #494C56;
     color: var(--text-accent);
     border: 3px solid rgba(255, 255, 255, 0.05);
+    --r: 12px;
+    border-shape: var(--squircle-shape);
     border-radius: 12px;
     cursor: pointer;
     font-size: 16px;
@@ -1799,6 +1885,8 @@ body {
     background-color: var(--danger-color);
     color: var(--text-accent);
     border: 3px solid rgba(255, 255, 255, 0.1);
+    --r: 12px;
+    border-shape: var(--squircle-shape);
     border-radius: 12px;
     cursor: pointer;
     font-size: 16px;
@@ -1819,6 +1907,8 @@ body {
 /* User Options Modal Styles */
 #user-options-modal .modal-content {
     background-color: var(--game-bg);
+    --r: 15px;
+    border-shape: var(--squircle-shape);
     border-radius: 15px;
     width: 400px;
     max-width: 90%;
@@ -1847,6 +1937,8 @@ body {
     width: 100%;
     padding: 16px 15px;
     border: 1.5px solid var(--stroke-color);
+    --r: 15px;
+    border-shape: var(--squircle-shape);
     border-radius: 15px;
     font-size: 16px;
     background-color: var(--game-bg);
@@ -1878,6 +1970,8 @@ body {
     background-color: #494C56;
     color: var(--text-accent);
     border: 3px solid rgba(255, 255, 255, 0.05);
+    --r: 15px;
+    border-shape: var(--squircle-shape);
     border-radius: 15px;
     cursor: pointer;
     font-size: 16px;
@@ -1901,6 +1995,8 @@ body {
     background-color: var(--danger-color);
     color: var(--text-accent);
     border: 3px solid rgba(255, 255, 255, 0.1);
+    --r: 15px;
+    border-shape: var(--squircle-shape);
     border-radius: 15px;
     cursor: pointer;
     font-size: 16px;
@@ -1924,6 +2020,8 @@ body {
     background-color: var(--primary-color);
     color: var(--text-accent);
     border: 3px solid rgba(255, 255, 255, 0.1);
+    --r: 15px;
+    border-shape: var(--squircle-shape);
     border-radius: 15px;
     cursor: pointer;
     font-size: 16px;
@@ -1964,6 +2062,8 @@ button:hover {
     background-color: #494C56;
     color: var(--text-accent);
     border: none;
+    --r: 8px;
+    border-shape: var(--squircle-shape);
     border-radius: 8px;
     cursor: pointer;
     font-size: 14px;
@@ -1988,6 +2088,8 @@ button:hover {
     padding: 8px 12px;
     background-color: var(--primary-color);
     border: 1px solid rgba(255, 255, 255, 0.1);
+    --r: 8px;
+    border-shape: var(--squircle-shape);
     border-radius: 8px;
     color: var(--text-accent);
     font-size: 14px;
@@ -2034,6 +2136,8 @@ button:hover {
     bottom: 0;
     background-color: var(--stroke-color);
     transition: .4s;
+    --r: 24px;
+    border-shape: var(--squircle-shape);
     border-radius: 24px;
 }
 
@@ -2075,6 +2179,8 @@ input:checked+.slider:before {
     padding: 16px 15px;
     padding-right: 35px;
     border: 1.5px solid var(--stroke-color);
+    --r: 15px;
+    border-shape: var(--squircle-shape);
     border-radius: 15px;
     font-size: 16px;
     background-color: var(--game-bg);
@@ -2123,6 +2229,8 @@ input:checked+.slider:before {
     background-color: #494C56 !important;
     color: var(--text-accent);
     border: 3px solid rgba(255, 255, 255, 0.05);
+    --r: 15px;
+    border-shape: var(--squircle-shape);
     border-radius: 15px;
     cursor: pointer;
     font-size: 16px;
@@ -2318,6 +2426,8 @@ input:checked+.slider:before {
 .custom-emoji-input {
     width: 60px;
     padding: 4px 8px;
+    --r: 5px;
+    border-shape: var(--squircle-shape);
     border-radius: 5px;
     border: 1.5px solid var(--stroke-color);
     background-color: var(--game-bg);
@@ -2337,6 +2447,8 @@ input:checked+.slider:before {
     align-items: center;
     gap: 6px;
     padding: 2px 8px;
+    --r: 12px;
+    border-shape: var(--squircle-shape);
     border-radius: 12px;
     cursor: pointer;
     transition: background-color 0.2s ease;
@@ -2361,6 +2473,8 @@ input:checked+.slider:before {
     max-width: 500px;
     width: 90%;
     background: var(--game-bg);
+    --r: 20px;
+    border-shape: var(--squircle-shape);
     border-radius: 20px;
     overflow: hidden;
 }
@@ -2391,6 +2505,8 @@ input:checked+.slider:before {
 
 .option-card {
     background: rgba(255, 255, 255, 0.03);
+    --r: 12px;
+    border-shape: var(--squircle-shape);
     border-radius: 12px;
     padding: 15px;
     display: flex;
@@ -2409,6 +2525,8 @@ input:checked+.slider:before {
     background: var(--primary-color);
     width: 40px;
     height: 40px;
+    --r: 10px;
+    border-shape: var(--squircle-shape);
     border-radius: 10px;
     display: flex;
     align-items: center;
@@ -2438,6 +2556,8 @@ input:checked+.slider:before {
 /* Specific Option Styles */
 .small-btn {
     padding: 6px 12px;
+    --r: 6px;
+    border-shape: var(--squircle-shape);
     border-radius: 6px;
     border: 1px solid var(--primary-color);
     background: transparent;
@@ -2456,6 +2576,8 @@ input:checked+.slider:before {
     padding: 8px 16px;
     background: var(--primary-color);
     color: white;
+    --r: 8px;
+    border-shape: var(--squircle-shape);
     border-radius: 8px;
     cursor: pointer;
     font-size: 0.9rem;
@@ -2480,6 +2602,8 @@ input:checked+.slider:before {
     background: transparent;
     border: 1px solid #ff4444;
     color: #ff4444;
+    --r: 8px;
+    border-shape: var(--squircle-shape);
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s;
