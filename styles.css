@@ -744,13 +744,17 @@ body {
 .chat-skeleton-message.sent {
     align-self: flex-end;
     width: 40%;
-    border-radius: 15px 15px 5px 15px;
+    --r: 15px;
+    border-shape: var(--squircle-shape);
+    border-radius: 15px;
 }
 
 .chat-skeleton-message.received {
     align-self: flex-start;
     width: 40%;
-    border-radius: 15px 15px 15px 5px;
+    --r: 15px;
+    border-shape: var(--squircle-shape);
+    border-radius: 15px;
 }
 
 .chat-skeleton-message.short {
@@ -1172,15 +1176,21 @@ body {
 }
 
 .message-bubble.consecutive:last-child {
-    border-radius: 12px 12px 4px 12px;
+    --r: 12px;
+    border-shape: var(--squircle-shape);
+    border-radius: 12px;
 }
 
 .message-bubble.sent.consecutive:last-child {
-    border-radius: 12px 12px 4px 12px;
+    --r: 12px;
+    border-shape: var(--squircle-shape);
+    border-radius: 12px;
 }
 
 .message-bubble.received.consecutive:last-child {
-    border-radius: 12px 12px 12px 4px;
+    --r: 12px;
+    border-shape: var(--squircle-shape);
+    border-radius: 12px;
 }
 
 .message-gap {
@@ -1220,7 +1230,9 @@ body {
     margin-left: auto;
     margin-right: 20px;
     text-align: right;
-    border-radius: 12px 12px 4px 12px;
+    --r: 12px;
+    border-shape: var(--squircle-shape);
+    border-radius: 12px;
     position: relative;
 }
 
@@ -1261,7 +1273,9 @@ body {
     margin-right: auto;
     margin-left: 20px;
     text-align: left;
-    border-radius: 12px 12px 12px 4px;
+    --r: 12px;
+    border-shape: var(--squircle-shape);
+    border-radius: 12px;
 }
 
 .typing-indicator {
@@ -1270,7 +1284,9 @@ body {
     margin-right: auto;
     margin-left: 20px;
     text-align: left;
-    border-radius: 12px 12px 12px 4px;
+    --r: 12px;
+    border-shape: var(--squircle-shape);
+    border-radius: 12px;
     padding: 12px 20px;
     display: flex;
     align-items: center;
@@ -2280,7 +2296,9 @@ input:checked+.slider:before {
     padding: 8px;
     background: var(--stroke-color);
     border: 4px solid var(--game-bg);
-    border-radius: 50px;
+    --r: 18px;
+    border-shape: var(--squircle-shape);
+    border-radius: 18px;
     z-index: 2;
 }
 
@@ -2304,7 +2322,9 @@ input:checked+.slider:before {
     padding: 6px 12px;
     background: var(--stroke-color);
     border: 4px solid var(--game-bg);
-    border-radius: 50px;
+    --r: 18px;
+    border-shape: var(--squircle-shape);
+    border-radius: 18px;
     font-size: 14px;
     z-index: 1;
     display: none;
@@ -2319,14 +2339,18 @@ input:checked+.slider:before {
 .message.sent .message-reactions {
     top: -18px;
     left: -12px;
-    border-radius: 50px 50px 50px 20px;
+    --r: 18px;
+    border-shape: var(--squircle-shape);
+    border-radius: 18px;
     background: var(--stroke-color);
 }
 
 .message.received .message-reactions {
     top: -18px;
     right: -12px;
-    border-radius: 50px 50px 20px 50px;
+    --r: 18px;
+    border-shape: var(--squircle-shape);
+    border-radius: 18px;
     background: var(--primary-color);
 }
 
