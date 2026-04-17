@@ -1063,9 +1063,7 @@ body {
     --r: 16px;
     border-shape: var(--squircle-shape);
     border-radius: 16px;
-    margin: 0 auto;
-    max-width: 680px;
-    width: calc(100% - 40px);
+    margin: 0 20px 20px;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -2720,11 +2718,19 @@ input:checked+.slider:before {
     background-color: transparent;
     border: none;
     box-shadow: none;
-    color: var(--label-color);
+    color: #B0B5DB;
+}
+
+#sidebar-toggle .material-symbols-rounded {
+    color: #B0B5DB;
 }
 
 #sidebar-toggle:hover {
     background-color: transparent;
+    color: var(--text-accent);
+}
+
+#sidebar-toggle:hover .material-symbols-rounded {
     color: var(--text-accent);
 }
 
