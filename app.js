@@ -1971,7 +1971,7 @@ function closeSettingsModal() {
 }
 
 // Settings Modal Event Listeners
-document.addEventListener('click', e => { if (e.target.closest('.settings-icon')) openSettingsModal(); });
+document.addEventListener('click', e => { if (e.target.closest('#settings-toggle')) openSettingsModal(); });
 document.addEventListener('click', e => { if (e.target.closest('#settings-modal .close-modal')) closeSettingsModal(); });
 
 // Close modal when clicking outside
